@@ -1,0 +1,99 @@
+{
+  "__local_config__": {
+    "comfyui_input_dir": "E:\\Comfyui\\qq\\上传",
+    "workflow_dir": "E:\\Comfyui\\qq\\工作流",
+    "output_dir": "E:\\Comfyui\\qq\\保存",
+    "webui_lan": true,
+    "default_quality": "720p"
+  },
+  "__groups_binding__": {},
+  "__wf_categories__": {
+    "FLUX漫转真.json": "图生图",
+    "qwen编辑测试1.json": "编辑",
+    "基础图生视频.json": "图生视频",
+    "Anima动漫画图.json": "画"
+  },
+  "__disabled_groups__": {},
+  "__groups_source__": "",
+  "__bind_target__": "",
+  "__groups_data__": [],
+  "__hidden_workflows__": [],
+  "__workflow_aliases__": {},
+  "__workflow_node_configs__": {
+    "FLUX漫转真.json": {
+      "__negative_node__": "",
+      "__prompt_node__": "",
+      "__resolution_node__": "",
+      "__load_image_nodes__": "5126",
+      "__load_image_node__": ""
+    },
+    "Anima动漫画图.json": {
+      "__prompt_node__": "5409",
+      "__resolution_node__": "5400",
+      "__load_image_nodes__": "",
+      "__negative_node__": "5393",
+      "__load_image_node__": ""
+    },
+    "qwen编辑测试1.json": {
+      "__prompt_node__": "255",
+      "__resolution_node__": "",
+      "__load_image_nodes__": "223,250,251",
+      "__negative_node__": ""
+    },
+    "基础图生视频.json": {
+      "__prompt_node__": "634",
+      "__resolution_node__": "",
+      "__load_image_nodes__": "",
+      "__negative_node__": ""
+    }
+  },
+  "5393_text": "worst quality, low quality, score_1, score_2, score_3, artist name",
+  "__commands__": {},
+  "current_quality": "720p",
+  "current_ratio": "9:16",
+  "current_width": 712,
+  "current_height": 1264,
+  "quality_presets": {
+    "480p": {
+      "name": "SD",
+      "pixels": 400000
+    },
+    "720p": {
+      "name": "标清",
+      "pixels": 900000
+    },
+    "1080p": {
+      "name": "高清",
+      "pixels": 2000000
+    },
+    "2K": {
+      "name": "超清",
+      "pixels": 3700000
+    },
+    "4K": {
+      "name": "原画",
+      "pixels": 8300000
+    }
+  },
+  "aspect_ratios": [
+    "1:1",
+    "3:4",
+    "4:3",
+    "9:16",
+    "16:9",
+    "2:3",
+    "3:2"
+  ],
+  "__workflow_categories__": {
+    "FLUX漫转真.json": "图生图",
+    "qwen编辑测试1.json": "编辑",
+    "基础图生视频.json": "图生视频",
+    "Anima动漫画图.json": "画"
+  },
+  "__category_order__": [
+    "画",
+    "图生图",
+    "图生视频",
+    "编辑"
+  ]
+}

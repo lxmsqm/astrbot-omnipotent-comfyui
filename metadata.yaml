@@ -1,0 +1,9 @@
+name: "ComfyUI 全能工具"
+version: "1.0.0"
+description: "AstrBot ComfyUI 插件，支持文生图、图生图、视频、编辑，自带 WebUI 面板。"
+author: "lxmsqm,黑谷"
+license: "MIT"
+repository: "https://github.com/lxmsqm/astrbot-omnipotent-comfyui"
+dependencies:
+  - requests
+  - aiohttp
