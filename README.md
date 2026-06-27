@@ -378,6 +378,38 @@ AstrBot (云端) ──HTTP──→ ComfyUI (云端或另一台服务器)
 
 ---
 
+## LLM 工具调用
+
+插件注册了以下 LLM 可调用工具（`@filter.llm_tool()`），供支持 Function Calling 的 LLM 自动调用：
+
+| 工具名 | 功能 | 关键参数 |
+|--------|------|---------|
+| `comfyui_draw` | 文生图 | `prompt`, `ratio` |
+| `comfyui_img2img` | 图生图 | `prompt`, `image_url`, `denoise` |
+| `comfyui_video` | 图生视频 | `image_url`, `prompt` |
+| `comfyui_edit` | 编辑图片 | `prompt`, `image_urls`（最多3张） |
+| `comfyui_random` | 随机抽卡 | `count` |
+| `comfyui_switch_workflow` | 切换工作流 | `keyword` |
+| `comfyui_list_workflows` | 列出可用工作流 | 无 |
+| `comfyui_get_current_workflow` | 获取当前工作流 | 无 |
+| `comfyui_queue_status` | 查看队列状态 | 无 |
+| `comfyui_stop` | 停止生成 | 无 |
+| `comfyui_execute` | 执行工作流 | `prompt` |
+
+### 图片处理说明
+
+当用户通过消息发送图片时，插件会自动拦截 LLM 请求中的图片数据：
+
+1. 将图片（base64 / HTTP URL）下载到临时目录
+2. 以文本路径形式告知 LLM：`[用户发送了图片，已保存到: path]`
+3. LLM 调用 `comfyui_img2img` / `comfyui_video` / `comfyui_edit` 等工具时传入该路径
+
+> **适用场景**：纯文本模型（如 DeepSeek V4 Flash）不支持 `image_url` 消息类型时，此机制确保 LLM 仍能感知用户发图并调用对应工具。
+
+临时文件在图片上传到 ComfyUI 后即时删除，另有定时清理兜底（每 1 小时清理超过 24 小时的文件）。
+
+---
+
 ## 跨平台兼容
 
 插件核心功能与消息平台无关，支持在以下平台运行：
