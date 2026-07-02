@@ -1,0 +1,497 @@
+[
+  {
+    "name": "雨中奔跑",
+    "tags": "running in rain, splashing water, dynamic motion",
+    "style": "general"
+  },
+  {
+    "name": "清晨散步",
+    "tags": "morning walk, leisurely stroll, fresh air",
+    "style": "general"
+  },
+  {
+    "name": "快速行走",
+    "tags": "brisk walking, power walk, purposeful stride",
+    "style": "general"
+  },
+  {
+    "name": "原地踏步",
+    "tags": "marching in place, stationary walk, rhythmic steps",
+    "style": "general"
+  },
+  {
+    "name": "慢跑热身",
+    "tags": "jogging warmup, light run, preparing body",
+    "style": "general"
+  },
+  {
+    "name": "爬楼梯",
+    "tags": "climbing stairs, step ascent, upward movement",
+    "style": "general"
+  },
+  {
+    "name": "下楼梯",
+    "tags": "descending stairs, careful stepping, downward motion",
+    "style": "general"
+  },
+  {
+    "name": "弯腰捡东西",
+    "tags": "bending to pick up, reaching down, item retrieval",
+    "style": "general"
+  },
+  {
+    "name": "伸懒腰",
+    "tags": "stretching body, full body stretch, waking up motion",
+    "style": "general"
+  },
+  {
+    "name": "坐椅子",
+    "tags": "sitting on chair, lowering body, taking a seat",
+    "style": "general"
+  },
+  {
+    "name": "站立起身",
+    "tags": "standing up, rising from seat, upright posture",
+    "style": "general"
+  },
+  {
+    "name": "挥手打招呼",
+    "tags": "waving hello, hand gesture, friendly greeting",
+    "style": "general"
+  },
+  {
+    "name": "点头同意",
+    "tags": "nodding head, affirmative gesture, showing agreement",
+    "style": "general"
+  },
+  {
+    "name": "摇头拒绝",
+    "tags": "shaking head, negative gesture, refusal",
+    "style": "general"
+  },
+  {
+    "name": "转身回望",
+    "tags": "turning around, looking back, body rotation",
+    "style": "general"
+  },
+  {
+    "name": "推开房门",
+    "tags": "pushing door open, forward push, entering room",
+    "style": "general"
+  },
+  {
+    "name": "拉上窗帘",
+    "tags": "drawing curtains, pulling fabric, closing drapes",
+    "style": "general"
+  },
+  {
+    "name": "端起杯子喝水",
+    "tags": "lifting cup to drink, hydrating, gentle sip",
+    "style": "general"
+  },
+  {
+    "name": "放下手机",
+    "tags": "putting down phone, placing object, disconnecting",
+    "style": "general"
+  },
+  {
+    "name": "背上背包",
+    "tags": "putting on backpack, shouldering bag, preparing to go",
+    "style": "general"
+  },
+  {
+    "name": "系鞋带",
+    "tags": "tying shoelaces, bending down, fastening shoes",
+    "style": "general"
+  },
+  {
+    "name": "对镜梳头",
+    "tags": "brushing hair in mirror, grooming, daily routine",
+    "style": "general"
+  },
+  {
+    "name": "擦拭桌面",
+    "tags": "wiping table, cleaning surface, circular motion",
+    "style": "general"
+  },
+  {
+    "name": "扫地",
+    "tags": "sweeping floor, using broom, collecting dust",
+    "style": "general"
+  },
+  {
+    "name": "拖地",
+    "tags": "mopping floor, wet cleaning, back and forth motion",
+    "style": "general"
+  },
+  {
+    "name": "拧开瓶盖",
+    "tags": "twisting bottle cap, unscrewing lid, opening drink",
+    "style": "general"
+  },
+  {
+    "name": "撕开包装袋",
+    "tags": "tearing package, opening snack bag, quick rip",
+    "style": "general"
+  },
+  {
+    "name": "按下开关",
+    "tags": "pressing button, turning on light, finger push",
+    "style": "general"
+  },
+  {
+    "name": "翻阅书页",
+    "tags": "turning book page, reading gesture, paper rustling",
+    "style": "general"
+  },
+  {
+    "name": "键盘打字",
+    "tags": "typing on keyboard, finger tapping, rapid input",
+    "style": "general"
+  },
+  {
+    "name": "鼠标点击",
+    "tags": "clicking mouse, index finger press, computer interaction",
+    "style": "general"
+  },
+  {
+    "name": "抬手看表",
+    "tags": "lifting wrist to check time, glancing at watch, time check",
+    "style": "general"
+  },
+  {
+    "name": "看手机信息",
+    "tags": "checking phone message, looking at screen, reading notification",
+    "style": "general"
+  },
+  {
+    "name": "拍照",
+    "tags": "taking photo, aiming camera, pressing shutter",
+    "style": "general"
+  },
+  {
+    "name": "戴眼镜",
+    "tags": "putting on glasses, placing on nose, adjusting frame",
+    "style": "general"
+  },
+  {
+    "name": "摘下眼镜揉眼",
+    "tags": "removing glasses, rubbing eyes, tired gesture",
+    "style": "general"
+  },
+  {
+    "name": "戴耳机听歌",
+    "tags": "putting on headphones, listening to music, immersive",
+    "style": "general"
+  },
+  {
+    "name": "叠衣服",
+    "tags": "folding clothes, neatening fabric, organizing wardrobe",
+    "style": "general"
+  },
+  {
+    "name": "铺床单",
+    "tags": "spreading bedsheet, making bed, smoothing fabric",
+    "style": "general"
+  },
+  {
+    "name": "拧干毛巾",
+    "tags": "wringing towel, twisting fabric, removing water",
+    "style": "general"
+  },
+  {
+    "name": "梳马尾辫",
+    "tags": "tying ponytail, gathering hair, quick hairstyle",
+    "style": "general"
+  },
+  {
+    "name": "刮胡子",
+    "tags": "shaving beard, using razor, morning grooming",
+    "style": "general"
+  },
+  {
+    "name": "洗手",
+    "tags": "washing hands, rubbing soap, rinsing under tap",
+    "style": "general"
+  },
+  {
+    "name": "洗脸",
+    "tags": "washing face, splashing water, fresh feeling",
+    "style": "general"
+  },
+  {
+    "name": "涂抹护肤霜",
+    "tags": "applying face cream, gentle dabbing, skincare routine",
+    "style": "general"
+  },
+  {
+    "name": "对着镜子微笑",
+    "tags": "smiling at mirror, checking expression, self-assurance",
+    "style": "general"
+  },
+  {
+    "name": "穿外套",
+    "tags": "putting on coat, sliding arms in, getting dressed",
+    "style": "general"
+  },
+  {
+    "name": "脱掉湿袜子",
+    "tags": "taking off wet socks, peeling fabric, relief",
+    "style": "general"
+  },
+  {
+    "name": "撑开雨伞",
+    "tags": "opening umbrella, canopy expanding, rain shield",
+    "style": "general"
+  },
+  {
+    "name": "收拢折叠伞",
+    "tags": "closing umbrella, folding canopy, after rain",
+    "style": "general"
+  },
+  {
+    "name": "投掷垃圾",
+    "tags": "throwing trash, tossing into bin, casual aim",
+    "style": "general"
+  },
+  {
+    "name": "伸手接住掉落物",
+    "tags": "catching falling object, quick reflex, saving drop",
+    "style": "general"
+  },
+  {
+    "name": "递东西",
+    "tags": "handing over item, passing object, exchange gesture",
+    "style": "general"
+  },
+  {
+    "name": "接过零钱",
+    "tags": "receiving change, palm open, transaction finish",
+    "style": "general"
+  },
+  {
+    "name": "竖起大拇指",
+    "tags": "thumbs up, positive sign, approval gesture",
+    "style": "general"
+  },
+  {
+    "name": "做出OK手势",
+    "tags": "OK hand sign, finger circle, confirmation",
+    "style": "general"
+  },
+  {
+    "name": "比耶",
+    "tags": "peace sign, two fingers up, photo pose",
+    "style": "general"
+  },
+  {
+    "name": "双手插兜",
+    "tags": "hands in pockets, casual stance, relaxed posture",
+    "style": "general"
+  },
+  {
+    "name": "抱臂思考",
+    "tags": "crossing arms, thinking pose, contemplating",
+    "style": "general"
+  },
+  {
+    "name": "手托腮发呆",
+    "tags": "resting chin on hand, daydreaming, spaced out",
+    "style": "general"
+  },
+  {
+    "name": "跪地找东西",
+    "tags": "kneeling to search, looking under furniture, low perspective",
+    "style": "general"
+  },
+  {
+    "name": "踮脚尖够高处",
+    "tags": "standing on tiptoes, reaching high shelf, stretching up",
+    "style": "general"
+  },
+  {
+    "name": "蹲下系鞋带",
+    "tags": "squatting to tie laces, low crouch, street scene",
+    "style": "general"
+  },
+  {
+    "name": "盘腿坐",
+    "tags": "sitting cross-legged, meditation posture, grounded",
+    "style": "general"
+  },
+  {
+    "name": "抱膝而坐",
+    "tags": "hugging knees while sitting, cozy position, resting",
+    "style": "general"
+  },
+  {
+    "name": "扶栏杆眺望",
+    "tags": "leaning on railing, gazing into distance, overlooking",
+    "style": "general"
+  },
+  {
+    "name": "靠墙休息",
+    "tags": "leaning against wall, resting back, taking a break",
+    "style": "general"
+  },
+  {
+    "name": "单腿站立穿鞋",
+    "tags": "balancing on one leg to put on shoe, flamingo stance",
+    "style": "general"
+  },
+  {
+    "name": "大步流星",
+    "tags": "striding confidently, long steps, purposeful walk",
+    "style": "general"
+  },
+  {
+    "name": "小碎步快跑",
+    "tags": "short quick steps, shuffling run, hurried pace",
+    "style": "general"
+  },
+  {
+    "name": "倒退走路",
+    "tags": "walking backwards, reverse motion, careful steps",
+    "style": "general"
+  },
+  {
+    "name": "侧身挤过人群",
+    "tags": "side-stepping through crowd, squeezing past, narrow passage",
+    "style": "general"
+  },
+  {
+    "name": "爬上梯子",
+    "tags": "climbing ladder, three-point contact, upward climb",
+    "style": "general"
+  },
+  {
+    "name": "跳下台阶",
+    "tags": "jumping off step, small leap, landing softly",
+    "style": "general"
+  },
+  {
+    "name": "撑杆跳过水坑",
+    "tags": "pole-vaulting puddle, using stick, muddy ground",
+    "style": "general"
+  },
+  {
+    "name": "踩石头过河",
+    "tags": "stepping stones across stream, balancing, careful footing",
+    "style": "general"
+  },
+  {
+    "name": "弯腰穿过树枝",
+    "tags": "ducking under branch, avoiding leaves, forest walk",
+    "style": "general"
+  },
+  {
+    "name": "拨开草丛",
+    "tags": "parting tall grass, pushing aside, trailblazing",
+    "style": "general"
+  },
+  {
+    "name": "拍掉肩上灰",
+    "tags": "dusting off shoulder, brushing dirt, grooming gesture",
+    "style": "general"
+  },
+  {
+    "name": "拂去裤腿泥土",
+    "tags": "wiping mud off pants, cleaning leg, post-hike action",
+    "style": "general"
+  },
+  {
+    "name": "甩干手上的水",
+    "tags": "shaking water off hands, flicking fingers, air drying",
+    "style": "general"
+  },
+  {
+    "name": "吹凉热汤",
+    "tags": "blowing on hot soup, cooling food, gentle breath",
+    "style": "general"
+  },
+  {
+    "name": "搅拌咖啡",
+    "tags": "stirring coffee, spoon rotation, dissolving sugar",
+    "style": "general"
+  },
+  {
+    "name": "切开牛排",
+    "tags": "cutting steak, using knife and fork, dining motion",
+    "style": "general"
+  },
+  {
+    "name": "用筷子夹菜",
+    "tags": "picking up food with chopsticks, precise grip, dining",
+    "style": "general"
+  },
+  {
+    "name": "举杯庆祝",
+    "tags": "raising glass for toast, celebratory gesture, clinking",
+    "style": "general"
+  },
+  {
+    "name": "写钢笔字",
+    "tags": "writing with fountain pen, ink flow, cursive motion",
+    "style": "general"
+  },
+  {
+    "name": "用橡皮擦字",
+    "tags": "erasing pencil marks, rubbing paper, correcting mistake",
+    "style": "general"
+  },
+  {
+    "name": "削苹果",
+    "tags": "peeling apple, paring knife, continuous strip",
+    "style": "general"
+  },
+  {
+    "name": "拉开拉链",
+    "tags": "unzipping zipper, opening jacket, smooth motion",
+    "style": "general"
+  },
+  {
+    "name": "扣上纽扣",
+    "tags": "buttoning shirt, fastening button, fine motor skill",
+    "style": "general"
+  },
+  {
+    "name": "给植物浇水",
+    "tags": "watering plants, pouring from can, gentle stream",
+    "style": "general"
+  },
+  {
+    "name": "逗猫",
+    "tags": "teasing cat, waving toy, playful interaction",
+    "style": "general"
+  },
+  {
+    "name": "遛狗",
+    "tags": "walking dog, holding leash, brisk outdoor walk",
+    "style": "general"
+  },
+  {
+    "name": "鼓掌",
+    "tags": "clapping hands, applauding, repetitive slapping",
+    "style": "general"
+  },
+  {
+    "name": "打哈欠",
+    "tags": "yawning, mouth wide open, tiredness sign",
+    "style": "general"
+  },
+  {
+    "name": "打喷嚏",
+    "tags": "sneezing, sudden burst, covering mouth",
+    "style": "general"
+  },
+  {
+    "name": "安静深呼吸",
+    "tags": "taking deep breath, chest rising, calming inhale",
+    "style": "general"
+  },
+  {
+    "name": "雨中奔跑",
+    "tags": "running in rain, splashing water, dynamic motion",
+    "style": "general"
+  }
+]

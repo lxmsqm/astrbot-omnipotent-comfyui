@@ -1,0 +1,12 @@
+[
+  {"name": "黄金时刻", "tags": "golden hour, warm lighting, sun rays, amber glow", "style": "general"},
+  {"name": "体积光", "tags": "volumetric lighting, god rays, light beams, atmospheric", "style": "general"},
+  {"name": "霓虹灯光", "tags": "neon lighting, colorful lights, glow, night atmosphere", "style": "general"},
+  {"name": "逆光剪影", "tags": "backlighting, silhouette, rim light, dramatic contrast", "style": "general"},
+  {"name": "柔光散射", "tags": "soft lighting, diffused light, gentle glow, dreamy", "style": "general"},
+  {"name": "烛光暖黄", "tags": "candlelight, warm yellow, cozy atmosphere, flickering", "style": "general"},
+  {"name": "月光清冷", "tags": "moonlight, cool blue, silver glow, night lighting", "style": "general"},
+  {"name": "舞台聚光", "tags": "spotlight, stage lighting, focused beam, dramatic", "style": "general"},
+  {"name": "赛博朋克蓝紫", "tags": "cyberpunk lighting, blue purple, magenta, cold neon", "style": "general"},
+  {"name": "黑白高对比", "tags": "black and white, high contrast, noir, dramatic shadows", "style": "general"}
+]
