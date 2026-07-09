@@ -7,6 +7,7 @@ import re
 import os
 import shutil
 import time
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from astrbot.api.event import filter, AstrMessageEvent, MessageChain
@@ -16,7 +17,7 @@ from astrbot.api.provider import ProviderRequest
 from astrbot.api.message_components import Image as AstrImage, At, Plain
 from aiohttp import web
 from dataclasses import dataclass, field
-from .anima_data import AnimaDataManager
+from .anima_data import AnimaDataManager, load_anima_tools_source, _is_anima_source, _ANIMA_SOURCE_NAMES
 
 
 # ====================================================================
@@ -383,6 +384,55 @@ class ComfyUIExecuteTool(FunctionTool):
         return text
 
 
+@dataclass
+class ComfyUIRandomImageTool(FunctionTool):
+    name: str = "comfyui_random_image"
+    description: str = "从魔导书随机池中随机抽取标签，结合固定的标签，生成随机图片。每次可指定张数。"
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object", "properties": {
+            "count": {"type": "integer", "description": "生成张数，默认1张，最多10张"}
+        }, "required": []
+    })
+
+    async def run(self, event: AstrMessageEvent, count: int = 1):
+        plugin = self._plugin
+        import aiohttp
+        count = max(1, min(count, 10))
+        pins = plugin.workflow_config.get('__grimoire_pins__', {})
+        pin_names = [info.get('name','') for info in pins.values() if info.get('name')]
+        pin_info = f"，固定了: {', '.join(pin_names)}" if pin_names else ""
+        if not plugin.current_workflow_name:
+            return "❌ 未选中工作流，请先选择工作流"
+        # 检查当前工作流是否属于「画」分类
+        wf_cats = plugin.workflow_config.get('__wf_categories__', {}) or {}
+        wf_cats.update(plugin.workflow_config.get('__workflow_categories__', {}))
+        cur_cat = wf_cats.get(plugin.current_workflow_name, '')
+        if cur_cat != '画':
+            return "❌ 随机图只能在「画」分类的工作流上使用，请先切换到画图工作流"
+        # 1. 先收集所有提示词
+        prompts = []
+        for i in range(count):
+            async with aiohttp.ClientSession() as s:
+                async with s.post(f"http://127.0.0.1:{plugin.webui_port}/api/grimoire/random-pick", json={}) as r:
+                    data = await r.json()
+            if not data.get("ok") or not data.get("tags"):
+                return "❌ 随机池为空，请先在魔导书中添加随机池子分类"
+            prompts.append(data.get("tags", ""))
+        # 2. 提交全部到 ComfyUI（先全部提交，再逐个等结果）
+        user_id = event.get_sender_id()
+        batch_results = []
+        async def submit_one(prompt, idx):
+            status, text, path = await plugin._process_and_submit(prompt, None, user_id=user_id, skip_pin_merge=True)
+            if status == "ok":
+                sent = await plugin._send_image_result(event, f"🎲 随机图 ({idx+1}/{count}){pin_info}", path)
+                return f"第{idx+1}张{'已发送' if sent else '生成成功'}"
+            return f"第{idx+1}张生成失败: {text}"
+        tasks = [submit_one(p, i) for i, p in enumerate(prompts)]
+        for coro in asyncio.as_completed(tasks):
+            batch_results.append(await coro)
+        return f"随机图完成: {'; '.join(batch_results)}{pin_info}"
+
+
 @register("astrbot_plugin_comfyui_local", "BLack_Rin_ROBOT", "连接本地ComfyUI生成图片", "1.0.0")
 class ComfyUILocalPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
@@ -393,16 +443,13 @@ class ComfyUILocalPlugin(Star):
         # 目录配置：本地配置存在但键不存在/为空时，不fallback到config默认值，保持为空让前端显示占位符
         out = local_cfg.get("output_dir")
         self.output_dir = Path(out) if out else Path()
-        self.upload_mode = local_cfg.get("upload_mode") or self.config.get("upload_mode", "local")
         self.webui_port = int(local_cfg.get("webui_port") or self.config.get("webui_port", 8898))
         self.webui_lan = bool(local_cfg.get("webui_lan", False) or self.config.get("webui_lan", False) or False)
         self.webui_ipv6 = bool(local_cfg.get("webui_ipv6", False) or self.config.get("webui_ipv6", False) or False)
         self.upload_dir = self.output_dir / "upload" if self.output_dir.parts else Path()
-        self.preview_dir = Path(__file__).parent / "previews"
         if self.output_dir.parts:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             self.upload_dir.mkdir(parents=True, exist_ok=True)
-        self.preview_dir.mkdir(parents=True, exist_ok=True)
         self.workflow_path = ""
         self.workflow_dir = Path()
         self.current_workflow_name = ""
@@ -428,11 +475,14 @@ class ComfyUILocalPlugin(Star):
         self._progress = {}  # prompt_id -> {value, max, node} 实时进度（兼容旧逻辑）
         self._prompt_node_count = {}  # prompt_id -> int 总节点数
         self._prompt_progress = {}  # prompt_id -> {nodes_done, nodes_total, node_name, node_value, node_max, running}
-        self._generating_locks = {}  # user_id -> bool  per-user 生成锁
-        self._generating_lock = False  # 兼容旧引用，实际用 per-user
         self._prompt_start_time = {}  # prompt_id -> float timestamp
         # 魔导书开关（启用后 LLM 画图强制先搜数据库）
         self.grimoire_enabled = self.workflow_config.get('__grimoire_enabled__', False)
+        # 魔导书图片缓存目录
+        self._grimoire_cache_dir = Path(__file__).resolve().parent / "data" / "cache"
+        self._grimoire_cache_dir.mkdir(parents=True, exist_ok=True)
+        # 缓存任务进度 {source: {"running": bool, "total": int, "done": int, "success": int, "failed": int, "message": str}}
+        self._cache_progress = {}
         self._ws_client_id = str(uuid.uuid4())  # 固定 client_id，WS 监听器和 prompt 提交使用同一个
         self.current_prompt_id = None
         self.pending_actions = {}  # {user_id: {"action": str, "data": dict, "expires_at": float}}
@@ -441,6 +491,9 @@ class ComfyUILocalPlugin(Star):
         self._sent_images_lock = asyncio.Lock()
         # OneBot bot 引用（从 event.bot 获取，供撤回使用）
         self._bot_ref = None
+        # 黑名单群组缓存（从 persona_switcher 读取）
+        self._blocked_groups_cache = []
+        self._blocked_groups_checked = 0
         # 质量预设（像素密度等级，非固定分辨率；实际宽高由比例动态计算）
         self.quality_presets = {
             "480p": {"name": "SD", "pixels": 399_360},
@@ -472,7 +525,7 @@ class ComfyUILocalPlugin(Star):
         loop.create_task(self._ws_progress_listener())
         lan = f"，局域网 http://你的IP:{self.webui_port}" if self.webui_lan else ""
         ipv6 = f"，IPv6 http://[你的IPv6]:{self.webui_port}" if self.webui_ipv6 else ""
-        logger.info(f"[ComfyUI] WebUI: http://127.0.0.1:{self.webui_port}{lan}{ipv6} | 工作流目录: {wdir} | 上传模式: {self.upload_mode}")
+        logger.info(f"[ComfyUI] WebUI: http://127.0.0.1:{self.webui_port}{lan}{ipv6} | 工作流目录: {wdir}")
 
     def _load_local_config(self):
         p = Path(__file__).resolve().parent / "plugin_config.json"
@@ -517,7 +570,7 @@ class ComfyUILocalPlugin(Star):
         try:
             tools = [ComfyUIDrawTool(), ComfyUIListWorkflowsTool(), ComfyUISwitchWorkflowTool(), ComfyUIGetCurrentWorkflowTool(),
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIEditTool(), ComfyUIRandomTool(),
-                     ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool()]
+                     ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool()]
             for t in tools:
                 t._plugin = self
                 self.context.add_llm_tools(t)
@@ -802,6 +855,10 @@ class ComfyUILocalPlugin(Star):
         return user_id, group_id, allowed
 
     async def _ensure_workflow_for_event(self, event):
+        # 黑名单检查：封锁群中非管理员禁止使用所有命令
+        if self._check_group_blocked(event):
+            event.stop_event()
+            return
         context_key = self._get_context_key(event)
         if not context_key:
             return
@@ -833,6 +890,37 @@ class ComfyUILocalPlugin(Star):
 
         # 更新上下文记录
         self._context_workflows[context_key] = self.current_workflow_name
+
+    def _check_group_blocked(self, event) -> bool:
+        """检查群是否被 persona_switcher 加入黑名单。如果被封锁且用户不是管理员，返回 True。"""
+        group_id = event.get_group_id() if hasattr(event, 'get_group_id') else None
+        if not group_id:
+            return False
+        gid = str(group_id)
+        # 每 60 秒重新读取一次黑名单
+        import time
+        now = time.time()
+        if now - self._blocked_groups_checked > 60:
+            self._blocked_groups_checked = now
+            try:
+                bp = Path(__file__).resolve().parent.parent / "astrbot_plugin_persona_switcher" / "blocked_groups.json"
+                if bp.exists():
+                    with open(bp, 'r', encoding='utf-8') as f:
+                        self._blocked_groups_cache = json.load(f) or []
+                else:
+                    self._blocked_groups_cache = []
+            except Exception:
+                self._blocked_groups_cache = []
+        if gid in self._blocked_groups_cache:
+            # 检查是否是管理员
+            try:
+                perm = event.get_permission()
+                if perm in (filter.PermissionType.ADMIN, filter.PermissionType.SUPER_USER):
+                    return False  # 管理员放行
+            except Exception:
+                pass
+            return True
+        return False
 
     async def _ensure_command_workflow(self, event, cmd_name):
         """根据 __wf_categories__ 分类确保当前工作流允许该命令执行。
@@ -876,15 +964,21 @@ class ComfyUILocalPlugin(Star):
         }, timeout=30)
         return m
 
+    async def _serve_webui(self, r):
+        resp = web.FileResponse(Path(__file__).parent / 'webui.html')
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
+
     def _start_webui(self):
         app = web.Application()
-        app.router.add_get('/', lambda r: web.FileResponse(Path(__file__).parent / 'webui.html'))
+        app.router.add_get('/', self._serve_webui)
         app.router.add_get('/favicon.ico', lambda r: web.Response(status=204))  # 静默处理 favicon 请求
         app.router.add_get('/api/config', lambda r: web.json_response({
             "comfyui_url": self.comfyui_url,
             "workflow_dir": str(self.workflow_dir) if self.workflow_dir.parts else "",
             "output_dir": str(self.output_dir) if self.output_dir.parts else "",
-            "upload_mode": self.upload_mode,
             "webui_port": self.webui_port,
             "webui_lan": self.webui_lan,
             "webui_ipv6": self.webui_ipv6,
@@ -913,10 +1007,6 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/upload-image', self._webui_upload_image)
         app.router.add_get('/api/context-workflows', self._webui_get_context_workflows)
         app.router.add_post('/api/context-workflow', self._webui_set_context_workflow)
-        # 工作流预览图 API
-        app.router.add_get('/api/wf_previews', self._webui_get_wf_previews)
-        app.router.add_post('/api/wf_preview', self._webui_upload_wf_preview)
-        app.router.add_get('/api/wf_preview', self._webui_get_wf_preview)
         # WebUI 质量与比例 API
         app.router.add_post('/api/set-quality', self._webui_set_quality)
         app.router.add_post('/api/set-ratio', self._webui_set_ratio)
@@ -932,23 +1022,77 @@ class ComfyUILocalPlugin(Star):
         # 魔导书 API
         app.router.add_get('/api/grimoire/sources', self._webui_grimoire_sources)
         app.router.add_get('/api/grimoire/data', self._webui_grimoire_data)
+        app.router.add_get('/api/grimoire/categories', self._webui_grimoire_categories)
         app.router.add_post('/api/grimoire/data', self._webui_grimoire_add)
         app.router.add_put('/api/grimoire/data', self._webui_grimoire_update)
         app.router.add_delete('/api/grimoire/data', self._webui_grimoire_delete)
         app.router.add_post('/api/grimoire/source', self._webui_grimoire_new_source)
+        app.router.add_put('/api/grimoire/source', self._webui_grimoire_rename_source)
         app.router.add_delete('/api/grimoire/source', self._webui_grimoire_delete_source)
+        app.router.add_post('/api/grimoire/category', self._webui_grimoire_new_category)
+        app.router.add_put('/api/grimoire/category', self._webui_grimoire_rename_category)
+        app.router.add_delete('/api/grimoire/category', self._webui_grimoire_delete_category)
         app.router.add_get('/api/grimoire/status', self._webui_grimoire_status)
         app.router.add_post('/api/grimoire/status', self._webui_grimoire_toggle)
         app.router.add_post('/api/grimoire/batch-import', self._webui_grimoire_batch_import)
-        asyncio.get_event_loop().create_task(self._run_webui(web.AppRunner(app)))
+        app.router.add_post('/api/grimoire/batch-delete', self._webui_grimoire_batch_delete)
+        app.router.add_get('/api/grimoire/pins', self._webui_grimoire_get_pins)
+        app.router.add_post('/api/grimoire/pin', self._webui_grimoire_set_pin)
+        app.router.add_get('/api/grimoire/rand-pool', self._webui_grimoire_get_rand_pool)
+        app.router.add_post('/api/grimoire/rand-pool', self._webui_grimoire_set_rand_pool)
+        app.router.add_post('/api/grimoire/random-pick', self._webui_grimoire_random_pick)
+        # 收藏（Star）API
+        app.router.add_get('/api/grimoire/stars', self._webui_grimoire_get_stars)
+        app.router.add_post('/api/grimoire/stars', self._webui_grimoire_set_stars)
+        # 魔导书图片缓存 API
+        app.router.add_get('/api/grimoire/cache-status', self._webui_grimoire_cache_status)
+        app.router.add_post('/api/grimoire/cache-all', self._webui_grimoire_cache_all)
+        app.router.add_get('/api/grimoire/cache-progress', self._webui_grimoire_cache_progress)
+        app.router.add_get('/cache/{filename}', self._webui_cache_image)
+        self._webui_app = app
+        self._webui_runner = web.AppRunner(app)
+        asyncio.get_event_loop().create_task(self._run_webui(self._webui_runner))
 
     async def _run_webui(self, runner):
         await runner.setup()
-        await web.TCPSite(runner, '127.0.0.1', self.webui_port).start()
+        self._webui_site_local = web.TCPSite(runner, '127.0.0.1', self.webui_port)
+        await self._webui_site_local.start()
+        self._webui_site_lan = None
+        self._webui_site_ipv6 = None
         if self.webui_lan:
-            await web.TCPSite(runner, '0.0.0.0', self.webui_port).start()
+            self._webui_site_lan = web.TCPSite(runner, '0.0.0.0', self.webui_port)
+            await self._webui_site_lan.start()
         if self.webui_ipv6:
-            await web.TCPSite(runner, '::', self.webui_port).start()
+            self._webui_site_ipv6 = web.TCPSite(runner, '::', self.webui_port)
+            await self._webui_site_ipv6.start()
+
+    async def _toggle_lan(self, enable: bool):
+        """动态开启/关闭局域网访问"""
+        try:
+            if enable and not self._webui_site_lan:
+                self._webui_site_lan = web.TCPSite(self._webui_runner, '0.0.0.0', self.webui_port)
+                await self._webui_site_lan.start()
+                logger.info(f"[ComfyUI] 局域网访问已开启 (0.0.0.0:{self.webui_port})")
+            elif not enable and self._webui_site_lan:
+                await self._webui_site_lan.stop()
+                self._webui_site_lan = None
+                logger.info(f"[ComfyUI] 局域网访问已关闭")
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 切换局域网访问失败: {e}")
+
+    async def _toggle_ipv6(self, enable: bool):
+        """动态开启/关闭 IPv6 访问"""
+        try:
+            if enable and not self._webui_site_ipv6:
+                self._webui_site_ipv6 = web.TCPSite(self._webui_runner, '::', self.webui_port)
+                await self._webui_site_ipv6.start()
+                logger.info(f"[ComfyUI] IPv6 访问已开启")
+            elif not enable and self._webui_site_ipv6:
+                await self._webui_site_ipv6.stop()
+                self._webui_site_ipv6 = None
+                logger.info(f"[ComfyUI] IPv6 访问已关闭")
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 切换 IPv6 访问失败: {e}")
 
     async def _webui_save_config(self, r):
         try:
@@ -971,10 +1115,6 @@ class ComfyUILocalPlugin(Star):
             except Exception as e:
                 logger.warning(f"[ComfyUI] 创建输出目录失败: {e}")
             updates["output_dir"] = d["output_dir"]
-        if "upload_mode" in d:
-            self.upload_mode = d["upload_mode"]
-            updates["upload_mode"] = d["upload_mode"]
-            logger.info(f"[ComfyUI] 上传模式切换为: {d['upload_mode']}")
         if "webui_port" in d:
             try:
                 port = int(d["webui_port"])
@@ -982,14 +1122,10 @@ class ComfyUILocalPlugin(Star):
                     return web.json_response({"ok": False, "error": "端口范围 1-65535"})
                 self.webui_port = port
                 updates["webui_port"] = port
+                await self._toggle_lan(self.webui_lan)
+                await self._toggle_ipv6(self.webui_ipv6)
             except ValueError:
                 return web.json_response({"ok": False, "error": "端口必须是数字"})
-        if "webui_lan" in d:
-            self.webui_lan = bool(d["webui_lan"])
-            updates["webui_lan"] = self.webui_lan
-        if "webui_ipv6" in d:
-            self.webui_ipv6 = bool(d["webui_ipv6"])
-            updates["webui_ipv6"] = self.webui_ipv6
         if updates:
             self._save_local_config(updates)
         return web.json_response({"ok": True})
@@ -1111,14 +1247,6 @@ class ComfyUILocalPlugin(Star):
             # 安全检查：确保在 workflow 目录内
             target.resolve().relative_to(wdir.resolve())
             target.unlink()
-            # 同时删除预览图
-            preview_file = self.preview_dir / f"{name}.jpg"
-            if preview_file.exists():
-                try:
-                    preview_file.unlink()
-                    logger.info(f"[ComfyUI] 已删除预览图: {preview_file}")
-                except Exception as e:
-                    logger.warning(f"[ComfyUI] 删除预览图失败: {e}")
             logger.info(f"[ComfyUI] 已删除工作流: {name}")
             async with self._config_lock:
                 # 删除相关配置（分类、隐藏、别名）
@@ -1153,6 +1281,11 @@ class ComfyUILocalPlugin(Star):
                                 del bd[bid]
                         elif isinstance(wfs, str) and wfs == name:
                             del bd[bid]
+                # 清理 __workflow_node_configs__ 中该工作流的条目
+                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+                if name in wf_configs:
+                    del wf_configs[name]
+                    self.workflow_config['__workflow_node_configs__'] = wf_configs
                 await self._save_workflow_config()
             return web.json_response({"ok": True})
         except ValueError:
@@ -1492,10 +1625,15 @@ class ComfyUILocalPlugin(Star):
         try:
             with open(self.workflow_path, 'r', encoding='utf-8') as f: wf = json.load(f)
             result = self._parse_workflow_params(wf)
+            # 用 __saved_texts__ 覆盖显示值（让前端能看到保存的文本，包括清空后的空值）
+            wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+            wf_cfg = wf_configs.get(self.current_workflow_name, {})
+            wf_saved = wf_cfg.get('__saved_texts__', {}) or {}
             for node in result["nodes"]:
                 for p in node["params"]:
                     ck = f"{node['id']}_{p['key']}"
-                    if ck in self.workflow_config: p["value"] = self.workflow_config[ck]
+                    if ck in wf_saved:
+                        p["value"] = wf_saved[ck]
             return web.json_response(result)
         except Exception as e:
             logger.warning(f"[ComfyUI] 获取工作流参数失败: {e}")
@@ -1525,6 +1663,30 @@ class ComfyUILocalPlugin(Star):
                 preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
                 for key in preserved_keys:
                     if key not in data and key in self.workflow_config: data[key] = self.workflow_config[key]
+                # 将 {nodeId}_{key} 类的键存入工作流专属配置，防止跨工作流泄漏
+                wf_configs = data.get('__workflow_node_configs__', {}) or {}
+                wf_configs[wf_name] = wf_configs.get(wf_name, {})
+                wf_saved_texts = wf_configs[wf_name].get('__saved_texts__', {}) or {}
+                for ck in list(data.keys()):
+                    if ck.startswith('__'): continue
+                    parts = ck.split('_', 1)
+                    if len(parts) == 2 and parts[0].isdigit():
+                        wf_saved_texts[ck] = data.pop(ck)
+                if wf_saved_texts:
+                    wf_configs[wf_name]['__saved_texts__'] = wf_saved_texts
+                    data['__workflow_node_configs__'] = wf_configs
+                # 计算并保存工作流内容指纹
+                wf_path_save = self.workflow_path
+                if wf_path_save:
+                    try:
+                        with open(wf_path_save, 'r', encoding='utf-8') as f:
+                            fp = self._compute_fingerprint(json.load(f))
+                        wf_configs = data.get('__workflow_node_configs__', {}) or {}
+                        wf_configs[wf_name] = wf_configs.get(wf_name, {})
+                        wf_configs[wf_name]['__fingerprint__'] = fp
+                        data['__workflow_node_configs__'] = wf_configs
+                    except Exception:
+                        pass
                 # 更新内存中的 workflow_config，再通过统一函数写文件（含合并逻辑）
                 self.workflow_config.update(data)
             # 锁已释放，再调用 _save_workflow_config（它不自带锁，与 asyncio.Lock 的重入危险已解除）
@@ -1554,14 +1716,17 @@ class ComfyUILocalPlugin(Star):
         # 计算已运行时间
         start_ts = self._prompt_start_time.get(pid, 0)
         elapsed = int(time.time() - start_ts) if start_ts else 0
-        is_running = running > 0 or self._generating_lock
+        any_running = any(
+            pp.get('running', False) for pp in self._prompt_progress.values()
+        ) if self._prompt_progress else False
+        is_running = running > 0 or any_running
         return web.json_response({
             "prompt_id": pid or "",
             "queue_running": running,
             "queue_pending": pending,
             "running": is_running,
             "elapsed": elapsed,
-            "state": "generating" if self._generating_lock else ("queued" if running > 0 else "idle"),
+            "state": "generating" if any_running else ("queued" if running > 0 else "idle"),
         })
 
     async def _webui_get_workflow_params_config(self, request):
@@ -1652,18 +1817,17 @@ class ComfyUILocalPlugin(Star):
             self.comfyui_url = "127.0.0.1:8188"
             self.output_dir = Path()
             self.upload_dir = Path()
-            self.upload_mode = "local"
             self.webui_port = 8898
             self.webui_lan = False
             self.webui_ipv6 = False
             self.default_quality = "720p"
             self.default_ratio = "9:16"
             self.default_width, self.default_height = self._calc_resolution(self.default_quality, self.default_ratio)
-            # 写回一个干净的配置文件（保留 __local_config__ 和 __groups_binding__ 空结构）
+            # 写回一个干净的配置文件（保留 __local_config__ 和 __group_bindings__ 空结构）
             config_path = Path(__file__).resolve().parent / "plugin_config.json"
             clean = {
                 "__local_config__": {},
-                "__groups_binding__": {}
+                "__group_bindings__": {}
             }
             async with self._config_lock:
                 with open(str(config_path), 'w', encoding='utf-8') as f:
@@ -1691,6 +1855,21 @@ class ComfyUILocalPlugin(Star):
                 "alias": alias,
                 "display_name": display_name
             })
+        # 清理已不存在的旧工作流的残留配置（节点配置、分类、别名等）
+        existing_names = {f.name for f in files}
+        changed = False
+        for cfg_key in ('__workflow_node_configs__', '__wf_categories__', '__workflow_aliases__', '__workflow_categories__'):
+            d = self.workflow_config.get(cfg_key, {}) or {}
+            for name in list(d.keys()):
+                if name not in existing_names:
+                    del d[name]
+                    changed = True
+            if changed:
+                self.workflow_config[cfg_key] = d
+        if changed:
+            # 异步保存（不阻塞）
+            import asyncio
+            asyncio.ensure_future(self._save_workflow_config())
         self.workflow_list_cache = all_files
         visible = [w for w in all_files if not w["hidden"]]
         if not self.workflow_path and visible:
@@ -1795,17 +1974,41 @@ class ComfyUILocalPlugin(Star):
                 if 'denoise' in node.get('inputs', {}): return nid
         return None
 
+    def _compute_fingerprint(self, workflow) -> str:
+        """根据工作流的节点ID和类型计算内容指纹，用于检测工作流文件是否被替换"""
+        parts = []
+        for nid in sorted(workflow.keys(), key=int):
+            node = workflow.get(nid, {})
+            if not isinstance(node, dict): continue
+            ct = node.get('class_type', '')
+            parts.append(f"{nid}:{ct}")
+        import hashlib
+        return hashlib.md5(",".join(parts).encode()).hexdigest()
+
     def _apply_workflow_config(self, workflow):
         bind_target = self.workflow_config.get('__bind_target__', '')
         if bind_target and bind_target != self.current_workflow_name:
             return
         skip_keys = {'rgthree_comparer', 'any', 'any_input'}
-        for ck, val in self.workflow_config.items():
-            if ck.startswith('__') or val is None: continue
-            if val == '' and not ck.endswith('_text'): continue  # 允许清空提示词文本，但阻止其他空值覆盖
+        # 获取当前工作流的保存文本（从 __workflow_node_configs__ 读取，每个工作流隔离）
+        wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+        wf_cfg = wf_configs.get(self.current_workflow_name, {})
+        wf_saved_texts = wf_cfg.get('__saved_texts__', {}) or {}
+        # 只允许已配置的节点 ID 应用 _text
+        allowed_nodes = set()
+        for role_key in ('__prompt_node__', '__negative_node__'):
+            nid = wf_cfg.get(role_key, '') or self.workflow_config.get(role_key, '')
+            if nid: allowed_nodes.add(nid)
+        # 同时兼容旧版根级别 {nodeId}_text（新版的已存入 __saved_texts__）
+        for ck in list(wf_saved_texts.keys()) + [k for k in self.workflow_config.keys() if k.endswith('_text') and not k.startswith('__') and k not in wf_saved_texts]:
+            val = wf_saved_texts.get(ck)
+            if val is None:
+                val = self.workflow_config.get(ck)
+            if val is None: continue
             parts = ck.split('_', 1)
             if len(parts) == 2:
                 nid, key = parts
+                if nid not in allowed_nodes: continue
                 if key in skip_keys: continue
                 if nid in workflow and key in workflow[nid].get('inputs', {}):
                     orig = workflow[nid]['inputs'][key]
@@ -1820,14 +2023,32 @@ class ComfyUILocalPlugin(Star):
 
     def _inject_prompt(self, workflow, prompt, target_node=None):
         nid = target_node or self._find_positive_prompt_node(workflow)
-        if nid and nid in workflow: workflow[nid]['inputs']['text'] = prompt; return True
+        if nid and nid in workflow:
+            inputs = workflow[nid].get('inputs', {})
+            # 自动找到第一个字符串字段，追加而非覆盖
+            for key, val in inputs.items():
+                if isinstance(val, str):
+                    existing = val.strip()
+                    if existing:
+                        workflow[nid]['inputs'][key] = f"{existing}, {prompt}"
+                    else:
+                        workflow[nid]['inputs'][key] = prompt
+                    return True
         return False
 
     def _inject_negative_prompt(self, workflow, negative_prompt):
         nid = self._find_negative_prompt_node(workflow)
         if nid and nid in workflow:
-            workflow[nid]['inputs']['text'] = negative_prompt
-            return True
+            inputs = workflow[nid].get('inputs', {})
+            # 自动找到第一个字符串字段，追加而非覆盖
+            for key, val in inputs.items():
+                if isinstance(val, str):
+                    existing = val.strip()
+                    if existing:
+                        workflow[nid]['inputs'][key] = f"{existing}, {negative_prompt}"
+                    else:
+                        workflow[nid]['inputs'][key] = negative_prompt
+                    return True
         return False
 
     def _set_resolution(self, workflow, width, height):
@@ -2311,7 +2532,7 @@ class ComfyUILocalPlugin(Star):
                 await asyncio.sleep(5)
             await asyncio.sleep(0.5)
 
-    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None):
+    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None, skip_pin_merge=False):
         self._refresh_workflow_list()
         if not self.workflow_path: return ("error", "未设置工作流", None)
         is_video = any(k in self.current_workflow_name.lower() for k in ['视频', 'wan', 'ltx', 'animate'])
@@ -2322,6 +2543,48 @@ class ComfyUILocalPlugin(Star):
             #    工作流有不同节点 ID，导致 _apply_workflow_config 无法正确应用保存的参数。
             wf_path = self.workflow_path
             with open(wf_path, 'r', encoding='utf-8') as f: wf = json.load(f)
+
+            # 4. 内容指纹校验：检测工作流文件是否被替换（即使同名）
+            wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+            wf_cfg = wf_configs.get(self.current_workflow_name, {})
+            saved_fp = wf_cfg.get('__fingerprint__', '')
+            roles_ok = True
+            if saved_fp:
+                current_fp = self._compute_fingerprint(wf)
+                if current_fp != saved_fp:
+                    logger.info(f"[ComfyUI] 工作流 {self.current_workflow_name} 内容已变更(指纹不匹配)，清除旧配置")
+                    if self.current_workflow_name in wf_configs:
+                        del wf_configs[self.current_workflow_name]
+                        self.workflow_config['__workflow_node_configs__'] = wf_configs
+                    for k in list(self.workflow_config.keys()):
+                        if k.endswith('_text') and not k.startswith('__'):
+                            nid = k.split('_')[0]
+                            if nid.isdigit():
+                                del self.workflow_config[k]
+                    self._refresh_workflow_list()
+                    await self._save_workflow_config()
+                    # 重新加载当前工作流（不含旧配置干扰）
+                    with open(wf_path, 'r', encoding='utf-8') as f2: wf = json.load(f2)
+                    wf_cfg = {}  # 配置已清空
+                    return ("error", "检测到工作流文件已变更，旧配置已清除，请重新设置节点角色", None)
+            for role_key in ('__prompt_node__', '__negative_node__', '__resolution_node__'):
+                nid = wf_cfg.get(role_key, '')
+                if nid and nid not in wf:
+                    roles_ok = False
+                    break
+            if not roles_ok:
+                logger.info(f"[ComfyUI] 工作流 {self.current_workflow_name} 配置的节点 ID 不存在，文件可能已替换，清除配置")
+                if self.current_workflow_name in wf_configs:
+                    del wf_configs[self.current_workflow_name]
+                    self.workflow_config['__workflow_node_configs__'] = wf_configs
+                    # 同时清掉根级别的旧版 {nodeId}_text（全部清不现实，但清掉这些的能减少泄漏）
+                    for k in list(self.workflow_config.keys()):
+                        if k.endswith('_text') and not k.startswith('__'):
+                            nid = k.split('_')[0]
+                            if nid.isdigit():
+                                del self.workflow_config[k]
+                    self._refresh_workflow_list()
+                    await self._save_workflow_config()
 
             # 2. 从工作流 JSON 读取分辨率节点已保存的宽高
             w, h = None, None
@@ -2388,8 +2651,44 @@ class ComfyUILocalPlugin(Star):
                 self._set_resolution(wf, w, h)
             if image_path: await self._set_load_image(wf, image_path)
             if prompt:
+                # 合并固定标签到 prompt（有冲突检测），随机图模式跳过（已由 random-pick 合并过）
+                if not skip_pin_merge:
+                    if self.workflow_config.get('__grimoire_enabled__', False):
+                        prompt = self._merge_prompt_with_pins(prompt)
                 target_node = cmd_config.get('__prompt_node__') if cmd_config else None
-                self._inject_prompt(wf, prompt, target_node)
+                # 注入前日志：看节点现在的实际值
+                nid_before = target_node or self._find_positive_prompt_node(wf)
+                if nid_before and nid_before in wf:
+                    for k, v in wf[nid_before].get('inputs', {}).items():
+                        if isinstance(v, str):
+                            logger.info(f"[ComfyUI] 注入前节点 #{nid_before}.{k} = {v[:200]!r}")
+                            break
+                        elif isinstance(v, list):
+                            logger.info(f"[ComfyUI] 注入前节点 #{nid_before}.{k} 是连线(非文本): {v}")
+                else:
+                    logger.warning(f"[ComfyUI] 注入前：未找到节点 #{nid_before}")
+                if self._inject_prompt(wf, prompt, target_node):
+                    # 日志：打印注入后节点的实际文本
+                    nid = target_node or self._find_positive_prompt_node(wf)
+                    if nid and nid in wf:
+                        for k, v in wf[nid].get('inputs', {}).items():
+                            if isinstance(v, str):
+                                logger.info(f"[ComfyUI] 正面节点 #{nid}.{k} 写入后: [{v}]")
+                                break
+                else:
+                    logger.warning(f"[ComfyUI] 正面提示词注入失败！未找到提示词节点或节点无可写文本字段")
+            # 写入负面提示词（从 __saved_texts__ 或根级别读取）
+            neg_nid = self._find_negative_prompt_node(wf)
+            if neg_nid:
+                neg_ck = f"{neg_nid}_text"
+                # 优先从 __saved_texts__ 读取，再 fallback 根级别
+                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+                wf_cfg = wf_configs.get(self.current_workflow_name, {})
+                wf_saved = wf_cfg.get('__saved_texts__', {}) or {}
+                neg_val = wf_saved.get(neg_ck) or self.workflow_config.get(neg_ck)
+                if neg_val:
+                    self._inject_negative_prompt(wf, neg_val)
+                    logger.info(f"[ComfyUI] 注入负面提示词: {neg_val[:200]}")
             cid = self._ws_client_id  # 使用固定 client_id 以确保 WS 监听器能收到进度消息
             async with aiohttp.ClientSession() as s:
                 total_q, _, _ = await self._get_queue_status()
@@ -2397,14 +2696,10 @@ class ComfyUILocalPlugin(Star):
                 async with s.post(f"http://{self.comfyui_url}/prompt", json={"prompt": wf, "client_id": cid}) as r:
                     rj = await r.json()
                 if 'prompt_id' not in rj:
-                    self._generating_lock = False
-                    if user_id: self._generating_locks.pop(user_id, None)
                     return ("error", "提交失败", None)
                 pid = rj['prompt_id']
                 # ⚡ 立即预置进度数据，防止 WS 监听器在 async 间隙读到空值
                 self.current_prompt_id = pid
-                self._generating_lock = True
-                if user_id: self._generating_locks[user_id] = True
                 self._prompt_start_time[pid] = time.time()
                 self._prompt_node_count[pid] = len(wf)
                 self._prompt_progress[pid] = {
@@ -2421,8 +2716,6 @@ class ComfyUILocalPlugin(Star):
                 logger.info(f"[ComfyUI] 任务提交: {pid}, 节点数: {len(wf)}, 等待完成...")
                 outputs = await self._wait_for_history(pid, s, timeout=timeout_sec)
                 # 无论结果如何，任务已结束，清除进度状态
-                self._generating_lock = False
-                if user_id: self._generating_locks.pop(user_id, None)
                 if pid in self._prompt_progress:
                     self._prompt_progress[pid]['running'] = False
                 # 清理旧 pid 的进度数据，防止内存泄漏
@@ -2509,6 +2802,7 @@ class ComfyUILocalPlugin(Star):
         ctx_wf = self._context_workflows.get(ctx, self.current_workflow_name) if ctx else self.current_workflow_name
         m = f"当前工作流: {self._get_display_name(ctx_wf)}\n\n"
         m += "  /画 [比例] 提示词 - 文生图（发文字即可）\n"
+        m += "  /随机图 [数量] - 从随机池抽取标签出图（默认1张，最多10张）\n"
         m += "  /图生图 [降噪值] 提示词 - 图生图（引用图片 或 @用户获取头像）\n"
         m += "  /图生视频 - 图生视频（引用图片 或 @用户获取头像）\n"
         m += "  /编辑 提示词 - 编辑图片（直接传图、引用图片 或 @用户获取头像，最多3张）\n"
@@ -2911,11 +3205,11 @@ class ComfyUILocalPlugin(Star):
         msg = event.message_str.replace("/画", "").replace("画", "").strip()
         msg = re.sub(r'\[At:\d+\]', '', msg).strip()
         msg = re.sub(r'@\S+', '', msg).strip()
-        if not msg: yield event.plain_result("/画 提示词"); return
+        if not msg: yield event.plain_result("/画 提示词（或使用 /随机图 随机出图）"); return
         prompt = msg
         total_q, _, _ = await self._get_queue_status()
         queue_msg = self._format_queue_msg(total_q)
-        yield event.plain_result(f"生成中...{queue_msg}")
+        await event.send(event.plain_result(f"生成中...{queue_msg}"))
         cmd_config = self.workflow_config.get('__commands__', {}).get('画', {})
         status, text, path = await self._process_and_submit(prompt, None, cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id())
         if status == "ok":
@@ -2942,13 +3236,57 @@ class ComfyUILocalPlugin(Star):
         cmd_config = cmd_config if cmd_config else None
         total_q, _, _ = await self._get_queue_status()
         queue_msg = self._format_queue_msg(total_q)
-        yield event.plain_result(f"执行中...{queue_msg}")
+        await event.send(event.plain_result(f"执行中...{queue_msg}"))
         status, text, path = await self._process_and_submit(prompt, None, cmd_config=cmd_config, user_id=event.get_sender_id())
         if status == "ok":
-            sent = await self._send_image_result(event, f"✨ 执行完成 当前{text}", path)
-            if not sent:
-                yield event.image_result(path)
-        else: yield event.plain_result(text)
+            await self._send_image_result(event, f"✨ 执行完成 当前{text}", path)
+        else:
+            await event.send(event.plain_result(text))
+
+    @filter.command("随机图")
+    async def random_image(self, event: AstrMessageEvent):
+        """从随机池随机取标签 + 固定标签合并出图，支持 /随机图 N 执行 N 次"""
+        await self._ensure_workflow_for_event(event)
+        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '画')
+        if needs_sel:
+            yield event.plain_result(self._build_wf_selection_menu(event, '画', matching_wfs))
+            return
+        if not can_exec:
+            yield event.plain_result("随机图只能在「画」分类的工作流上使用，请先切换到画图工作流")
+            return
+        # 解析执行次数
+        msg = event.message_str.replace("/随机图", "").replace("随机图", "").strip()
+        count = 1
+        if msg:
+            try: count = max(1, min(int(msg), 10))
+            except ValueError: pass
+        else:
+            # 不给数字时默认 1 张
+            count = 1
+        # 先发提示（event.send 直发，不走 pipeline yield）
+        await event.send(event.plain_result(f"🎲 开始随机出图 ({count}张)..."))
+        # 运行任务，收集结果，最后发送图片
+        import aiohttp
+        tasks = []
+        for i in range(count):
+            async with aiohttp.ClientSession() as s:
+                async with s.post(f"http://127.0.0.1:{self.webui_port}/api/grimoire/random-pick", json={}) as r:
+                    data = await r.json()
+            if not data.get("ok") or not data.get("tags"):
+                if i == 0:
+                    yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
+                break
+            status, text, path = await self._process_and_submit(data["tags"], None, user_id=event.get_sender_id(), skip_pin_merge=True)
+            tasks.append((status, text, path))
+        if not tasks:
+            return
+        success = 0
+        for i, (status, text, path) in enumerate(tasks):
+            if status == "ok":
+                await self._send_image_result(event, f"🎲 随机图 ({i+1}/{len(tasks)})", path)
+                success += 1
+        if success > 0:
+            await event.send(event.plain_result(f"🎲 随机图完成，共 {success} 张"))
 
     @filter.command("图生图")
     async def img2img(self, event: AstrMessageEvent):
@@ -2973,8 +3311,10 @@ class ComfyUILocalPlugin(Star):
             total_q, _, _ = await self._get_queue_status()
             queue_msg = self._format_queue_msg(total_q)
             denoise_hint = f"（降噪: {denoise}）" if denoise else ""
-            yield event.plain_result(f"生成中...{denoise_hint}{queue_msg}")
-            if not await self._download_image(image_url, save_path): yield event.plain_result("下载图片失败"); return
+            await event.send(event.plain_result(f"生成中...{denoise_hint}{queue_msg}"))
+            if not await self._download_image(image_url, save_path):
+                yield event.plain_result("下载图片失败")
+                return
             cmd_config = dict(self.workflow_config.get('__commands__', {}).get('图生图', {}))
             if denoise:
                 try:
@@ -3071,7 +3411,7 @@ class ComfyUILocalPlugin(Star):
 
         total_q, _, _ = await self._get_queue_status()
         queue_msg = self._format_queue_msg(total_q)
-        yield event.plain_result(f"生成中...（已加载 {len(saved_paths)} 张图片）{queue_msg}")
+        await event.send(event.plain_result(f"生成中...（已加载 {len(saved_paths)} 张图片）{queue_msg}"))
 
         cmd_config = dict(self.workflow_config.get('__commands__', {}).get('编辑', {}))
         imgs = [str(p) for p in saved_paths]
@@ -3094,62 +3434,6 @@ class ComfyUILocalPlugin(Star):
                 yield event.image_result(out_path)
         else:
             yield event.plain_result(text)
-
-    async def _webui_get_wf_previews(self, r):
-        """返回所有有预览图的工作流列表"""
-        try:
-            previews = {}
-            if self.preview_dir.exists():
-                for f in self.preview_dir.iterdir():
-                    if f.is_file():
-                        wf_name = f.stem  # 去掉扩展名
-                        previews[wf_name] = True
-            return web.json_response({"previews": previews})
-        except Exception as e:
-            logger.warning(f"[ComfyUI] 获取预览列表失败: {e}")
-            return web.json_response({"previews": {}})
-
-    async def _webui_upload_wf_preview(self, r):
-        """上传工作流预览图（接收 base64 JSON）"""
-        try:
-            data = await r.json()
-            name = data.get('name', '').strip()
-            base64_data = data.get('image', '')
-            if not name or '..' in name or '/' in name or '\\' in name:
-                return web.json_response({"ok": False, "error": "非法工作流名称"})
-            if not base64_data:
-                return web.json_response({"ok": False, "error": "未收到图片数据"})
-            # 解码 base64
-            import base64
-            header, _, encoded = base64_data.partition(',')
-            try:
-                img_bytes = base64.b64decode(encoded)
-            except Exception:
-                return web.json_response({"ok": False, "error": "图片数据解码失败"})
-            # 保存预览图（始终用 .jpg 扩展名）
-            safe_name = Path(name).name  # 去掉路径部分
-            preview_path = self.preview_dir / f"{safe_name}.jpg"
-            preview_path.write_bytes(img_bytes)
-            logger.info(f"[ComfyUI] 预览图已保存: {preview_path}")
-            return web.json_response({"ok": True})
-        except Exception as e:
-            logger.error(f"[ComfyUI] 上传预览图失败: {e}")
-            return web.json_response({"ok": False, "error": str(e)})
-
-    async def _webui_get_wf_preview(self, r):
-        """获取工作流预览图"""
-        try:
-            name = r.query.get('name', '').strip()
-            if not name or '..' in name or '/' in name or '\\' in name:
-                return web.Response(status=400, text="非法工作流名称")
-            safe_name = Path(name).name
-            preview_path = self.preview_dir / f"{safe_name}.jpg"
-            if not preview_path.exists():
-                return web.Response(status=404, text="预览图不存在")
-            return web.FileResponse(preview_path, headers={'Content-Type': 'image/jpeg'})
-        except Exception as e:
-            logger.error(f"[ComfyUI] 获取预览图失败: {e}")
-            return web.Response(status=500, text=str(e))
 
     # ── 画廊 API ──────────────────────────────────────────
 
@@ -3331,9 +3615,10 @@ class ComfyUILocalPlugin(Star):
     # ========================================================================
 
     async def _webui_grimoire_sources(self, request):
-        """列出所有数据源（按目录分组）"""
+        """列出所有数据源（按目录分组），缺失的 anima 数据从 Anima-Tools JS 补充"""
         data_dir = Path(__file__).resolve().parent / "data"
         sources = []
+        have_anima_sources = set()
         if data_dir.exists():
             for fpath in sorted(data_dir.rglob("*.json")):
                 rel = fpath.relative_to(data_dir)
@@ -3349,12 +3634,33 @@ class ComfyUILocalPlugin(Star):
                     "name": rel.stem,
                     "dir": str(rel.parent) if str(rel.parent) != '.' else '',
                     "count": count,
-                    "size": fpath.stat().st_size
+                    "size": fpath.stat().st_size,
+                    "readonly": False,
                 })
+                # 记录已有的 anima 源（去掉 .json 后缀）
+                rel_normal = str(rel.parent / rel.stem).replace('\\', '/')
+                have_anima_sources.add(rel_normal)
+
+        # 补充缺失的 anima 源（从 Anima-Tools JS）
+        for source_path, source_name, label in _ANIMA_SOURCE_NAMES:
+            normal_path = source_path.replace('\\', '/')
+            if normal_path not in have_anima_sources:
+                items = load_anima_tools_source(source_name)
+                count = len(items)
+                sources.append({
+                    "path": source_path + ".json",
+                    "name": source_name,
+                    "dir": "anima",
+                    "count": count,
+                    "size": 0,
+                    "readonly": True,
+                })
+                logger.info(f"[魔导书] 补充 Anima-Tools 源: {label} ({count} 条)")
+
         return web.json_response({"sources": sources})
 
     async def _webui_grimoire_data(self, request):
-        """读取某个数据源的数据（支持分页和搜索）"""
+        """读取某个数据源的数据（支持分页、搜索和分类过滤）"""
         source = request.query.get('source', '').strip()
         try:
             page = int(request.query.get('page', '1'))
@@ -3362,6 +3668,7 @@ class ComfyUILocalPlugin(Star):
         except (ValueError, TypeError):
             page, page_size = 1, 50
         q = request.query.get('q', '').strip()
+        category = request.query.get('category', '').strip()
         if not source:
             return web.json_response({"ok": False, "error": "缺少 source 参数"})
         data_dir = Path(__file__).resolve().parent / "data"
@@ -3371,37 +3678,126 @@ class ComfyUILocalPlugin(Star):
         # 尝试加上 .json 后缀（如果 source 不带后缀）
         if not fpath.suffix:
             fpath = fpath.with_suffix('.json')
-        if not fpath.exists() or not fpath.is_file():
-            return web.json_response({"ok": False, "error": f"数据源不存在: {source}"})
-        try:
-            if fpath.exists() and fpath.stat().st_size > 0:
+
+        # 尝试从本地 JSON 读取
+        items = []
+        if fpath.exists():
+            try:
                 with open(fpath, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     items = json.loads(content) if content else []
-            else:
-                items = []
-            if not isinstance(items, list):
-                return web.json_response({"ok": False, "error": "数据格式错误"})
-        except Exception as e:
-            return web.json_response({"ok": False, "error": str(e)})
+            except Exception as e:
+                return web.json_response({"ok": False, "error": str(e)})
+
+        # 本地 JSON 不存在 → 尝试从 Anima-Tools JS 加载（只读源）
+        if not items and _is_anima_source(str(fpath.relative_to(data_dir))):
+            rel = fpath.relative_to(data_dir)
+            source_name = rel.stem  # artists / characters / clothing
+            items = load_anima_tools_source(source_name)
+
+        if not isinstance(items, list):
+            return web.json_response({"ok": False, "error": "数据格式错误"})
+        # 记录原始文件下标，供前端编辑/删除使用（只读源标记 readonly）
+        is_readonly = not fpath.exists()
+        items = [dict(it, index=i, readonly=is_readonly) for i, it in enumerate(items)]
         # 搜索过滤
         if q:
             kw = q.lower().strip()
             items = [it for it in items if
                      kw in (it.get("name") or "").lower() or
+                     kw in (it.get("name_cn") or "").lower() or
                      kw in (it.get("tags") or "").lower() or
                      kw in (it.get("note") or "").lower()]
+        # 分类过滤（精确匹配 category 字段，支持 ";" 分隔的多分类）
+        if category:
+            cat_kw = category.strip().lower()
+            items = [it for it in items if
+                     cat_kw in [p.strip().lower() for p in (it.get("category") or "").split(";")]]
+        # 收藏优先：将 preferred 中指定的条目排到最前面（保持原有相对顺序）
+        preferred = request.query.get('preferred', '').strip()
+        if preferred:
+            pref_names = [n.strip().lower() for n in preferred.split(',') if n.strip()]
+            if pref_names:
+                preferred_items = []
+                rest = []
+                for it in items:
+                    if (it.get("name") or "").lower() in pref_names:
+                        preferred_items.append(it)
+                    else:
+                        rest.append(it)
+                items = preferred_items + rest
         total = len(items)
         # 分页
         start = (page - 1) * page_size
         end = start + page_size
         page_items = items[start:end]
+        # 缓存状态只在当前页检查（避免 4 万次文件系统查询）
+        for it in page_items:
+            img_url = it.get("image_url") or ""
+            if img_url:
+                cache_key = hashlib.md5(img_url.encode()).hexdigest()
+                it["cache_key"] = cache_key
+                it["cached"] = (self._grimoire_cache_dir / cache_key).exists()
+            else:
+                it["cached"] = False
         return web.json_response({
             "ok": True,
             "items": page_items,
             "total": total,
             "page": page,
             "pageSize": page_size
+        })
+
+    async def _webui_grimoire_categories(self, request):
+        """获取某个数据源的所有可用分类（角色只返回热度前 50）"""
+        source = request.query.get('source', '').strip()
+        if not source:
+            return web.json_response({"ok": False, "error": "缺少 source 参数"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        source = source.replace('/', os.sep).replace('\\', os.sep)
+        fpath = data_dir / source
+        if not fpath.suffix:
+            fpath = fpath.with_suffix('.json')
+
+        items = []
+        if fpath.exists() and fpath.is_file():
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    items = json.loads(content) if content else []
+            except Exception:
+                items = []
+
+        # 本地 JSON 不存在 → 尝试从 Anima-Tools JS 加载
+        if not items and _is_anima_source(str(fpath.relative_to(data_dir))):
+            source_name = fpath.relative_to(data_dir).stem
+            items = load_anima_tools_source(source_name)
+
+        if not isinstance(items, list):
+            items = []
+        # 统计每个分类的条目数，按热度排序
+        cat_count: dict[str, int] = {}
+        cat_cn: dict[str, str] = {}
+        for it in items:
+            raw = (it.get("category") or "").strip()
+            if not raw:
+                continue
+            parts = [p.strip() for p in raw.split(";") if p.strip()]
+            for c in parts:
+                cat_count[c] = cat_count.get(c, 0) + 1
+                if c not in cat_cn:
+                    cat_cn[c] = (it.get("category_cn") or "").strip() or c
+        # 角色数据只返回热度前 50（826 个太多），服装/画师全返回
+        is_character_source = _is_anima_source(source) and 'character' in source.lower()
+        sorted_by_count = sorted(cat_count.items(), key=lambda x: -x[1])
+        if is_character_source and len(sorted_by_count) > 50:
+            sorted_by_count = sorted_by_count[:50]
+        sorted_cats = [c for c, _ in sorted_by_count]
+        categories_with_cn = [{"category": c, "name_cn": cat_cn[c], "count": cat_count[c]} for c in sorted_cats]
+        return web.json_response({
+            "ok": True, "categories": sorted_cats,
+            "categories_cn": categories_with_cn,
+            "total": len(cat_count), "shown": len(sorted_cats)
         })
 
     async def _webui_grimoire_add(self, request):
@@ -3414,20 +3810,32 @@ class ComfyUILocalPlugin(Star):
         item = body.get('item', {})
         if not source or not item:
             return web.json_response({"ok": False, "error": "缺少 source 或 item 参数"})
+        # Anima-Tools 源只读保护
+        if _is_anima_source(source):
+            return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可新增"})
         name = item.get('name', '').strip()
+        name_cn = item.get('name_cn', '').strip()
         tags = item.get('tags', '').strip()
         note = item.get('note', '').strip()
         style = item.get('style', 'general').strip()
+        category = item.get('category', '').strip()
+        category_cn = item.get('category_cn', '').strip()
         if not name:
             return web.json_response({"ok": False, "error": "名称不能为空"})
         if not tags:
             # fallback：未填 tags 时用 name 代替（建议用户填写英文标签）
             tags = name
         entry = {"name": name, "tags": tags}
+        if name_cn:
+            entry["name_cn"] = name_cn
         if note:
             entry["note"] = note
         if style:
             entry["style"] = style
+        if category:
+            entry["category"] = category
+        if category_cn:
+            entry["category_cn"] = category_cn
         data_dir = Path(__file__).resolve().parent / "data"
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
@@ -3467,6 +3875,9 @@ class ComfyUILocalPlugin(Star):
         items_data = body.get('items', [])
         if not source or not items_data:
             return web.json_response({"ok": False, "error": "缺少 source 或 items 参数"})
+        # Anima-Tools 源只读保护
+        if _is_anima_source(source):
+            return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可批量导入"})
         if not isinstance(items_data, list):
             return web.json_response({"ok": False, "error": "items 必须是数组"})
         # 解析并验证每条数据
@@ -3474,6 +3885,7 @@ class ComfyUILocalPlugin(Star):
         errors = []
         for i, raw in enumerate(items_data):
             name = (raw.get('name') or '').strip()
+            name_cn = (raw.get('name_cn') or '').strip()
             tags = (raw.get('tags') or '').strip()
             if not name:
                 errors.append(f"第 {i+1} 条缺少 name")
@@ -3481,12 +3893,20 @@ class ComfyUILocalPlugin(Star):
             if not tags:
                 tags = name
             entry = {"name": name, "tags": tags}
+            if name_cn:
+                entry["name_cn"] = name_cn
             note = (raw.get('note') or '').strip()
             style = (raw.get('style') or 'general').strip()
+            category = (raw.get('category') or '').strip()
+            category_cn = (raw.get('category_cn') or '').strip()
             if note:
                 entry["note"] = note
             if style:
                 entry["style"] = style
+            if category:
+                entry["category"] = category
+            if category_cn:
+                entry["category_cn"] = category_cn
             parsed.append(entry)
         if not parsed:
             return web.json_response({"ok": False, "error": "没有有效数据", "errors": errors})
@@ -3523,6 +3943,198 @@ class ComfyUILocalPlugin(Star):
             "total": len(items_data)
         })
 
+    async def _webui_grimoire_batch_delete(self, request):
+        """批量删除条目"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        source = body.get('source', '').strip()
+        indices = body.get('indices', [])
+        if not source or not indices:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        # Anima-Tools 源只读保护
+        if _is_anima_source(source):
+            return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可批量删除"})
+        if not isinstance(indices, list):
+            return web.json_response({"ok": False, "error": "indices 必须是数组"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        source = source.replace('/', os.sep).replace('\\', os.sep)
+        fpath = data_dir / source
+        if not fpath.suffix:
+            fpath = fpath.with_suffix('.json')
+        if not fpath.exists():
+            return web.json_response({"ok": False, "error": "文件不存在"})
+        try:
+            with open(fpath, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                items = json.loads(content) if content else []
+            if not isinstance(items, list):
+                return web.json_response({"ok": False, "error": "数据格式错误"})
+            deleted = 0
+            for idx in sorted(set(indices), reverse=True):
+                if 0 <= idx < len(items):
+                    items.pop(idx)
+                    deleted += 1
+            tmp_p = fpath.with_suffix('.json.tmp')
+            with open(tmp_p, 'w', encoding='utf-8') as f:
+                json.dump(items, f, ensure_ascii=False, indent=2)
+            tmp_p.replace(fpath)
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        try:
+            self.anima_data.load_all()
+        except Exception as e:
+            logger.warning(f"[魔导书] 重载数据失败: {e}")
+        return web.json_response({"ok": True, "deleted": deleted})
+
+    async def _webui_grimoire_get_pins(self, request):
+        """获取所有固定的标签"""
+        pins = self.workflow_config.get('__grimoire_pins__', {})
+        return web.json_response({"ok": True, "pins": pins})
+
+    async def _webui_grimoire_set_pin(self, request):
+        """固定/取消固定某条标签"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        source = body.get('source', '').strip()
+        action = body.get('action', '')  # 'pin' or 'unpin'
+        item = body.get('item', {})
+        # 统一用正斜杠
+        source = source.replace('\\', '/')
+        if not source or not action:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        pins = {}
+        for k, v in (self.workflow_config.get('__grimoire_pins__', {})).items():
+            pins[k.replace('\\', '/')] = v  # 统一已有键的格式
+        if action == 'unpin':
+            pins.pop(source, None)
+            # 也尝试匹配旧的带反斜杠的键（清理老数据）
+            pins.pop(source.replace('/', '\\'), None)
+        elif action == 'pin':
+            if not item.get('tags'):
+                return web.json_response({"ok": False, "error": "缺少标签"})
+            pins[source] = {"name": item.get("name",""), "tags": item.get("tags","")}
+        else:
+            return web.json_response({"ok": False, "error": "未知操作"})
+        self.workflow_config['__grimoire_pins__'] = pins
+        await self._save_workflow_config()
+        # 保存后立即验证写入是否成功
+        saved = self.workflow_config.get('__grimoire_pins__', {})
+        if action == 'unpin' and source in saved:
+            logger.warning(f"[魔导书] 取消固定失败: {source} 仍然存在")
+            return web.json_response({"ok": False, "error": "保存失败，请重试"})
+        return web.json_response({"ok": True, "pins": pins})
+
+    async def _webui_grimoire_get_rand_pool(self, request):
+        """获取随机池数据源列表"""
+        pool = self.workflow_config.get('__grimoire_rand_pool__', [])
+        return web.json_response({"ok": True, "pool": pool})
+
+    async def _webui_grimoire_set_rand_pool(self, request):
+        """添加/移除随机池数据源"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        source = body.get('source', '').strip()
+        action = body.get('action', '')
+        # 统一用正斜杠存储，避免 Windows 反斜杠导致路径不匹配
+        source = source.replace('\\', '/')
+        if not source or not action:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        if action == 'add':
+            if source not in pool:
+                pool.append(source)
+        elif action == 'remove':
+            pool = [s for s in pool if s != source]
+        else:
+            return web.json_response({"ok": False, "error": "未知操作"})
+        self.workflow_config['__grimoire_rand_pool__'] = pool
+        await self._save_workflow_config()
+        return web.json_response({"ok": True, "pool": pool})
+
+    async def _webui_grimoire_get_stars(self, request):
+        """获取收藏标签数据"""
+        stars = self.workflow_config.get('__grimoire_stars__', {})
+        return web.json_response({"ok": True, "stars": stars})
+
+    async def _webui_grimoire_set_stars(self, request):
+        """保存收藏标签数据"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        stars = body.get('stars', {})
+        self.workflow_config['__grimoire_stars__'] = stars
+        await self._save_workflow_config()
+        return web.json_response({"ok": True})
+
+    async def _webui_grimoire_random_pick(self, request):
+        """从随机池中每个子分类随机取一条，合并固定标签返回（去重）"""
+        data_dir = Path(__file__).resolve().parent / "data"
+        pool = self.workflow_config.get('__grimoire_rand_pool__', [])
+        pins = self.workflow_config.get('__grimoire_pins__', {})
+        
+        # 已固定的数据源不参与随机（避免同源出重复）
+        pinned_sources = set(pins.keys())
+        active_pool = [s for s in pool if s not in pinned_sources]
+        
+        import random
+        seen_tags = set()
+        all_tags = []
+        
+        # 1. 固定标签（总是包含）
+        for src, info in pins.items():
+            t = (info.get("tags") or "").strip()
+            if t:
+                for part in t.split(","):
+                    p = part.strip().lower()
+                    if p and len(p) > 1 and p not in seen_tags:
+                        seen_tags.add(p)
+                        all_tags.append(part.strip())
+        
+        # 2. 从随机池各子分类随机取一条
+        for src in active_pool:
+            fpath = data_dir / src.replace('/', os.sep).replace('\\', os.sep)
+            if not fpath.suffix: fpath = fpath.with_suffix('.json')
+            items = []
+            if fpath.exists():
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        items = json.loads(f.read().strip() or '[]')
+                except Exception:
+                    items = []
+            # JSON 不存在 → 尝试 Anima-Tools JS 回退
+            if not items and _is_anima_source(src):
+                source_name = Path(src).stem
+                items = load_anima_tools_source(source_name)
+            if not isinstance(items, list) or not items:
+                continue
+            try:
+                import random
+                picked = random.choice(items)
+                t = (picked.get("tags") or "").strip()
+                if t:
+                    for part in t.split(","):
+                        p = part.strip().lower()
+                        if p and len(p) > 1 and p not in seen_tags:
+                            seen_tags.add(p)
+                            all_tags.append(part.strip())
+            except Exception:
+                continue
+        
+        pick_names = []
+        for src in active_pool:
+            if src in pinned_sources: continue
+            pick_names.append(src.replace('.json','').split('/')[-1])
+        
+        logger.info(f"[随机图] 固定标签: {len(pins)}个, 随机池: {len(active_pool)}个源, 合并后 {len(all_tags)} 个标签")
+        return web.json_response({"ok": True, "tags": ", ".join(all_tags)})
+
     async def _webui_grimoire_update(self, request):
         """编辑指定数据源的某条数据（按索引）"""
         try:
@@ -3534,6 +4146,9 @@ class ComfyUILocalPlugin(Star):
         item = body.get('item', {})
         if not source or index < 0 or not item:
             return web.json_response({"ok": False, "error": "缺少参数"})
+        # Anima-Tools 源只读保护
+        if _is_anima_source(source):
+            return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可编辑"})
         data_dir = Path(__file__).resolve().parent / "data"
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
@@ -3550,7 +4165,7 @@ class ComfyUILocalPlugin(Star):
                 if not isinstance(items, list) or index >= len(items):
                     return web.json_response({"ok": False, "error": "索引越界"})
                 entry = {}
-                for key in ['name', 'tags', 'note', 'style']:
+                for key in ['name', 'name_cn', 'tags', 'note', 'style', 'category', 'category_cn']:
                     if key in item:
                         entry[key] = item[key]
                 items[index].update(entry)
@@ -3576,6 +4191,9 @@ class ComfyUILocalPlugin(Star):
         index = body.get('index', -1)
         if not source or index < 0:
             return web.json_response({"ok": False, "error": "缺少参数"})
+        # Anima-Tools 源只读保护
+        if _is_anima_source(source):
+            return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可删除"})
         data_dir = Path(__file__).resolve().parent / "data"
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
@@ -3605,21 +4223,23 @@ class ComfyUILocalPlugin(Star):
         return web.json_response({"ok": True, "deleted": deleted})
 
     async def _webui_grimoire_new_source(self, request):
-        """新建数据源文件（放在 custom/ 下）"""
+        """新建子分类（数据源文件），可指定所属总分类"""
         try:
             body = await request.json()
         except Exception:
             return web.json_response({"ok": False, "error": "请求体格式错误"})
         filename = body.get('filename', '').strip()
+        category = body.get('category', 'custom').strip()
         if not filename:
             return web.json_response({"ok": False, "error": "文件名不能为空"})
         if not filename.endswith('.json'):
             filename += '.json'
-        data_dir = Path(__file__).resolve().parent / "data" / "custom"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        fpath = data_dir / filename
+        data_dir = Path(__file__).resolve().parent / "data"
+        cat_dir = data_dir / category
+        cat_dir.mkdir(parents=True, exist_ok=True)
+        fpath = cat_dir / filename
         if fpath.exists():
-            return web.json_response({"ok": False, "error": "文件已存在"})
+            return web.json_response({"ok": False, "error": "该子分类已存在"})
         try:
             with open(fpath, 'w', encoding='utf-8') as f:
                 json.dump([], f, ensure_ascii=False, indent=2)
@@ -3629,7 +4249,116 @@ class ComfyUILocalPlugin(Star):
             self.anima_data.load_all()
         except Exception as e:
             logger.warning(f"[魔导书] 重载数据失败: {e}")
-        return web.json_response({"ok": True, "path": f"custom/{filename}"})
+        rel = fpath.relative_to(data_dir)
+        return web.json_response({"ok": True, "path": str(rel)})
+
+    async def _webui_grimoire_rename_source(self, request):
+        """重命名数据源文件（子分类）"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        source = body.get('source', '').strip()
+        new_name = body.get('newName', '').strip()
+        if not source or not new_name:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        if not new_name.endswith('.json'):
+            new_name += '.json'
+        data_dir = Path(__file__).resolve().parent / "data"
+        src_path = data_dir / source.replace('/', os.sep).replace('\\', os.sep)
+        if not src_path.suffix:
+            src_path = src_path.with_suffix('.json')
+        if not src_path.exists():
+            return web.json_response({"ok": False, "error": "数据源不存在"})
+        dst_path = src_path.parent / new_name
+        if dst_path.exists():
+            return web.json_response({"ok": False, "error": "目标文件名已存在"})
+        try:
+            src_path.rename(dst_path)
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        try:
+            self.anima_data.load_all()
+        except Exception as e:
+            logger.warning(f"[魔导书] 重载数据失败: {e}")
+        # 返回新路径
+        rel = dst_path.relative_to(data_dir)
+        return web.json_response({"ok": True, "path": str(rel)})
+
+    async def _webui_grimoire_new_category(self, request):
+        """新建总分类（目录）"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        name = body.get('name', '').strip()
+        if not name:
+            return web.json_response({"ok": False, "error": "名称不能为空"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        cat_dir = data_dir / name
+        if cat_dir.exists():
+            return web.json_response({"ok": False, "error": "该分类已存在"})
+        try:
+            cat_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        return web.json_response({"ok": True, "path": name})
+
+    async def _webui_grimoire_rename_category(self, request):
+        """重命名总分类（目录）"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        category = body.get('category', '').strip()
+        new_name = body.get('newName', '').strip()
+        if not category or not new_name:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        # 保护 anima 目录
+        if category == 'anima':
+            return web.json_response({"ok": False, "error": "不允许修改 Anima 分类名称"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        src_dir = data_dir / category
+        if not src_dir.exists() or not src_dir.is_dir():
+            return web.json_response({"ok": False, "error": "分类不存在"})
+        dst_dir = data_dir / new_name
+        if dst_dir.exists():
+            return web.json_response({"ok": False, "error": "目标分类名已存在"})
+        try:
+            src_dir.rename(dst_dir)
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        try:
+            self.anima_data.load_all()
+        except Exception as e:
+            logger.warning(f"[魔导书] 重载数据失败: {e}")
+        return web.json_response({"ok": True, "path": new_name})
+
+    async def _webui_grimoire_delete_category(self, request):
+        """删除总分类（目录及其下所有文件）"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        category = body.get('category', '').strip()
+        if not category:
+            return web.json_response({"ok": False, "error": "缺少参数"})
+        # 保护 anima 目录
+        if category == 'anima':
+            return web.json_response({"ok": False, "error": "不允许删除 Anima 分类"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        cat_dir = data_dir / category
+        if not cat_dir.exists() or not cat_dir.is_dir():
+            return web.json_response({"ok": False, "error": "分类不存在"})
+        try:
+            shutil.rmtree(str(cat_dir))
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
+        try:
+            self.anima_data.load_all()
+        except Exception as e:
+            logger.warning(f"[魔导书] 重载数据失败: {e}")
+        return web.json_response({"ok": True})
 
     async def _webui_grimoire_delete_source(self, request):
         """删除数据源文件"""
@@ -3640,9 +4369,9 @@ class ComfyUILocalPlugin(Star):
         source = body.get('source', '').strip()
         if not source:
             return web.json_response({"ok": False, "error": "缺少 source 参数"})
-        # 保护：不允许删除 anima/ 目录下的数据
+        # 保护：不允许删除 anima/ 下的原始数据（保护 24000+ 角色数据）
         if source.startswith('anima'):
-            return web.json_response({"ok": False, "error": "不允许删除 Anima 原始数据"})
+            return web.json_response({"ok": False, "error": "不允许删除 Anima 原始数据（角色/画师/服装）"})
         data_dir = Path(__file__).resolve().parent / "data"
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
@@ -3690,35 +4419,65 @@ class ComfyUILocalPlugin(Star):
                 return web.json_response({"ok": False, "error": str(e)})
         return web.json_response({"ok": True, "enabled": self.grimoire_enabled})
 
+    # ------------------------------------------------------------------
+    # 发送消息后保活：防止管道截断 command 的 yield
+    # ------------------------------------------------------------------
+    @filter.after_message_sent(priority=999)
+    async def _keep_alive_after_send(self, event: AstrMessageEvent):
+        """消息发送后恢复事件传播，防止 yield 被截断"""
+        if event.is_stopped():
+            event.continue_event()
+
     # ========================================================================
     # Anima 数据 API & LLM 工具
     # ========================================================================
 
-    async def _grimoire_enrich_prompt(self, prompt: str) -> str:
-        """魔导书启用时，从数据库搜索匹配标签并追加到 prompt 后"""
-        if not self.grimoire_enabled or not self.anima_data.is_loaded:
+    def _get_pinned_tags(self) -> str:
+        """获取固定的标签（已做冲突去重），返回逗号分隔的标签字符串"""
+        pins = self.workflow_config.get('__grimoire_pins__', {})
+        if not pins:
+            return ""
+        tags = []
+        seen = set()
+        for src, info in pins.items():
+            t = (info.get("tags") or "").strip()
+            if t:
+                for part in t.split(","):
+                    p_stripped = part.strip()
+                    p_lower = p_stripped.lower()
+                    if p_lower and len(p_lower) > 1 and p_lower not in seen:
+                        seen.add(p_lower)
+                        tags.append(p_stripped)
+        return ", ".join(tags)
+
+    def _merge_prompt_with_pins(self, prompt: str) -> str:
+        """合并用户提示词和固定标签，有冲突时固定标签不追加"""
+        pinned = self._get_pinned_tags()
+        if not pinned:
             return prompt
-        results = self.anima_data.search(prompt, top_k=8)
-        if not results:
-            return prompt
-        tags_set = set()
-        names = []
-        for r in results:
-            name = r.get("name", "")
-            tags_str = r.get("tags", "")
-            if name:
-                names.append(name)
-            if tags_str:
-                for t in tags_str.split(","):
-                    t = t.strip()
-                    if t and len(t) > 1:
-                        tags_set.add(t)
-        # 将搜索到的名称和标签追加到提示词后
-        extra = ", ".join(names + list(tags_set)[:10])
-        if extra:
-            enriched = f"{prompt}, {extra}"
-            logger.info(f"[魔导书] prompt 已增强: 「{prompt}」→ 追加 {len(names)}个名称+{min(len(tags_set),10)}个标签")
-            return enriched
+        # 简单冲突检测：将用户 prompt 分词，看固定标签中是否有重叠
+        prompt_lower = prompt.lower()
+        pin_parts = [p.strip() for p in pinned.split(",") if p.strip()]
+        conflict_keywords = {"1girl", "1boy", "solo", "female", "male", "woman", "man"}
+        filtered_pins = []
+        for part in pin_parts:
+            part_lower = part.lower()
+            # 如果用户 prompt 中已经包含该标签的完整内容，跳过
+            if part_lower in prompt_lower and len(part_lower) > 3:
+                continue
+            # 冲突关键词检测：如果用户 prompt 包含性别/人数词且固定标签也包含同类词，跳过
+            if any(kw in prompt_lower for kw in conflict_keywords) and \
+               any(kw in part_lower for kw in conflict_keywords):
+                continue
+            # 如果用户 prompt 包含颜色/外貌描述且固定标签也包含同类词，跳过
+            if any(kw in part_lower for kw in ["hair", "eye", "color"]) and \
+               any(kw in prompt_lower for kw in ["hair", "eye", "color"]):
+                continue
+            filtered_pins.append(part)
+        if filtered_pins:
+            result = f"{prompt}, {', '.join(filtered_pins)}"
+            logger.info(f"[固定标签] 已合并 {len(filtered_pins)} 个标签到 prompt")
+            return result
         return prompt
 
     async def _webui_anima_search(self, request):
@@ -3736,24 +4495,560 @@ class ComfyUILocalPlugin(Star):
         return web.json_response(self.anima_data.get_statistics())
 
     @filter.llm_tool(name="comfyui_search_tags")
-    async def llm_search_tags(self, event: AstrMessageEvent, keyword: str):
-        """搜索画师、角色、场景、动作、光影等绘画标签。根据关键词在画师库、角色库、场景库、服装库中搜索匹配的提示词标签，返回可用于生图的标签。
+    async def llm_search_tags(self, event: AstrMessageEvent, keyword: str, source: str = ""):
+        """搜索魔导书中的所有绘画标签。根据关键词在所有数据源或指定数据源中搜索匹配的提示词标签，返回可用于生图的标签。
 
         Args:
             keyword (string): 搜索关键词，如"初音未来"、"海滩"、"赛博朋克"、"回眸"、"黄金时刻"
+            source (string): 可选，数据源名称，如 artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing。不传则搜索全部数据源
         """
-        if not self.anima_data.is_loaded:
-            return "数据尚未加载，请稍后再试"
-        results = self.anima_data.search(keyword, top_k=15)
+        source = source.strip()
+        # 指定了数据源 → 单源搜索（供固定/随机池操作用）
+        if source:
+            name_map = {
+                "artists": "anima/artists.json", "characters": "anima/characters.json",
+                "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+                "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+                "environment": "scene/environment.json", "framing": "shot/framing.json",
+            }
+            src = name_map.get(source.lower().strip())
+            if not src:
+                return f"未知数据源: {source}"
+            fpath = Path(__file__).resolve().parent / "data" / src.replace('/', os.sep)
+            items = []
+            if fpath.exists():
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        items = json.load(f)
+                except Exception:
+                    return f"读取数据源失败: {source}"
+            else:
+                source_name = src.replace(".json", "").split("/")[-1]
+                from .anima_data import load_anima_tools_source, _ANIMA_SOURCE_NAMES
+                anima_names = [s[1] for s in _ANIMA_SOURCE_NAMES]
+                if source_name in anima_names:
+                    items = load_anima_tools_source(source_name)
+                else:
+                    return f"数据源文件不存在: {source}"
+            if not isinstance(items, list):
+                return "数据格式错误"
+            kw = keyword.lower().strip() if keyword else ""
+            matched = []
+            for it in items:
+                name = (it.get("name") or "").lower()
+                name_cn = (it.get("name_cn") or "").lower()
+                tags = (it.get("tags") or "").lower()
+                if not kw or kw in name or kw in name_cn or kw in tags:
+                    matched.append(it)
+            if not matched:
+                return f"在「{source}」中未找到匹配的条目"
+            matched = matched[:20]
+            lines = [f"「{source}」中的条目 ({len(matched)} 条):"]
+            for it in matched:
+                display = it.get("name_cn") or it.get("name") or ""
+                tag = it.get("tags") or ""
+                lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
+            return "\n".join(lines)
+
+        # 没有指定 source → 全局搜索全部数据源
+        results = []
+        # 1. 搜索 Anima 数据
+        if self.anima_data.is_loaded:
+            results.extend(self.anima_data.search(keyword, top_k=10))
+        # 2. 魔导书启用时才搜索数据文件
+        if self.grimoire_enabled:
+            data_dir = Path(__file__).resolve().parent / "data"
+            kw = keyword.lower().strip()
+            for fpath in data_dir.rglob("*.json"):
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        items = json.load(f)
+                    if not isinstance(items, list):
+                        continue
+                    for it in items:
+                        name = (it.get("name") or "").lower()
+                        name_cn = (it.get("name_cn") or "").lower()
+                        tags = (it.get("tags") or "").lower()
+                        note = (it.get("note") or "").lower()
+                        if kw in name or kw in name_cn or kw in tags or kw in note:
+                            rel_path = str(fpath.relative_to(data_dir.parent))
+                            results.append({
+                                "category": it.get("category") or fpath.stem,
+                                "name": it.get("name_cn") or it.get("name") or "",
+                                "tags": it.get("tags") or "",
+                                "source": rel_path,
+                            })
+                except Exception:
+                    continue
+        # 3. 去重（按 name+tags 去重）
+        seen = set()
+        unique = []
+        for r in results:
+            key = (r.get("name",""), r.get("tags",""))
+            if key not in seen:
+                seen.add(key)
+                unique.append(r)
+        results = unique[:10]
         if not results:
             return f"未找到与「{keyword}」相关的标签"
         lines = [f"搜索「{keyword}」结果:"]
         for r in results:
-            lines.append(f"  [{r['category']}] {r['name']}: {r['tags']}")
+            src = r.get("source","").replace("\\","/").split("/")[-2] if r.get("source") else r.get("category","")
+            lines.append(f"  [{src}] {r['name']}: {r['tags']}")
         lines.append(f"\n共 {len(results)} 条结果")
         return "\n".join(lines)
 
+    @filter.llm_tool(name="comfyui_list_grimoire")
+    async def llm_list_grimoire(self, event: AstrMessageEvent):
+        """列出魔导书的随机池子来源和已固定的标签。返回所有可用的随机池子名称和已固定的标签信息。"""
+        wc = self.workflow_config
+        pool = wc.get('__grimoire_rand_pool__', [])
+        pins = wc.get('__grimoire_pins__', {})
+        enabled = self.grimoire_enabled
+        if not pool and not pins:
+            return f"魔导书当前{'已启用' if enabled else '已禁用'}，随机池和固定标签均为空"
+        lines = [f"魔导书: {'✅ 已启用' if enabled else '❌ 已禁用'}"]
+        all_sources = [
+            "anima/artists.json", "anima/characters.json", "anima/clothing.json",
+            "lighting/lighting.json", "pose_action/Normal posture.json", "pose_action/Sex positions.json",
+            "scene/environment.json", "shot/framing.json",
+        ]
+        lines.append("\n📦 可用数据源:")
+        for src in all_sources:
+            name = src.split("/")[-1].replace(".json","")
+            in_pool = "⭐ 池中" if src in pool else ""
+            pinned_name = ""
+            for ps, pi in pins.items():
+                if ps.replace('\\','/') == src:
+                    pinned_name = f"📌 {pi.get('name','')}"
+                    break
+            lines.append(f"  {name}: {in_pool} {pinned_name}".strip())
+        if pool:
+            lines.append(f"\n🎲 随机池中的源 ({len(pool)} 个): {', '.join(s.split('/')[-1].replace('.json','') for s in pool)}")
+        if pins:
+            lines.append(f"\n📌 固定标签:")
+            for ps, pi in pins.items():
+                src_name = ps.replace('\\','/').split('/')[-1].replace('.json','')
+                lines.append(f"  {src_name} → {pi.get('name','')}: {pi.get('tags','')}")
+        return "\n".join(lines)
 
+    @filter.llm_tool(name="comfyui_manage_pool")
+    async def llm_manage_pool(self, event: AstrMessageEvent, action: str, source: str):
+        """管理魔导书随机池。添加或移除数据源到随机池中，随机池中的数据源会参与随机抽取。
+
+        Args:
+            action (string): 操作类型，"add" 表示添加到随机池，"remove" 表示从随机池移除
+            source (string): 数据源名称，可选值: artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用，请先在 WebUI 中启用魔导书"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}，可选: {', '.join(name_map.keys())}"
+        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        action = action.lower().strip()
+        if action == "add":
+            if src in pool:
+                return f"「{source}」已在随机池中"
+            pool.append(src)
+            self.workflow_config['__grimoire_rand_pool__'] = pool
+            await self._save_workflow_config()
+            return f"✅ 已将「{source}」添加到随机池"
+        elif action == "remove":
+            if src not in pool:
+                return f"「{source}」不在随机池中"
+            pool.remove(src)
+            self.workflow_config['__grimoire_rand_pool__'] = pool
+            await self._save_workflow_config()
+            return f"✅ 已将「{source}」从随机池移除"
+        else:
+            return f"未知操作: {action}，请使用 add 或 remove"
+
+    async def llm_rand_pool_remove(self, event: AstrMessageEvent, source: str):
+        """将某个数据源从魔导书随机池中移除。移除后该数据源不再参与随机抽取。
+
+        Args:
+            source (string): 数据源名称，可选值: artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        if src not in pool:
+            return f"「{source}」不在随机池中"
+        pool.remove(src)
+        self.workflow_config['__grimoire_rand_pool__'] = pool
+        await self._save_workflow_config()
+        return f"✅ 已将「{source}」从随机池移除"
+
+    @filter.llm_tool(name="comfyui_manage_pin")
+    async def llm_manage_pin(self, event: AstrMessageEvent, action: str, source: str, name: str = "", tags: str = ""):
+        """管理魔导书的固定标签。固定某个数据源中的一条标签后，该标签会固定出现在每次随机/生图中。
+
+        Args:
+            action (string): 操作类型，"pin" 表示固定标签，"unpin" 表示取消固定
+            source (string): 数据源名称，如 artists, characters, clothing
+            name (string): 要固定的条目名称，取消固定时不需传
+            tags (string): 要固定条目对应的英文提示词标签，取消固定时不需传
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        action = action.lower().strip()
+        if action == "pin":
+            if not name or not tags:
+                return "固定标签需要提供 name 和 tags 参数"
+            source_key = src.replace('/', '\\')
+            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            pins[source_key] = {"name": name, "tags": tags}
+            self.workflow_config['__grimoire_pins__'] = pins
+            await self._save_workflow_config()
+            return f"✅ 已固定 {source}/{name}: {tags}"
+        elif action == "unpin":
+            source_key = src.replace('/', '\\')
+            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            matched = [k for k in pins if k.replace('\\','/') == src]
+            if not matched:
+                return f"「{source}」没有固定的标签"
+            for k in matched:
+                pins.pop(k, None)
+            self.workflow_config['__grimoire_pins__'] = pins
+            await self._save_workflow_config()
+            return f"✅ 已取消固定 {source}"
+        else:
+            return f"未知操作: {action}，请使用 pin 或 unpin"
+
+    async def llm_unpin_tag(self, event: AstrMessageEvent, source: str):
+        """取消固定某个数据源的标签。取消后该数据源不再固定出现在随机/生图中。
+
+        Args:
+            source (string): 数据源名称，如 artists, characters, clothing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        source_key = src.replace('/', '\\')
+        pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+        matched = [k for k in pins if k.replace('\\','/') == src]
+        if not matched:
+            return f"「{source}」没有固定的标签"
+        for k in matched:
+            pins.pop(k, None)
+        self.workflow_config['__grimoire_pins__'] = pins
+        await self._save_workflow_config()
+        return f"✅ 已取消固定 {source}"
+
+    async def llm_search_grimoire_items(self, event: AstrMessageEvent, source: str, keyword: str = ""):
+        """在魔导书的某个数据源中搜索条目。返回匹配的条目名称和标签，供固定/添加到随机池用。
+
+        Args:
+            source (string): 数据源名称，如 artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+            keyword (string): 搜索关键词，可选，为空则列出所有条目
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        fpath = Path(__file__).resolve().parent / "data" / src.replace('/', os.sep)
+        items = []
+        if fpath.exists():
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    items = json.load(f)
+            except Exception:
+                return f"读取数据源失败: {source}"
+        else:
+            # JSON 文件不存在 → 尝试从 Anima-Tools JS 加载（只读源）
+            source_name = src.replace(".json", "").split("/")[-1]
+            from .anima_data import load_anima_tools_source, _ANIMA_SOURCE_NAMES
+            anima_names = [s[1] for s in _ANIMA_SOURCE_NAMES]
+            if source_name in anima_names:
+                items = load_anima_tools_source(source_name)
+            else:
+                return f"数据源文件不存在: {source}"
+        if not isinstance(items, list):
+            return "数据格式错误"
+        kw = keyword.lower().strip() if keyword else ""
+        matched = []
+        for it in items:
+            name = (it.get("name") or "").lower()
+            name_cn = (it.get("name_cn") or "").lower()
+            tags = (it.get("tags") or "").lower()
+            if not kw or kw in name or kw in name_cn or kw in tags:
+                matched.append(it)
+        if not matched:
+            return f"在「{source}」中未找到匹配的条目"
+        matched = matched[:30]
+        lines = [f"「{source}」中的条目 ({len(matched)} 条):"]
+        for it in matched:
+            display = it.get("name_cn") or it.get("name") or ""
+            tag = it.get("tags") or ""
+            lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
+        return "\n".join(lines)
+
+    # ==================================================================
+    # 魔导书图片缓存系统
+    # ==================================================================
+
+    async def _webui_grimoire_cache_status(self, request):
+        """查询某个数据源的图片缓存状态（含总大小）"""
+        source = request.query.get('source', '').strip()
+        if not source:
+            return web.json_response({"ok": False, "error": "缺少 source 参数"})
+        data_dir = Path(__file__).resolve().parent / "data"
+        source = source.replace('/', os.sep).replace('\\', os.sep)
+        fpath = data_dir / source
+        if not fpath.suffix:
+            fpath = fpath.with_suffix('.json')
+
+        # 尝试从本地 JSON 读取
+        items = []
+        if fpath.exists() and fpath.is_file():
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    items = json.loads(content) if content else []
+                if not isinstance(items, list):
+                    items = []
+            except Exception:
+                items = []
+
+        # 本地 JSON 不存在 → 尝试从 Anima-Tools JS 加载
+        if not items and _is_anima_source(str(fpath.relative_to(data_dir))):
+            source_name = fpath.relative_to(data_dir).stem
+            items = load_anima_tools_source(source_name)
+
+        if not items:
+            return web.json_response({"ok": False, "error": "数据源为空或不存在"})
+
+        total = len(items)
+        # 读一次缓存目录，用集合查，避免 4 万次文件系统查询
+        cached_keys = set(f.name for f in self._grimoire_cache_dir.iterdir()) if self._grimoire_cache_dir.exists() else set()
+        cached = 0
+        cache_size = 0
+        for it in items:
+            img_url = it.get("image_url") or ""
+            if img_url:
+                cache_key = hashlib.md5(img_url.encode()).hexdigest()
+                if cache_key in cached_keys:
+                    cached += 1
+                    try:
+                        cache_size += (self._grimoire_cache_dir / cache_key).stat().st_size
+                    except Exception:
+                        pass
+        return web.json_response({
+            "ok": True,
+            "total": total,
+            "cached": cached,
+            "pending": total - cached,
+            "cache_size_gb": round(cache_size / (1024**3), 2),
+            "cache_size_mb": round(cache_size / (1024**2), 1),
+            "source": source
+        })
+
+    async def _webui_grimoire_cache_all(self, request):
+        """批量缓存某个数据源的全部图片 — 后台启动，立即返回"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体必须是 JSON"})
+        source = body.get('source', '').strip()
+        if not source:
+            return web.json_response({"ok": False, "error": "缺少 source 参数"})
+
+        # 如果已有运行中的任务，不重复启动
+        existing = self._cache_progress.get(source)
+        if existing and existing.get("running"):
+            return web.json_response({"ok": True, "message": "已有缓存任务运行中"})
+
+        # 后台启动下载
+        self._cache_progress[source] = {
+            "running": True,
+            "total": 0,
+            "done": 0,
+            "success": 0,
+            "failed": 0,
+            "message": "正在扫描..."
+        }
+        asyncio.create_task(self._run_cache_background(source))
+        return web.json_response({"ok": True, "message": "缓存任务已启动"})
+
+    async def _run_cache_background(self, source):
+        """后台分批下载全部图片"""
+        data_dir = Path(__file__).resolve().parent / "data"
+        src_path = source.replace('/', os.sep).replace('\\', os.sep)
+        fpath = data_dir / src_path
+        if not fpath.suffix:
+            fpath = fpath.with_suffix('.json')
+
+        try:
+            if fpath.exists() and fpath.stat().st_size > 0:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    items = json.loads(content) if content else []
+            else:
+                items = []
+            if not isinstance(items, list):
+                items = []
+        except Exception as e:
+            self._cache_progress[source] = {
+                "running": False, "total": 0, "done": 0,
+                "success": 0, "failed": 0, "message": f"读取数据源失败: {e}"
+            }
+            return
+
+        # 本地 JSON 不存在 → 尝试从 Anima-Tools JS 加载
+        if not items and _is_anima_source(str(fpath.relative_to(data_dir))):
+            source_name = fpath.relative_to(data_dir).stem
+            items = load_anima_tools_source(source_name)
+
+        try:
+            # 收集未缓存的图片（读一次缓存目录，用集合查）
+            cached_keys = set(f.name for f in self._grimoire_cache_dir.iterdir()) if self._grimoire_cache_dir.exists() else set()
+            to_download = []
+            for it in items:
+                img_url = it.get("image_url") or ""
+                if img_url:
+                    ck = hashlib.md5(img_url.encode()).hexdigest()
+                    if ck not in cached_keys:
+                        to_download.append((img_url, ck))
+
+            total = len(to_download)
+            self._cache_progress[source]["total"] = total
+            if total == 0:
+                self._cache_progress[source].update(
+                    running=False, done=0, success=0, failed=0,
+                    message="所有图片已缓存"
+                )
+                return
+
+            # 分批下载（每批50，8并发）
+            BATCH_SIZE = 50
+            MAX_CONCURRENT = 8
+            success = 0
+            failed = 0
+            done = 0
+
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=None, sock_connect=10, sock_read=30),
+                headers={"User-Agent": "AstrBot-ComfyUI/1.0"}
+            ) as session:
+                sem = asyncio.Semaphore(MAX_CONCURRENT)
+
+                async def _dl_one(url, ck):
+                    async with sem:
+                        try:
+                            async with session.get(url) as resp:
+                                if resp.status == 200:
+                                    data = await resp.read()
+                                    cache_path = self._grimoire_cache_dir / ck
+                                    with open(cache_path, 'wb') as f:
+                                        f.write(data)
+                                    return True
+                                return False
+                        except Exception:
+                            return False
+
+                for i in range(0, total, BATCH_SIZE):
+                    batch = to_download[i:i + BATCH_SIZE]
+                    results = await asyncio.gather(*[_dl_one(url, ck) for url, ck in batch])
+                    batch_ok = sum(1 for r in results if r)
+                    success += batch_ok
+                    failed += (len(batch) - batch_ok)
+                    done += len(batch)
+                    self._cache_progress[source].update(
+                        done=done, success=success, failed=failed,
+                        message=f"已下载 {done}/{total}"
+                    )
+
+            self._cache_progress[source].update(
+                running=False,
+                message=f"完成: {success} 成功, {failed} 失败"
+            )
+        except Exception as e:
+            logger.error(f"[缓存] 后台下载异常: {e}")
+            self._cache_progress[source] = {
+                "running": False, "total": 0, "done": 0,
+                "success": 0, "failed": 0, "message": f"异常: {e}"
+            }
+
+    async def _webui_grimoire_cache_progress(self, request):
+        """查询当前缓存任务的进度"""
+        source = request.query.get('source', '').strip()
+        if not source:
+            return web.json_response({"ok": False, "error": "缺少 source 参数"})
+        prog = self._cache_progress.get(source, {})
+        return web.json_response({
+            "ok": True,
+            "running": prog.get("running", False),
+            "total": prog.get("total", 0),
+            "done": prog.get("done", 0),
+            "success": prog.get("success", 0),
+            "failed": prog.get("failed", 0),
+            "message": prog.get("message", "")
+        })
+
+    async def _webui_cache_image(self, request):
+        """提供本地缓存的图片"""
+        filename = request.match_info.get('filename', '')
+        if not filename:
+            return web.Response(status=400, text="Missing filename")
+        # 安全校验：只允许字母数字下划线横线点号
+        if not re.match(r'^[a-zA-Z0-9_.-]+$', filename):
+            return web.Response(status=400, text="Invalid filename")
+        cache_path = self._grimoire_cache_dir / filename
+        if not cache_path.exists():
+            return web.Response(status=404, text="Not cached")
+        content_type = 'image/webp'
+        ext = cache_path.suffix.lower()
+        if ext in ('.png',):
+            content_type = 'image/png'
+        elif ext in ('.jpg', '.jpeg'):
+            content_type = 'image/jpeg'
+        elif ext in ('.gif',):
+            content_type = 'image/gif'
+        return web.Response(
+            body=cache_path.read_bytes(),
+            content_type=content_type,
+            headers={"Cache-Control": "max-age=86400, public"}
+        )
 
     async def terminate(self):
         logger.info("[ComfyUI] 插件已卸载")

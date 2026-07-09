@@ -4,5 +4,17 @@
     "description": "点击打开 WebUI 管理面板：http://127.0.0.1:8898",
     "type": "string",
     "default": "http://127.0.0.1:8898"
+  },
+  "webui_lan": {
+    "title": "局域网访问",
+    "description": "开启后可通过局域网 IP 访问 WebUI（无需重启，即时生效）",
+    "type": "bool",
+    "default": false
+  },
+  "webui_ipv6": {
+    "title": "IPv6 访问",
+    "description": "开启后可通过 IPv6 地址访问 WebUI（无需重启，即时生效）",
+    "type": "bool",
+    "default": false
   }
 }

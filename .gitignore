@@ -27,4 +27,11 @@ Thumbs.db
 # data/pose_action/Sex positions.json
 
 # Handover document (internal only)
+本次交接文档.md
 交接文档.md
+
+# Backup files
+*.bak
+
+# Cache (symlinked to E: drive)
+data/cache/
