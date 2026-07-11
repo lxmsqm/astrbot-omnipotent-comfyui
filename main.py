@@ -58,7 +58,7 @@ class ComfyUIDrawTool(FunctionTool):
             logger.warning(f"[ComfyUI] 发送生成中提示失败: {e}")
         status, text, path = await plugin._process_and_submit(prompt, ratio, user_id=event.get_sender_id(), quality_override=quality)
         if status == "ok":
-            sent = await plugin._send_image_result(event, "✨ 生成完成", path)
+            sent = await plugin._send_image_result(event, "✨ 生成完成", path, prompt=prompt)
             if sent: return "✅ 图片已发送"
             try:
                 from astrbot.api.message_components import Image
@@ -158,7 +158,7 @@ class ComfyUIImg2ImgTool(FunctionTool):
             except Exception: pass
         status, text, out_path = await plugin._process_and_submit(prompt, ratio, str(save_path), cmd_config=cmd_config or None, user_id=event.get_sender_id())
         if status == "ok":
-            sent = await plugin._send_image_result(event, f"✨ 图生图完成 当前{text}", out_path)
+            sent = await plugin._send_image_result(event, f"✨ 图生图完成 当前{text}", out_path, prompt=prompt)
             if sent: return "✅ 图片已发送"
             try:
                 from astrbot.api.message_components import Image; from astrbot.api.event import MessageChain
@@ -257,7 +257,7 @@ class ComfyUIEditTool(FunctionTool):
             try: Path(p).unlink(missing_ok=True)
             except Exception: pass
         if status == "ok":
-            sent = await plugin._send_image_result(event, f"✨ 编辑完成 当前{text}", out_path)
+            sent = await plugin._send_image_result(event, f"✨ 编辑完成 当前{text}", out_path, prompt=prompt)
             if sent: return "✅ 编辑完成，图片已发送"
             try:
                 from astrbot.api.message_components import Image; from astrbot.api.event import MessageChain
@@ -294,7 +294,7 @@ class ComfyUIRandomTool(FunctionTool):
         for i in range(count):
             status, text, path = await plugin._process_and_submit("", None, user_id=event.get_sender_id())
             if status == "ok":
-                sent = await plugin._send_image_result(event, f"✨ 抽卡完成 当前{text}", path)
+                sent = await plugin._send_image_result(event, f"✨ 抽卡完成 当前{text}", path, prompt='')
                 if sent: results.append(f"第{i+1}张: ✅ 已发送")
                 else: results.append(f"第{i+1}张: ✅ 已生成")
             else:
@@ -371,7 +371,7 @@ class ComfyUIExecuteTool(FunctionTool):
         except Exception: pass
         status, text, path = await plugin._process_and_submit(prompt, None, user_id=event.get_sender_id())
         if status == "ok":
-            sent = await plugin._send_image_result(event, f"✨ 执行完成 当前{text}", path)
+            sent = await plugin._send_image_result(event, f"✨ 执行完成 当前{text}", path, prompt=prompt)
             if sent: return "✅ 执行完成，图片已发送"
             try:
                 from astrbot.api.message_components import Image; from astrbot.api.event import MessageChain
@@ -424,7 +424,7 @@ class ComfyUIRandomImageTool(FunctionTool):
         async def submit_one(prompt, idx):
             status, text, path = await plugin._process_and_submit(prompt, None, user_id=user_id, skip_pin_merge=True)
             if status == "ok":
-                sent = await plugin._send_image_result(event, f"🎲 随机图 ({idx+1}/{count}){pin_info}", path)
+                sent = await plugin._send_image_result(event, f"🎲 随机图 ({idx+1}/{count}){pin_info}", path, prompt=prompt)
                 return f"第{idx+1}张{'已发送' if sent else '生成成功'}"
             return f"第{idx+1}张生成失败: {text}"
         tasks = [submit_one(p, i) for i, p in enumerate(prompts)]
@@ -489,6 +489,22 @@ class ComfyUILocalPlugin(Star):
         # 已发送图片记录 {abs_path: [{"message_id": str, "umo": str, "sent_at": float}, ...]}
         self._sent_images = {}
         self._sent_images_lock = asyncio.Lock()
+        # 提示词记录（引用图片查提示词用）
+        self._prompt_log = []
+        self._prompt_log_lock = asyncio.Lock()
+        self._prompt_log_path = Path(__file__).resolve().parent / "data" / "prompt_log.json"
+        self._prompt_log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.prompt_log_days = int(self.config.get("prompt_log_days", 3))
+        if self._prompt_log_path.exists():
+            try:
+                with open(str(self._prompt_log_path), 'r', encoding='utf-8') as f:
+                    self._prompt_log = json.load(f)
+                self._trim_prompt_log()
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 读取提示词记录失败: {e}")
+                self._prompt_log = []
+        # 扩写后提示词缓存 {文件路径: 扩写文本}，由 _process_and_submit 写入，_send_image_result 消费
+        self._expanded_prompt_cache: dict[str, str] = {}
         # OneBot bot 引用（从 event.bot 获取，供撤回使用）
         self._bot_ref = None
         # 黑名单群组缓存（从 persona_switcher 读取）
@@ -503,6 +519,8 @@ class ComfyUILocalPlugin(Star):
             "4K": {"name": "原画", "pixels": 8_294_400},
         }
         self.default_quality = local_cfg.get("default_quality") or "720p"
+        # 图片消息是否附带提示词
+        self.show_prompt_on_image = bool(local_cfg.get("show_prompt_on_image", False) or self.config.get("show_prompt_on_image", False))
         # 比例列表（纯字符串，宽高由质量动态计算）
         self.aspect_ratios = ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]
         self.default_ratio = local_cfg.get("default_ratio") or self.config.get("default_ratio", "9:16")
@@ -627,12 +645,44 @@ class ComfyUILocalPlugin(Star):
         self.current_workflow_name = wf['name']
         self._refresh_workflow_list()
 
-    async def _send_image_result(self, event, text, path):
+    def _trim_prompt_log(self):
+        """清理超过保留天数的提示词记录"""
+        if self.prompt_log_days <= 0:
+            return
+        cutoff = time.time() - self.prompt_log_days * 86400
+        before = len(self._prompt_log)
+        self._prompt_log = [r for r in self._prompt_log if r['timestamp'] > cutoff]
+        if len(self._prompt_log) < before:
+            logger.info(f"[ComfyUI] 提示词记录清理: {before} -> {len(self._prompt_log)} 条")
+
+    async def _append_prompt_log(self, message_id, prompt):
+        """追加一条提示词记录到日志并写文件"""
+        async with self._prompt_log_lock:
+            self._prompt_log.append({
+                "message_id": str(message_id),
+                "prompt": prompt,
+                "timestamp": time.time()
+            })
+            self._trim_prompt_log()
+            try:
+                with open(str(self._prompt_log_path), 'w', encoding='utf-8') as f:
+                    json.dump(self._prompt_log, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 写入提示词记录失败: {e}")
+
+    async def _send_image_result(self, event, text, path, prompt=''):
         """发图。群消息会附带 At @mention，返回 True/False"""
         try:
             umo = getattr(event, 'unified_msg_origin', None)
             if not umo:
                 return False
+
+            # 如果开启了图片附带提示词，在文本末尾追加最终提示词
+            if self.show_prompt_on_image and path:
+                abs_path = str(Path(path).resolve())
+                final_prompt = self._expanded_prompt_cache.get(abs_path, '') or prompt
+                if final_prompt:
+                    text = f"{text}\n{final_prompt}"
 
             # 去掉 text 中可能残留的 [CQ:at,...] 前缀（仅 OneBot/QQ 平台）
             clean_text = text
@@ -727,6 +777,16 @@ class ComfyUILocalPlugin(Star):
                         self._sent_images[abs_path] = self._sent_images[abs_path][-20:]
             except Exception as e:
                 logger.debug(f"[ComfyUI] 记录发送图片失败: {e}")
+
+            # 记录提示词到 prompt_log（引用图片查提示词用）
+            if msg_id:
+                final_prompt = self._expanded_prompt_cache.pop(abs_path, '') or prompt
+                if final_prompt:
+                    try:
+                        await self._append_prompt_log(msg_id, final_prompt)
+                    except Exception as e:
+                        logger.debug(f"[ComfyUI] 记录提示词失败: {e}")
+
             return True
         except Exception as e:
             logger.error(f"[ComfyUI] 发送组合消息失败: {e}")
@@ -982,6 +1042,7 @@ class ComfyUILocalPlugin(Star):
             "webui_port": self.webui_port,
             "webui_lan": self.webui_lan,
             "webui_ipv6": self.webui_ipv6,
+            "show_prompt_on_image": self.show_prompt_on_image,
         }))
         app.router.add_post('/api/config', self._webui_save_config)
         app.router.add_get('/api/groups', self._webui_get_groups)
@@ -1126,6 +1187,11 @@ class ComfyUILocalPlugin(Star):
                 await self._toggle_ipv6(self.webui_ipv6)
             except ValueError:
                 return web.json_response({"ok": False, "error": "端口必须是数字"})
+        if "show_prompt_on_image" in d:
+            val = d["show_prompt_on_image"]
+            self.show_prompt_on_image = bool(val)
+            self.config["show_prompt_on_image"] = self.show_prompt_on_image
+            updates["show_prompt_on_image"] = self.show_prompt_on_image
         if updates:
             self._save_local_config(updates)
         return web.json_response({"ok": True})
@@ -1650,17 +1716,17 @@ class ComfyUILocalPlugin(Star):
                 return web.json_response({"ok": False, "error": "未选中工作流"})
             # 诊断日志：记录传入数据的关键字段
             logger.info(f"[ComfyUI] _webui_save_workflow_params: wf_name={wf_name!r}, data_keys={list(data.keys())}")
-            for rk in ['__prompt_node__', '__resolution_node__', '__load_image_nodes__', '__negative_node__']:
+            for rk in ['__prompt_node__', '__resolution_node__', '__load_image_nodes__', '__negative_node__', '__expanded_text_node__']:
                 if rk in data:
                     logger.info(f"[ComfyUI]   save role {rk}={data[rk]!r}")
             async with self._config_lock:
-                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__negative_node__']:
+                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__negative_node__', '__expanded_text_node__']:
                     if key_name in data:
                         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
                         wf_configs[wf_name] = wf_configs.get(wf_name, {})
                         wf_configs[wf_name][key_name] = data.pop(key_name)
                         data['__workflow_node_configs__'] = wf_configs
-                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
+                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__disabled_nodes__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
                 for key in preserved_keys:
                     if key not in data and key in self.workflow_config: data[key] = self.workflow_config[key]
                 # 将 {nodeId}_{key} 类的键存入工作流专属配置，防止跨工作流泄漏
@@ -1743,7 +1809,7 @@ class ComfyUILocalPlugin(Star):
         # 诊断日志
         logger.info(f"[ComfyUI] _webui_get_workflow_params_config: wf={wf_config_name!r}, "
                     f"node_configs_keys={list(wf_configs.keys())}, "
-                    f"current_wf_node_roles={ {k: wf_config.get(k) for k in ['__prompt_node__','__resolution_node__','__load_image_nodes__','__negative_node__']} }")
+                    f"current_wf_node_roles={ {k: wf_config.get(k) for k in ['__prompt_node__','__resolution_node__','__load_image_nodes__','__negative_node__','__expanded_text_node__']} }")
         return web.json_response({
             "__prompt_node__": wf_config.get("__prompt_node__", "") or self.workflow_config.get("__prompt_node__", ""),
             "__resolution_node__": wf_config.get("__resolution_node__", "") or self.workflow_config.get("__resolution_node__", ""),
@@ -1753,6 +1819,7 @@ class ComfyUILocalPlugin(Star):
             "__commands__": self.workflow_config.get("__commands__", {}),
             "__groups_source__": self.workflow_config.get("__groups_source__", ""),
             "__disabled_groups__": self.workflow_config.get("__disabled_groups__", {}),
+            "__disabled_nodes__": self.workflow_config.get("__disabled_nodes__", []),
             "__bind_target__": self.workflow_config.get("__bind_target__", ""),
             "__groups_data__": self.workflow_config.get("__groups_data__", []),
             "__hidden_workflows__": self.workflow_config.get("__hidden_workflows__", []),
@@ -1994,12 +2061,8 @@ class ComfyUILocalPlugin(Star):
         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
         wf_cfg = wf_configs.get(self.current_workflow_name, {})
         wf_saved_texts = wf_cfg.get('__saved_texts__', {}) or {}
-        # 只允许已配置的节点 ID 应用 _text
-        allowed_nodes = set()
-        for role_key in ('__prompt_node__', '__negative_node__'):
-            nid = wf_cfg.get(role_key, '') or self.workflow_config.get(role_key, '')
-            if nid: allowed_nodes.add(nid)
-        # 同时兼容旧版根级别 {nodeId}_text（新版的已存入 __saved_texts__）
+        # 应用所有节点保存的参数值（包括主模型、Lora 等），不再限制仅 prompt/negative 节点
+        # 注释：以前的 allowed_nodes 限制导致主模型/Lora 切换不生效，现已移除
         for ck in list(wf_saved_texts.keys()) + [k for k in self.workflow_config.keys() if k.endswith('_text') and not k.startswith('__') and k not in wf_saved_texts]:
             val = wf_saved_texts.get(ck)
             if val is None:
@@ -2008,7 +2071,6 @@ class ComfyUILocalPlugin(Star):
             parts = ck.split('_', 1)
             if len(parts) == 2:
                 nid, key = parts
-                if nid not in allowed_nodes: continue
                 if key in skip_keys: continue
                 if nid in workflow and key in workflow[nid].get('inputs', {}):
                     orig = workflow[nid]['inputs'][key]
@@ -2630,6 +2692,29 @@ class ComfyUILocalPlugin(Star):
                                 to_delete.append(nid)
                         for nid in to_delete:
                             del wf[nid]
+            # 处理单个禁用节点（如 Lora 加载器）
+            disabled_nodes = self.workflow_config.get('__disabled_nodes__', []) or []
+            if disabled_nodes:
+                for nid in disabled_nodes:
+                    nid_str = str(nid)
+                    if nid_str in wf:
+                        node = wf[nid_str]
+                        ct = node.get('class_type', '')
+                        # 将 Lora 的强度归零，而非修改 lora_name（None 不在有效列表中）
+                        # 强度归零后 Lora 加载器仍然运行但完全不生效
+                        inputs = node.get('inputs', {})
+                        lora_strength_keys = ['strength', 'strength_model', 'strength_clip', 'model_strength', 'clip_strength']
+                        has_strength = False
+                        for sk in lora_strength_keys:
+                            if sk in inputs:
+                                inputs[sk] = 0
+                                has_strength = True
+                        if not has_strength:
+                            # 没有强度参数的节点，尝试设置为空字符
+                            lora_name_keys = ['lora_name', 'lora', 'lora1', 'lora2']
+                            for lk in lora_name_keys:
+                                if lk in inputs:
+                                    inputs[lk] = ""
             if cmd_config:
                 # 只应用 cmd_config 中与 workflow_config 不同的值（避免覆盖已保存的配置）
                 for ck, val in cmd_config.items():
@@ -2715,6 +2800,39 @@ class ComfyUILocalPlugin(Star):
                             logger.info(f"[ComfyUI] 用户 {user_id} 有 {len(existing)} 个排队任务")
                 logger.info(f"[ComfyUI] 任务提交: {pid}, 节点数: {len(wf)}, 等待完成...")
                 outputs = await self._wait_for_history(pid, s, timeout=timeout_sec)
+                # 读取扩写后文本（如配置了 __expanded_text_node__）
+                expanded_text = ''
+                if outputs and self.current_workflow_name:
+                    wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+                    wf_cfg = wf_configs.get(self.current_workflow_name, {})
+                    exp_node = wf_cfg.get('__expanded_text_node__', '')
+                    if exp_node:
+                        logger.info(f"[ComfyUI] 扩写节点已配置: #{exp_node}, outputs含此节点: {exp_node in outputs}")
+                    if exp_node and exp_node in outputs:
+                        try:
+                            exp_out = outputs[exp_node]
+                            # 尝试多个可能的 output key
+                            text_val = ''
+                            for key in ('output', 'string', 'text'):
+                                if key in exp_out and isinstance(exp_out[key], list) and len(exp_out[key]) > 0:
+                                    text_val = str(exp_out[key][0])
+                                    break
+                            if not text_val:
+                                # 兜底：取 outputs 里第一个字符串值
+                                for v in exp_out.values():
+                                    if isinstance(v, str) and v.strip():
+                                        text_val = v
+                                        break
+                                    if isinstance(v, list) and len(v) > 0 and isinstance(v[0], str):
+                                        text_val = v[0]
+                                        break
+                            if text_val and text_val.strip():
+                                expanded_text = text_val.strip()
+                                logger.info(f"[ComfyUI] 扩写后文本(节点#{exp_node}): {expanded_text[:100]}...")
+                            else:
+                                logger.info(f"[ComfyUI] 扩写节点 #{exp_node} output 格式: { {k: type(v).__name__ for k, v in exp_out.items()} }")
+                        except Exception as e:
+                            logger.info(f"[ComfyUI] 读取扩写后文本异常: {e}")
                 # 无论结果如何，任务已结束，清除进度状态
                 if pid in self._prompt_progress:
                     self._prompt_progress[pid]['running'] = False
@@ -2766,6 +2884,9 @@ class ComfyUILocalPlugin(Star):
                                         real_w, real_h = w, h  # fallback 到算法值
                                 # 根据真实分辨率计算实际比例（映射到最近的标准比例）
                                 actual_ratio = self._closest_ratio(real_w, real_h)
+                                # 扩写后文本缓存，供 _send_image_result 使用
+                                if expanded_text:
+                                    self._expanded_prompt_cache[str(sp)] = expanded_text
                                 return ("ok", f"{actual_ratio} {real_w}x{real_h}", str(sp))
                             else:
                                 logger.warning(f"[ComfyUI] 下载失败 HTTP {ir.status}: {img['filename']}")
@@ -2786,6 +2907,8 @@ class ComfyUILocalPlugin(Star):
                                         logger.info(f"[ComfyUI] 已清理工作流原始输出(去重): {original_file}")
                                     except Exception as e:
                                         logger.warning(f"[ComfyUI] 清理原始输出失败: {e}")
+                                if expanded_text:
+                                    self._expanded_prompt_cache[str(sp)] = expanded_text
                                 return ("ok", f"{ratio} {w}x{h}", str(sp))
                 logger.warning(f"[ComfyUI] outputs 中未找到可下载的文件: {pid}")
                 return ("error", "未找到输出文件(history 有记录但无 images)", None)
@@ -2832,6 +2955,24 @@ class ComfyUILocalPlugin(Star):
         except Exception as e:
             logger.warning(f"[ComfyUI] 获取队列失败: {e}")
             yield event.plain_result("无法获取队列状态")
+
+    @filter.command("提示词")
+    async def get_prompt_by_reply(self, event: AstrMessageEvent):
+        """引用一张 bot 发过的图片，查询生图时使用的提示词"""
+        reply_id = ''
+        for comp in event.get_messages():
+            d = comp.__dict__ if hasattr(comp, '__dict__') else {}
+            if d.get('type') == 'Reply':
+                reply_id = str(d.get('id', '') or '')
+                break
+        if not reply_id:
+            yield event.plain_result("请引用一张图片再发送 /提示词")
+            return
+        for r in reversed(self._prompt_log):
+            if r['message_id'] == reply_id:
+                yield event.plain_result(f"提示词: {r['prompt']}")
+                return
+        yield event.plain_result("已过期或不是我发的图")
 
     @filter.command("停止")
     async def stop_generation(self, event: AstrMessageEvent):
@@ -3213,7 +3354,7 @@ class ComfyUILocalPlugin(Star):
         cmd_config = self.workflow_config.get('__commands__', {}).get('画', {})
         status, text, path = await self._process_and_submit(prompt, None, cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id())
         if status == "ok":
-            sent = await self._send_image_result(event, f"✨ 生成完成 当前{text}", path)
+            sent = await self._send_image_result(event, f"✨ 生成完成 当前{text}", path, prompt=prompt)
             if not sent:
                 yield event.image_result(path)
         else: yield event.plain_result(text)
@@ -3239,7 +3380,7 @@ class ComfyUILocalPlugin(Star):
         await event.send(event.plain_result(f"执行中...{queue_msg}"))
         status, text, path = await self._process_and_submit(prompt, None, cmd_config=cmd_config, user_id=event.get_sender_id())
         if status == "ok":
-            await self._send_image_result(event, f"✨ 执行完成 当前{text}", path)
+            await self._send_image_result(event, f"✨ 执行完成 当前{text}", path, prompt=prompt)
         else:
             await event.send(event.plain_result(text))
 
@@ -3277,13 +3418,13 @@ class ComfyUILocalPlugin(Star):
                     yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
                 break
             status, text, path = await self._process_and_submit(data["tags"], None, user_id=event.get_sender_id(), skip_pin_merge=True)
-            tasks.append((status, text, path))
+            tasks.append((status, text, path, data["tags"]))
         if not tasks:
             return
         success = 0
-        for i, (status, text, path) in enumerate(tasks):
+        for i, (status, text, path, prompt) in enumerate(tasks):
             if status == "ok":
-                await self._send_image_result(event, f"🎲 随机图 ({i+1}/{len(tasks)})", path)
+                await self._send_image_result(event, f"🎲 随机图 ({i+1}/{len(tasks)})", path, prompt=prompt)
                 success += 1
         if success > 0:
             await event.send(event.plain_result(f"🎲 随机图完成，共 {success} 张"))
@@ -3325,7 +3466,7 @@ class ComfyUILocalPlugin(Star):
                     logger.warning(f"[ComfyUI] 设置降噪值失败: {e}")
             status, text, out_path = await self._process_and_submit(prompt, None, str(save_path), cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id())
             if status == "ok":
-                sent = await self._send_image_result(event, f"✨ 生成完成 当前{text}", out_path)
+                sent = await self._send_image_result(event, f"✨ 生成完成 当前{text}", out_path, prompt=prompt)
                 if not sent:
                     yield event.image_result(out_path)
             else: yield event.plain_result(text)
@@ -3429,7 +3570,7 @@ class ComfyUILocalPlugin(Star):
                 pass
 
         if status == "ok":
-            sent = await self._send_image_result(event, f"✨ 编辑完成 当前{text}", out_path)
+            sent = await self._send_image_result(event, f"✨ 编辑完成 当前{text}", out_path, prompt=prompt)
             if not sent:
                 yield event.image_result(out_path)
         else:
@@ -4593,7 +4734,8 @@ class ComfyUILocalPlugin(Star):
             return f"未找到与「{keyword}」相关的标签"
         lines = [f"搜索「{keyword}」结果:"]
         for r in results:
-            src = r.get("source","").replace("\\","/").split("/")[-2] if r.get("source") else r.get("category","")
+            src_parts = (r.get("source") or "").replace("\\","/").split("/")
+            src = src_parts[-2] if len(src_parts) >= 2 else (src_parts[-1] if src_parts else r.get("category",""))
             lines.append(f"  [{src}] {r['name']}: {r['tags']}")
         lines.append(f"\n共 {len(results)} 条结果")
         return "\n".join(lines)

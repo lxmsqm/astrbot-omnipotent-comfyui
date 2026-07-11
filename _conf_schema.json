@@ -16,5 +16,17 @@
     "description": "开启后可通过 IPv6 地址访问 WebUI（无需重启，即时生效）",
     "type": "bool",
     "default": false
+  },
+  "prompt_log_days": {
+    "title": "提示词记录天数",
+    "description": "引用图片查询提示词的记录保留天数，默认 3 天，填 0 关闭",
+    "type": "int",
+    "default": 3
+  },
+  "show_prompt_on_image": {
+    "title": "图片附带提示词",
+    "description": "每次生成的图片消息末尾自动附上最终提示词",
+    "type": "bool",
+    "default": false
   }
 }

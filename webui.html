@@ -22,51 +22,51 @@
 :root {
   --ui-opacity: 1;
 
-  /* 背景 & 表面 — 深紫黑基底 */
-  --bg:            oklch(12% 0.018 285);
-  --bg-elevated:   oklch(17% 0.025 285);
-  --card:          color-mix(in oklch, oklch(19% 0.03 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  /* 背景 & 表面 — 深邃黑基底 */
+  --bg:            oklch(6% 0.015 285);
+  --bg-elevated:   oklch(12% 0.025 285);
+  --card:          color-mix(in oklch, oklch(14% 0.035 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --card-bg:       var(--card);
-  --card-border:   color-mix(in oklch, oklch(28% 0.05 285 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --bg-overlay:    color-mix(in oklch, oklch(10% 0.025 285 / 0.85), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --input-bg:      color-mix(in oklch, oklch(20% 0.025 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --card-hover:    color-mix(in oklch, oklch(24% 0.035 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-border:   color-mix(in oklch, oklch(28% 0.06 285 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --bg-overlay:    color-mix(in oklch, oklch(5% 0.02 285 / 0.85), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(16% 0.03 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(20% 0.04 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
 
-  /* 文字层级 */
-  --text:          oklch(93% 0.01 285);
-  --text-sub:      oklch(65% 0.025 285);
-  --text-sub2:     oklch(50% 0.025 285);
-  --text-muted:    oklch(38% 0.025 285);
+  /* 文字层级 — 更高对比度 */
+  --text:          oklch(95% 0.015 285);
+  --text-sub:      oklch(70% 0.03 285);
+  --text-sub2:     oklch(52% 0.03 285);
+  --text-muted:    oklch(35% 0.03 285);
 
-  /* 主色 — 赛博紫 + 品红光 */
-  --primary:       oklch(62% 0.22 310);
-  --primary-hover: oklch(54% 0.22 310);
-  --primary-glow:  0 0 20px oklch(62% 0.22 310 / 0.25);
-  --accent:        oklch(58% 0.25 265);
-  --accent-hover:  oklch(50% 0.25 265);
-  --accent-glow:   0 0 20px oklch(58% 0.25 265 / 0.25);
+  /* 主色 — 更高饱和度 */
+  --primary:       oklch(65% 0.28 315);
+  --primary-hover: oklch(56% 0.28 315);
+  --primary-glow:  0 0 24px oklch(65% 0.28 315 / 0.35);
+  --accent:        oklch(60% 0.30 265);
+  --accent-hover:  oklch(52% 0.30 265);
+  --accent-glow:   0 0 24px oklch(60% 0.30 265 / 0.35);
 
-  /* 功能色 */
-  --success:       oklch(62% 0.18 160);
-  --success-glow:  0 0 12px oklch(62% 0.18 160 / 0.3);
-  --warning:       oklch(72% 0.18 85);
-  --danger:        oklch(58% 0.22 25);
-  --danger-glow:   0 0 12px oklch(58% 0.22 25 / 0.3);
-  --info:          oklch(58% 0.16 250);
+  /* 功能色 — 更亮 */
+  --success:       oklch(65% 0.20 155);
+  --success-glow:  0 0 16px oklch(65% 0.20 155 / 0.4);
+  --warning:       oklch(75% 0.20 85);
+  --danger:        oklch(62% 0.25 20);
+  --danger-glow:   0 0 16px oklch(62% 0.25 20 / 0.4);
+  --info:          oklch(60% 0.18 250);
 
-  /* 渐变 */
-  --gradient-primary: linear-gradient(135deg, oklch(64% 0.24 310), oklch(58% 0.25 265));
-  --gradient-accent:  linear-gradient(135deg, oklch(58% 0.25 265), oklch(64% 0.24 310));
-  --gradient-text:    linear-gradient(135deg, oklch(64% 0.24 310), oklch(58% 0.25 265), oklch(50% 0.22 265));
-  --gradient-warm:    linear-gradient(135deg, oklch(62% 0.18 30), oklch(64% 0.24 310));
-  --gradient-cool:    linear-gradient(135deg, oklch(58% 0.25 265), oklch(58% 0.16 250));
-  --gradient-glow:    linear-gradient(135deg, oklch(64% 0.24 310 / 0.4), oklch(58% 0.25 265 / 0.4));
+  /* 渐变 — 更大反差 */
+  --gradient-primary: linear-gradient(135deg, oklch(68% 0.28 315), oklch(60% 0.30 265));
+  --gradient-accent:  linear-gradient(135deg, oklch(60% 0.30 265), oklch(68% 0.28 315));
+  --gradient-text:    linear-gradient(135deg, oklch(68% 0.28 315), oklch(60% 0.30 265), oklch(50% 0.25 265));
+  --gradient-warm:    linear-gradient(135deg, oklch(65% 0.20 30), oklch(68% 0.28 315));
+  --gradient-cool:    linear-gradient(135deg, oklch(60% 0.30 265), oklch(60% 0.18 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(68% 0.28 315 / 0.5), oklch(60% 0.30 265 / 0.5));
 
   /* 角色标签色 */
-  --role-prompt:   oklch(62% 0.18 160);
-  --role-negative: oklch(58% 0.22 25);
-  --role-load:     oklch(58% 0.16 250);
-  --role-res:      oklch(72% 0.18 85);
+  --role-prompt:   oklch(65% 0.20 155);
+  --role-negative: oklch(62% 0.25 20);
+  --role-load:     oklch(60% 0.18 250);
+  --role-res:      oklch(75% 0.20 85);
 
   /* 标签色 */
   --tag-bg:        oklch(22% 0.04 310);
@@ -113,22 +113,22 @@
 
 /* Light Mode */
 [data-theme="light"], :root:not([data-theme="dark"]) {
-  --bg:            oklch(97% 0.006 310);
+  --bg:            oklch(96% 0.008 310);
   --bg-elevated:   oklch(100% 0 0);
-  --card:          color-mix(in oklch, oklch(100% 0 0 / 0.85), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card:          color-mix(in oklch, oklch(100% 0 0 / 0.88), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --card-bg:       var(--card);
-  --card-border:   color-mix(in oklch, oklch(85% 0.02 310 / 0.6), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-border:   color-mix(in oklch, oklch(80% 0.025 310 / 0.6), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --bg-overlay:    color-mix(in oklch, oklch(95% 0.008 310 / 0.7), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --input-bg:      color-mix(in oklch, oklch(92% 0.008 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --card-hover:    color-mix(in oklch, oklch(85% 0.015 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --text:          oklch(15% 0.015 310);
-  --text-sub:      oklch(42% 0.025 310);
-  --text-sub2:     oklch(62% 0.02 310);
-  --text-muted:    oklch(78% 0.015 310);
-  --primary:       oklch(52% 0.22 310);
-  --primary-hover: oklch(44% 0.22 310);
-  --accent:        oklch(48% 0.25 265);
-  --accent-hover:  oklch(40% 0.25 265);
+  --input-bg:      color-mix(in oklch, oklch(90% 0.01 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(82% 0.02 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --text:          oklch(15% 0.02 310);
+  --text-sub:      oklch(40% 0.03 310);
+  --text-sub2:     oklch(60% 0.025 310);
+  --text-muted:    oklch(75% 0.02 310);
+  --primary:       oklch(52% 0.28 315);
+  --primary-hover: oklch(44% 0.28 315);
+  --accent:        oklch(48% 0.30 265);
+  --accent-hover:  oklch(40% 0.30 265);
   --shadow:        oklch(30% 0.035 310 / 0.12);
   --shadow-sm:     0 1px 3px oklch(30% 0.035 310 / 0.06);
   --shadow-md:     0 4px 16px oklch(30% 0.035 310 / 0.08);
@@ -137,7 +137,7 @@
   --tag-bg:        oklch(95% 0.035 310);
   --tag-color:     oklch(38% 0.06 310);
   --tag-border:    oklch(80% 0.025 310);
-  --tag-hover-bg:  oklch(52% 0.22 310);
+  --tag-hover-bg:  oklch(52% 0.28 315);
   --tag-hover-color: #fff;
   --icon-bg:       color-mix(in oklch, oklch(90% 0.015 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
 }
@@ -218,6 +218,32 @@ button::-moz-focus-inner{border:0}
   backdrop-filter:blur(20px) saturate(1.3);
   -webkit-backdrop-filter:blur(20px) saturate(1.3);
   overflow:hidden;position:sticky;top:8px;z-index:50;
+  /* 动态渐变边框呼吸灯 */
+  transition:box-shadow 0.3s ease;
+}
+.unified-header::before{
+  content:'';position:absolute;inset:-1px;
+  border-radius:calc(var(--radius) + 1px);
+  background:linear-gradient(135deg, 
+    oklch(62% 0.22 310 / 0.3), 
+    oklch(58% 0.25 265 / 0.2),
+    oklch(62% 0.22 310 / 0.3),
+    oklch(72% 0.18 85 / 0.15),
+    oklch(62% 0.22 310 / 0.3)
+  );
+  background-size:300% 300%;
+  z-index:-1;
+  animation:headerBorderGlow 5s ease-in-out infinite;
+  pointer-events:none;
+  mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  padding:1px;
+}
+@keyframes headerBorderGlow{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
 }
 [data-theme="dark"] .unified-header{
   box-shadow:var(--shadow-sm),0 0 60px oklch(64% 0.24 310 / 0.06), inset 0 1px 0 oklch(100% 0 0 / 0.04);
@@ -365,6 +391,12 @@ button::-moz-focus-inner{border:0}
   width:var(--sidebar-w);flex-shrink:0;
   display:flex;flex-direction:column;gap:12px;
   transition:transform var(--transition-normal),opacity var(--transition-normal);
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:var(--radius);padding:12px;
+  backdrop-filter:blur(24px) saturate(1.4);
+  -webkit-backdrop-filter:blur(24px) saturate(1.4);
+  box-shadow:var(--shadow-sm), 0 8px 32px oklch(0% 0 0 / 0.12);
+  overflow:clip;isolation:isolate;
 }
 .sidebar-backdrop{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);
@@ -375,7 +407,7 @@ button::-moz-focus-inner{border:0}
 .sidebar-backdrop.active{opacity:1;pointer-events:auto;}
 
 /* ========================================================================
-   9. Cards — 玻璃态增强
+   9. Cards — 玻璃态 + 渐变顶边
    ======================================================================== */
 .card{
   background:var(--card);border:1px solid var(--card-border);
@@ -383,28 +415,23 @@ button::-moz-focus-inner{border:0}
   backdrop-filter:blur(24px) saturate(1.4);
   -webkit-backdrop-filter:blur(24px) saturate(1.4);
   transition:box-shadow var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast),background var(--transition-fast);
-  box-shadow:var(--shadow-sm);
-}
-.card:hover{
-  box-shadow:var(--shadow-md);
-  border-color:color-mix(in oklch,var(--primary) 40%,var(--card-border));
-}
-
-/* H. 赛博装饰角标 */
-.card::before{
-  content:'';position:absolute;
-  width:14px;height:14px;
-  pointer-events:none;z-index:2;
-  opacity:0;transition:opacity 0.3s;
-  border-color:var(--primary);border-style:solid;
+  box-shadow:var(--shadow-sm), 0 8px 32px oklch(0% 0 0 / 0.12);
+  position:relative;overflow:clip;isolation:isolate;
 }
 .card::before{
-  top:6px;left:6px;
-  border-width:2px 0 0 2px;
-  border-radius:4px 0 0 0;
+  content:'';position:absolute;top:0;left:0;right:0;height:2.5px;
+  background:var(--gradient-primary);
+  opacity:0.6;transition:opacity var(--transition-fast);
+  z-index:2;pointer-events:none;
+  border-radius:var(--radius) var(--radius) 0 0;
 }
 .card:hover::before{
-  opacity:0.7;
+  opacity:1;
+}
+.card:hover{
+  box-shadow:var(--shadow-md), 0 0 30px oklch(68% 0.28 315 / 0.08), 0 12px 40px oklch(0% 0 0 / 0.15);
+  border-color:color-mix(in oklch,var(--primary) 50%,var(--card-border));
+  transform: translateY(-2px);
 }
 
 .card-header{
@@ -472,6 +499,9 @@ button::-moz-focus-inner{border:0}
 }
 .wf-search input:focus{border-color:var(--primary);box-shadow:var(--shadow-focus)}
 .wf-search input::placeholder{color:var(--text-sub2);}
+/* 全局 placeholder 主题色 */
+input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-sub2) 70%, transparent);font-weight:400;}
+.wf-search input::placeholder, .settings-input::placeholder{color:var(--text-sub2);}
 .wf-list{
   display:flex;flex-direction:column;gap:2px;
   max-height:400px;overflow-y:auto;
@@ -495,8 +525,16 @@ button::-moz-focus-inner{border:0}
 .wf-item:hover::before{opacity:0.05;}.wf-item.active{
   background:linear-gradient(135deg,color-mix(in oklch,var(--primary) 12%,transparent),color-mix(in oklch,var(--accent) 8%,transparent));
   border-left-color:var(--primary);
+  border-left-width:3px;
   font-weight:600;
-  box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent),
+              3px 0 12px oklch(65% 0.28 315 / 0.15),
+              -1px 0 8px oklch(65% 0.28 315 / 0.08);
+  animation:wfActivePulse 2.5s ease-in-out infinite;
+}
+@keyframes wfActivePulse{
+  0%,100%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent),3px 0 12px oklch(65% 0.28 315 / 0.15),-1px 0 8px oklch(65% 0.28 315 / 0.08)}
+  50%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 20%,transparent),3px 0 20px oklch(65% 0.28 315 / 0.25),-1px 0 12px oklch(65% 0.28 315 / 0.15)}
 }
 .wf-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .wf-badge{
@@ -535,7 +573,8 @@ button::-moz-focus-inner{border:0}
 .prep-section textarea, #prompt_textarea, #neg_textarea{
   width:100%;min-height:80px;padding:12px 14px;
   border-radius:var(--radius-sm);border:1px solid var(--card-border);
-  background:var(--bg-elevated);color:var(--text);font-size:14px;
+  background:var(--input-bg);
+  color:var(--text);font-size:14px;
   font-family:'Noto Sans SC',sans-serif;
   outline:none;resize:vertical;
   transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
@@ -616,6 +655,9 @@ button::-moz-focus-inner{border:0}
 }
 .node-card:hover::before{opacity:1;}
 .node-card:active{transform:translateY(-1px) scale(0.98);}
+.node-card.node-disabled{opacity:0.45;border-color:var(--danger,#e74c3c);filter:grayscale(0.6);}
+.node-card.node-disabled::before{background:var(--danger,#e74c3c);opacity:0.6;}
+.node-card.node-disabled:hover{transform:translateY(-2px);border-color:var(--danger,#e74c3c);}
 /* 选中节点 — 彩色边框 + 左色条 + 发光 + 置前 */
 .node-card.prompt-active{
   border-color:var(--success);border-width:2px;
@@ -641,6 +683,12 @@ button::-moz-focus-inner{border:0}
   z-index:2;position:relative;
   border-left:4px solid var(--danger);
 }
+.node-card.exp-active{
+  border-color:var(--accent);border-width:2px;
+  box-shadow:0 0 24px oklch(65% 0.25 290 / 0.35),var(--shadow-md);
+  z-index:2;position:relative;
+  border-left:4px solid var(--accent);
+}
 .node-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm);}
 
 .node-role-label{
@@ -652,6 +700,8 @@ button::-moz-focus-inner{border:0}
 .node-role-label.role-negative{background:color-mix(in oklch, var(--danger) 25%, transparent);color:var(--role-negative);border:1px solid var(--danger);}
 .node-role-label.role-load{background:color-mix(in oklch, var(--info) 25%, transparent);color:var(--role-load);border:1px solid var(--info);}
 .node-role-label.role-res{background:color-mix(in oklch, var(--warning) 25%, transparent);color:var(--role-res);border:1px solid var(--warning);}
+.node-role-label.role-exp{background:color-mix(in oklch, var(--accent) 25%, transparent);color:var(--accent);border:1px solid var(--accent);}
+.node-role-label.role-disabled{background:color-mix(in oklch, var(--danger, #e74c3c) 25%, transparent);color:var(--danger, #e74c3c);border:1px solid var(--danger, #e74c3c);}
 
 .node-card .node-icon{font-size:14px;margin-right:4px;vertical-align:middle}
 .node-card .node-id{
@@ -686,15 +736,24 @@ button::-moz-focus-inner{border:0}
 .node-tag-btn.active-danger{background:color-mix(in oklch, var(--danger) 25%, transparent);border-color:var(--danger);color:var(--role-negative);font-weight:600;}
 .node-tag-btn.active-info{background:color-mix(in oklch, var(--info) 25%, transparent);border-color:var(--info);color:var(--role-load);font-weight:600;}
 .node-tag-btn.active-warning{background:color-mix(in oklch, var(--warning) 25%, transparent);border-color:var(--warning);color:var(--role-res);font-weight:600;}
+.node-tag-btn.active-accent{background:color-mix(in oklch, var(--accent) 25%, transparent);border-color:var(--accent);color:var(--accent);font-weight:600;}
 .node-tag-btn:disabled{
   opacity:0.45;cursor:not-allowed;transform:none!important;
   filter:grayscale(0.6);pointer-events:none;user-select:none;
 }
 .node-help-bar{
-  font-size:11px;color:var(--text-sub);padding:6px 8px;margin-bottom:6px;
+  font-size:11px;color:var(--text-sub);padding:8px 10px;margin-bottom:6px;
   background:var(--input-bg);border-radius:var(--radius-sm);
-  border:1px solid var(--card-border);line-height:1.5;
+  border:1px solid var(--card-border);line-height:1.6;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
 }
+.node-help-dot{
+  display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px;
+}
+.node-help-dot.pos{background:var(--success);box-shadow:0 0 6px var(--success-glow);}
+.node-help-dot.neg{background:var(--danger);box-shadow:0 0 6px var(--danger-glow);}
+.node-help-dot.img{background:var(--info);}
+.node-help-dot.res{background:var(--warning);}
 /* 魔导书IP分类 — 自定义下拉框 */
 .grm-cat-dropdown {
   position: relative;
@@ -826,6 +885,7 @@ button::-moz-focus-inner{border:0}
 .assigned-tag.tag-negative{background:color-mix(in oklch, var(--danger) 18%, transparent);border-color:var(--danger);color:var(--role-negative);}
 .assigned-tag.tag-res{background:color-mix(in oklch, var(--warning) 18%, transparent);border-color:var(--warning);color:var(--role-res);}
 .assigned-tag.tag-load{background:color-mix(in oklch, var(--info) 18%, transparent);border-color:var(--info);color:var(--role-load);}
+.assigned-tag.tag-disabled{background:color-mix(in oklch, var(--danger) 18%, transparent);border-color:var(--danger);color:var(--role-negative);}
 .assigned-tag .tag-remove{
   background:none;border:none;cursor:pointer;font-size:12px;
   padding:0;width:20px;height:20px;line-height:20px;
@@ -952,12 +1012,12 @@ button::-moz-focus-inner{border:0}
   box-shadow:var(--shadow-lg);
   font-size:13px;max-width:360px;
   transform:translateX(120%);opacity:0;
-  transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+  transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
 }
 .toast-item.show{transform:translateX(0);opacity:1;}
 .toast-item.removing{transform:translateX(120%);opacity:0;}
 .toast-item.success{border-left:3px solid var(--success);}
-.toast-item.error{border-left:3px solid var(--danger);}
+.toast-item.error{border-left:3px solid var(--danger);border-image:linear-gradient(180deg,var(--danger),var(--warning)) 1;}
 .toast-item.info{border-left:3px solid var(--info);}
 .toast-icon{font-size:16px;flex-shrink:0;}
 .toast-close{
@@ -1077,13 +1137,38 @@ button::-moz-focus-inner{border:0}
 #progress_step_detail{color:var(--text-muted)}
 
 /* ========================================================================
-   24. Upload Area
+   24. Upload Area — Dropzone Style
    ======================================================================== */
-.upload-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.upload-area input[type=file]{font-size:12px;color:var(--text-sub);}
+.upload-area{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 16px;border:2px dashed var(--card-border);
+  border-radius:var(--radius-sm);background:var(--input-bg);
+  transition:all var(--transition-fast);min-height:60px;
+}
+.upload-area:hover{
+  border-color:color-mix(in oklch, var(--primary) 40%, var(--card-border));
+  background:color-mix(in oklch, var(--primary) 4%, var(--input-bg));
+}
+.upload-area input[type=file]{
+  font-size:12px;color:var(--text-sub);
+  padding:6px 0;cursor:pointer;
+}
+.upload-area input[type=file]::file-selector-button{
+  padding:6px 14px;border-radius:var(--radius-xs);
+  border:1px solid var(--card-border);background:var(--card);
+  color:var(--text);font-size:11px;font-weight:500;
+  cursor:pointer;transition:all var(--transition-fast);
+  font-family:inherit;
+}
+.upload-area input[type=file]::file-selector-button:hover{
+  border-color:var(--primary);color:var(--primary);
+  background:color-mix(in oklch, var(--primary) 8%, var(--card));
+}
 .upload-area .file-name{
   font-size:12px;color:var(--text-sub);
   max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:4px 10px;background:var(--card);border-radius:var(--radius-xs);
+  border:1px solid var(--card-border);
 }
 
 /* ========================================================================
@@ -1181,7 +1266,15 @@ button::-moz-focus-inner{border:0}
 .bindmgr-sel-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--card-border);background:color-mix(in oklch,var(--card) 50%,transparent);}
 .bindmgr-sel-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text);}
 .bindmgr-add-wf-row{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid var(--card-border);}
-.bindmgr-select{flex:1;padding:7px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--bg);color:var(--text);font-size:12px;outline:none;min-width:0;}
+.bindmgr-select{flex:1;padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;outline:none;min-width:0;cursor:pointer;transition:border-color var(--transition-fast);}
+.bindmgr-select:focus{border-color:var(--primary);}
+/* 全局 select 样式统一 */
+select:not([class*="color"]):not([class*="date"]){
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a6a8a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;background-size:14px;
+  padding-right:28px;
+}
 .bindmgr-bound-wfs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;}
 .bindmgr-bound-wfs:empty::after{content:'（无独立工作流）';color:var(--text-sub);font-size:11px;}
 
@@ -1192,12 +1285,21 @@ button::-moz-focus-inner{border:0}
 }
 
 /* ========================================================================
-   26. Scrollbar
+   26. Scrollbar — 赛博主题
    ======================================================================== */
-::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--text-sub2)}
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, var(--primary), var(--accent));
+  border-radius:3px;
+  border:1px solid transparent;
+  background-clip:content-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg, var(--primary-hover), var(--accent-hover));
+}
+/* Firefox */
+*{scrollbar-width:thin;scrollbar-color:var(--primary) transparent}
 
 /* ========================================================================
    27. Gallery
@@ -1239,6 +1341,11 @@ button::-moz-focus-inner{border:0}
   content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
   width:20px;height:3px;border-radius:2px;
   background:var(--gradient-primary);
+  animation:bnActivePulse 2s ease-in-out infinite;
+}
+@keyframes bnActivePulse{
+  0%,100%{opacity:0.6;width:20px}
+  50%{opacity:1;width:28px}
 }
 
 /* ========================================================================
@@ -1248,9 +1355,21 @@ button::-moz-focus-inner{border:0}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .node-card,.wf-item{animation:fadeIn 0.25s cubic-bezier(0.16,1,0.3,1);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.empty-state{padding:36px 20px;text-align:center;color:var(--text-sub2);display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px}
-.empty-state-icon{font-size:40px;opacity:0.35;margin-bottom:2px;}
-.empty-state-title{font-size:14px;font-weight:600;color:var(--text-sub)}
+.empty-state{
+  padding:36px 20px;text-align:center;color:var(--text-sub2);
+  display:flex;flex-direction:column;align-items:center;gap:10px;font-size:13px;
+  position:relative;
+}
+.empty-state-icon{
+  font-size:44px;opacity:0.3;margin-bottom:4px;
+  filter:drop-shadow(0 0 12px oklch(62% 0.22 310 / 0.15));
+  animation:emptyFloat 3s ease-in-out infinite;
+}
+@keyframes emptyFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+.empty-state-title{font-size:14px;font-weight:600;color:var(--text-sub);letter-spacing:0.3px;}
 .empty-state-desc{font-size:11px;color:var(--text-sub);opacity:0.7;line-height:1.6;max-width:280px}
 
 .collapsible-header{
@@ -1282,7 +1401,8 @@ button::-moz-focus-inner{border:0}
 .param-row label{font-size:12px;color:var(--text-sub);display:block;margin-bottom:4px;font-weight:500;}
 .param-row input,.param-row select,.param-row textarea{
   width:100%;padding:10px 12px;border-radius:var(--radius-sm);
-  border:1px solid var(--card-border);background:var(--input-bg);
+  border:1px solid var(--card-border);
+  background:var(--input-bg);
   color:var(--text);font-size:14px;outline:none;
   min-height:44px;transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
 }
@@ -1298,7 +1418,8 @@ button::-moz-focus-inner{border:0}
 .settings-label{font-size:11px;color:var(--text-sub);min-width:70px;flex-shrink:0}
 .settings-input{
   flex:1;padding:8px 12px;border-radius:var(--radius-sm);
-  border:1px solid var(--card-border);background:var(--input-bg);
+  border:1px solid var(--card-border);
+  background:var(--input-bg);
   color:var(--text);font-size:13px;outline:none;
   min-height:40px;transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
 }
@@ -1467,13 +1588,15 @@ button::-moz-focus-inner{border:0}
 .grimoire-data-table{flex:1;overflow-y:auto;padding:4px 8px;}
 .grimoire-pagination{
   padding:8px 14px;border-top:1px solid var(--card-border);
-  display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;
+  background:color-mix(in oklch, var(--card) 50%, transparent);
 }
 .grm-page-jump{
-  width:48px;padding:3px 4px;border:1px solid var(--card-border);
-  border-radius:var(--radius-xs);background:var(--input-bg);
-  color:var(--text);font-size:11px;text-align:center;outline:none;
-  -moz-appearance:textfield;
+  width:52px;padding:4px 6px;border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);background:var(--input-bg);
+  color:var(--text);font-size:12px;text-align:center;outline:none;
+  -moz-appearance:textfield;min-height:30px;
+  transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
 }
 .grm-page-jump::-webkit-inner-spin-button,.grm-page-jump::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 .grm-page-jump:focus{border-color:var(--primary);}
@@ -1624,33 +1747,55 @@ button::-moz-focus-inner{border:0}
 .grm-item-btn.star.active{opacity:1;color:var(--primary);filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.7)) drop-shadow(0 0 20px oklch(62% 0.22 310 / 0.3));}
 .grm-item-card.starred{box-shadow:inset 0 0 0 2px oklch(62% 0.22 310 / 0.5),var(--shadow-sm),0 0 20px oklch(62% 0.22 310 / 0.1);}
 
-/* 魔导书卡片图片缩略图 */
+/* 魔导书卡片图片缩略图 — 大图版 */
 .grm-item-img{
-  width:48px;height:64px;flex-shrink:0;border-radius:var(--radius-xs);
+  width:72px;height:96px;flex-shrink:0;border-radius:var(--radius-sm);
   object-fit:cover;background:var(--card-border);
-  transition:opacity 0.3s ease,transform 0.2s ease;
+  transition:opacity 0.3s ease,transform 0.25s ease,box-shadow 0.25s ease;
   cursor:pointer;
+  box-shadow:var(--shadow-sm);
 }
-.grm-item-img:hover{transform:scale(1.05);}
+.grm-item-img:hover{transform:scale(1.06);box-shadow:var(--shadow-md);}
+/* 无图占位符 — 渐变背景 + 大图标 */
 .grm-item-img-placeholder{
-  width:48px;height:64px;flex-shrink:0;border-radius:var(--radius-xs);
-  background:var(--card-border);display:flex;align-items:center;justify-content:center;
-  font-size:18px;color:var(--text-sub2);opacity:0.4;
+  width:72px;height:96px;flex-shrink:0;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg, color-mix(in oklch, var(--primary) 12%, var(--card-border)), color-mix(in oklch, var(--accent) 8%, var(--card-border)));
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;color:var(--text-sub2);opacity:0.5;
+  box-shadow:var(--shadow-sm);
+  transition:transform 0.25s ease,opacity 0.25s ease;
 }
-.grm-item-card.has-img{padding-left:8px;}
+.grm-item-card:hover .grm-item-img-placeholder{
+  opacity:0.7;transform:scale(1.03);
+}
+.grm-item-card.has-img{padding-left:6px;}
+/* 缓存标识 — 适应大图位置 */
 .grm-item-cached-badge{
-  position:absolute;top:4px;left:52px;font-size:8px;
-  background:var(--success);color:#fff;padding:0 4px;border-radius:3px;
-  line-height:14px;opacity:0.8;pointer-events:none;z-index:1;
+  position:absolute;top:4px;left:6px;font-size:8px;
+  background:var(--success);color:#fff;padding:0 5px;border-radius:4px;
+  line-height:16px;opacity:0.85;pointer-events:none;z-index:2;
+  font-weight:700;
 }
 .grm-item-uncached-badge{
-  position:absolute;top:4px;left:52px;font-size:8px;
-  background:var(--text-sub2);color:#fff;padding:0 4px;border-radius:3px;
-  line-height:14px;opacity:0.5;pointer-events:none;z-index:1;
+  position:absolute;top:4px;left:6px;font-size:8px;
+  background:color-mix(in oklch, var(--text-sub2) 60%, transparent);
+  color:#fff;padding:0 5px;border-radius:4px;
+  line-height:16px;opacity:0.6;pointer-events:none;z-index:2;
 }
+/* 卡片文字加大以匹配大图 */
+.grm-item-info{flex:1;min-width:0;padding:2px 0;}
+.grm-item-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4;}
+.grm-item-name-en{font-size:11px;color:var(--text-sub2);margin-left:6px;font-weight:400;}
+.grm-item-category{font-size:11px;color:var(--accent);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5;}
+.grm-item-tags{font-size:11px;color:var(--text-sub2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5;}
+/* 卡片内边距微调适应大图 */
+.grm-item-card{gap:12px;padding:10px 14px;}
 @media(max-width:640px){
-  .grm-item-img{width:40px;height:54px;}
-  .grm-item-img-placeholder{width:40px;height:54px;}
+  .grm-item-img{width:60px;height:80px;}
+  .grm-item-img-placeholder{width:60px;height:80px;}
+  .grm-item-name{font-size:13px;}
+  .grm-item-tags{font-size:10px;}
+  .grm-item-card{gap:10px;padding:8px 10px;}
 }
 
 /* 缓存状态标签 */
@@ -1721,20 +1866,30 @@ button::-moz-focus-inner{border:0}
 
 
 
-/* 数据源条目 */
+/* 数据源条目 — 左侧指示条 */
 .source-item{
   display:flex;align-items:center;gap:6px;
   padding:8px 10px;border-radius:var(--radius-xs);
   cursor:pointer;font-size:12px;margin-bottom:2px;
   transition:all var(--transition-fast);
   position:relative;overflow:hidden;
+  border-left:3px solid transparent;
 }
-.source-item:hover{background:var(--card-hover);}
+.source-item:hover{background:var(--card-hover);border-left-color:color-mix(in oklch, var(--primary) 30%, transparent);}
 .source-item:active{background:var(--card-hover);}
 .source-item.active{
   background:color-mix(in oklch, var(--primary) 12%, transparent);
   border-left:3px solid var(--primary);
   font-weight:600;
+}
+.source-item.active::after{
+  content:'';position:absolute;top:0;bottom:0;left:0;width:3px;
+  background:var(--gradient-primary);
+  animation:sourceGlow 2s ease-in-out infinite;
+}
+@keyframes sourceGlow{
+  0%,100%{opacity:0.5}
+  50%{opacity:1}
 }
 .source-item .source-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .source-item .source-count{
@@ -2440,7 +2595,7 @@ textarea:focus-visible,
 }
 
 /* ========================================================================
-   A. 粒子背景 — 纯 CSS（无 JS，兼容所有浏览器）
+   A. 背景系统 — 极光 + 浮动光球 + 网格 + 星光 + 噪点 + 暗角
    ======================================================================== */
 #bg_particles {
   position: fixed; inset: 0; z-index: 0;
@@ -2448,111 +2603,178 @@ textarea:focus-visible,
   width: 100vw; height: 100vh; height: 100dvh;
   overflow: hidden;
 }
-/* 三层不同大小/颜色的星光，各自漂移动画 */
-#bg_particles::before,
+/* 层1：流动极光 */
+#bg_particles::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: 
+    radial-gradient(ellipse 70% 55% at 15% 15%, oklch(68% 0.28 315 / 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 75% 25%, oklch(60% 0.30 265 / 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 40% at 50% 80%, oklch(75% 0.20 85 / 0.10) 0%, transparent 45%),
+    radial-gradient(ellipse 60% 45% at 30% 60%, oklch(68% 0.28 315 / 0.15) 0%, transparent 50%);
+  animation: auroraFlow 10s ease-in-out infinite alternate;
+}
+@keyframes auroraFlow {
+  0%   { transform: scale(1) rotate(0deg); opacity: 0.7; }
+  25%  { transform: scale(1.15) rotate(2.5deg); opacity: 1; }
+  50%  { transform: scale(0.92) rotate(-1.5deg); opacity: 0.8; }
+  75%  { transform: scale(1.08) rotate(1.8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+}
+/* 层2：浮动光球 */
+#bg_particles .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0;
+  animation: orbFloat var(--dur, 20s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+#bg_particles .orb:nth-child(1) {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, oklch(68% 0.28 315 / 0.25), transparent);
+  top: -10%; left: -10%;
+  --dur: 25s; --delay: 0s;
+}
+#bg_particles .orb:nth-child(2) {
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, oklch(60% 0.30 265 / 0.20), transparent);
+  bottom: -5%; right: -5%;
+  --dur: 30s; --delay: 3s;
+}
+#bg_particles .orb:nth-child(3) {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, oklch(75% 0.20 85 / 0.12), transparent);
+  top: 50%; left: 60%;
+  --dur: 22s; --delay: 6s;
+}
+#bg_particles .orb:nth-child(4) {
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, oklch(62% 0.25 20 / 0.10), transparent);
+  top: 20%; left: 80%;
+  --dur: 28s; --delay: 2s;
+}
+#bg_particles .orb:nth-child(5) {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, oklch(68% 0.28 315 / 0.15), transparent);
+  bottom: 10%; left: 20%;
+  --dur: 35s; --delay: 8s;
+}
+@keyframes orbFloat {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+  15%  { opacity: 0.8; }
+  50%  { transform: translate(80px, -60px) scale(1.3); opacity: 1; }
+  85%  { opacity: 0.6; }
+  100% { transform: translate(-40px, 30px) scale(0.9); opacity: 0; }
+}
+/* 层3：赛博格纹 */
+#bg_particles .grid-overlay {
+  position: absolute; inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+/* 层4：星光 dots */
 #bg_particles::after {
   content: '';
   position: absolute;
-  width: 2px; height: 2px;
-  border-radius: 50%;
-  animation: particleDrift 24s ease-in-out infinite alternate;
-}
-#bg_particles::before {
+  width: 100%; height: 100%;
   box-shadow:
-    12vw 8vh 0 0 rgba(180,100,255,0.6),
-    28vw 15vh 0 0 rgba(232,106,154,0.5),
-    45vw 5vh 0 1px rgba(130,160,255,0.4),
-    60vw 22vh 0 0 rgba(200,120,255,0.6),
-    78vw 12vh 0 0 rgba(255,180,200,0.4),
-    90vw 30vh 0 0 rgba(180,100,255,0.5),
-    15vw 40vh 0 1px rgba(232,106,154,0.4),
-    35vw 55vh 0 0 rgba(130,160,255,0.5),
-    55vw 70vh 0 0 rgba(200,120,255,0.4),
-    72vw 85vh 0 1px rgba(255,180,200,0.5),
-    5vw 65vh 0 0 rgba(180,100,255,0.3),
-    42vw 80vh 0 0 rgba(232,106,154,0.5),
-    82vw 45vh 0 0 rgba(130,160,255,0.4),
-    95vw 50vh 0 1px rgba(200,120,255,0.5),
-    8vw 28vh 0 0 rgba(255,180,200,0.4),
-    50vw 35vh 0 0 rgba(180,100,255,0.5),
-    68vw 60vh 0 0 rgba(232,106,154,0.3),
-    85vw 18vh 0 0 rgba(130,160,255,0.5),
-    22vw 48vh 0 1px rgba(200,120,255,0.4),
-    65vw 75vh 0 0 rgba(255,180,200,0.5),
-    32vw 10vh 0 0 rgba(180,100,255,0.4),
-    75vw 40vh 0 0 rgba(232,106,154,0.5),
-    40vw 90vh 0 0 rgba(130,160,255,0.3);
-  animation-duration: 28s;
-  animation-delay: -5s;
+    12vw 8vh 0 0 oklch(75% 0.06 310 / 0.5),
+    28vw 15vh 0 0 oklch(80% 0.08 265 / 0.4),
+    45vw 5vh 0 1px oklch(70% 0.1 30 / 0.4),
+    60vw 22vh 0 0 oklch(72% 0.12 265 / 0.5),
+    78vw 12vh 0 0 oklch(85% 0.05 310 / 0.4),
+    90vw 30vh 0 0 oklch(68% 0.15 310 / 0.5),
+    15vw 40vh 0 1px oklch(80% 0.08 265 / 0.4),
+    35vw 55vh 0 0 oklch(72% 0.12 30 / 0.5),
+    55vw 70vh 0 0 oklch(75% 0.06 310 / 0.4),
+    72vw 85vh 0 1px oklch(78% 0.06 265 / 0.5),
+    5vw 65vh 0 0 oklch(70% 0.1 30 / 0.3),
+    42vw 80vh 0 0 oklch(68% 0.15 310 / 0.5),
+    82vw 45vh 0 0 oklch(85% 0.05 310 / 0.4),
+    95vw 50vh 0 1px oklch(72% 0.12 265 / 0.5),
+    8vw 28vh 0 0 oklch(80% 0.08 265 / 0.4),
+    50vw 35vh 0 0 oklch(75% 0.06 310 / 0.5),
+    68vw 60vh 0 0 oklch(70% 0.1 30 / 0.3),
+    85vw 18vh 0 0 oklch(78% 0.06 265 / 0.5),
+    22vw 48vh 0 1px oklch(68% 0.15 310 / 0.4),
+    65vw 75vh 0 0 oklch(85% 0.05 310 / 0.5),
+    32vw 10vh 0 0 oklch(72% 0.12 30 / 0.4),
+    75vw 40vh 0 0 oklch(80% 0.08 265 / 0.5),
+    40vw 90vh 0 0 oklch(75% 0.06 310 / 0.3);
+  animation: starDrift 40s ease-in-out infinite alternate;
 }
-#bg_particles::after {
-  width: 1px; height: 1px;
-  box-shadow:
-    18vw 20vh 0 0 rgba(180,100,255,0.4),
-    33vw 42vh 0 0 rgba(232,106,154,0.3),
-    48vw 12vh 0 0 rgba(130,160,255,0.5),
-    63vw 28vh 0 0 rgba(200,120,255,0.3),
-    80vw 8vh 0 0 rgba(255,180,200,0.4),
-    10vw 25vh 0 0 rgba(180,100,255,0.3),
-    25vw 50vh 0 0 rgba(232,106,154,0.4),
-    52vw 38vh 0 0 rgba(130,160,255,0.3),
-    70vw 52vh 0 0 rgba(200,120,255,0.4),
-    88vw 65vh 0 0 rgba(255,180,200,0.3),
-    3vw 72vh 0 0 rgba(180,100,255,0.4),
-    38vw 62vh 0 0 rgba(232,106,154,0.3),
-    58vw 82vh 0 0 rgba(130,160,255,0.4),
-    92vw 15vh 0 0 rgba(200,120,255,0.3),
-    20vw 68vh 0 0 rgba(255,180,200,0.4),
-    45vw 5vh 0 0 rgba(180,100,255,0.3),
-    62vw 48vh 0 0 rgba(232,106,154,0.4),
-    76vw 30vh 0 0 rgba(130,160,255,0.3),
-    30vw 78vh 0 0 rgba(200,120,255,0.4),
-    55vw 95vh 0 0 rgba(255,180,200,0.3);
-  animation-duration: 35s;
-  animation-delay: -12s;
+@keyframes starDrift {
+  0%   { transform: translate(0, 0); opacity: 0.15; }
+  50%  { transform: translate(20px, -15px); opacity: 0.6; }
+  100% { transform: translate(-15px, 20px); opacity: 0.2; }
 }
-
-@keyframes particleDrift {
-  0%   { transform: translate(0, 0); opacity: 0.2; }
-  25%  { opacity: 0.8; }
-  50%  { transform: translate(30px, -20px); opacity: 0.5; }
-  75%  { opacity: 0.9; }
-  100% { transform: translate(-20px, 30px); opacity: 0.3; }
+/* 层5：噪点纹理 — 胶片颗粒感 */
+#bg_particles .noise {
+  position: absolute; inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  pointer-events: none;
 }
+/* 层6：暗角 vignette */
+#bg_particles .vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 60% at center, transparent 30%, oklch(0% 0 0 / 0.5) 100%);
+  pointer-events: none;
+}
+/* 移动端降级 */
+@media(max-width:768px){
+  #bg_particles .orb { display: none; }
+  #bg_particles .noise { display: none; }
+  #bg_particles::before { opacity: 0.25; animation-duration: 20s; }
+  #bg_particles::after { opacity: 0.15; }
+}
+[data-theme="light"] #bg_particles::before { opacity: 0.2; }
+[data-theme="light"] #bg_particles::after { opacity: 0.2; }
 
 [data-theme="light"] #bg_particles::before,
 [data-theme="light"] #bg_particles::after {
+  opacity: 0.4 !important;
+}
+[data-theme="light"] #bg_particles .star-field span {
+  opacity: 0.15 !important;
+}
+[data-theme="light"] #bg_particles .glow-star {
   opacity: 0.3 !important;
 }
 
 /* ========================================================================
-   D. 卡片扫光 Shimmer (hover)
+   D. 卡片霓虹扫光 + 流光边框 (hover)
    ======================================================================== */
-.card {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-.card::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 25%,
-    color-mix(in oklch, var(--primary) 12%, transparent) 45%,
-    color-mix(in oklch, var(--accent) 10%, transparent) 50%,
-    color-mix(in oklch, var(--primary) 12%, transparent) 55%,
-    transparent 75%
-  );
-  background-size: 200% 100%;
-  background-position: 200% 0;
-  pointer-events: none; z-index: 1;
-  transition: background-position 0.8s cubic-bezier(0.22,1,0.36,1);
-  mix-blend-mode: screen;
-  border-radius: inherit;
-}
-.card:hover::after {
-  background-position: -200% 0;
+/* 流光扫光层 — 从左上扫向右下（仅桌面端hover设备） */
+@media (hover: hover) {
+  .card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 20%,
+      color-mix(in oklch, var(--primary) 14%, transparent) 42%,
+      color-mix(in oklch, var(--accent) 12%, transparent) 48%,
+      color-mix(in oklch, var(--primary) 14%, transparent) 54%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    pointer-events: none; z-index: 1;
+    transition: background-position 0.8s cubic-bezier(0.22,1,0.36,1);
+    mix-blend-mode: screen;
+    border-radius: inherit;
+    opacity: 0;
+  }
+  .card:hover::after {
+    background-position: -200% 0;
+    opacity: 1;
+  }
 }
 @media(prefers-reduced-motion:reduce){
   .card::after { display: none; }
@@ -2572,10 +2794,123 @@ textarea:focus-visible,
   to{transform:scale(4);opacity:0;}
 }
 
+/* ========================================================================
+   H. 微交互动效 — 按钮悬停放大、标签弹跳、输入框光晕
+   ======================================================================== */
+/* 仅桌面端hover设备启用hover变换 */
+@media (hover: hover) {
+  .btn:hover { transform: translateY(-1px) scale(1.02); }
+  .theme-btn:hover, .ratio-btn:hover, .res-preset-btn:hover,
+  .group-tag:hover, .gallery-tab:hover, .gallery-filter:hover,
+  .wf-cat-tag:hover, .source-item:hover { transform: translateY(-1px); }
+  .node-card:hover { transform: translateY(-3px) scale(1.02); }
+  .wf-item:hover { transform: translateX(2px); }
+  @media(min-width:900px){
+    .gallery-fab:hover { transform: scale(1.1); box-shadow: 0 8px 32px oklch(62% 0.22 310 / 0.6); }
+  }
+}
+/* mobile/通用active反馈 — 轻触缩放 */
+.btn:active { transform: scale(0.96); }
+.theme-btn:active, .ratio-btn:active, .res-preset-btn:active,
+.group-tag:active { transform: scale(0.92); }
+.node-card:active { transform: translateY(-1px) scale(0.97); }
+
+/* ========================================================================
+   I. 装饰性渐变描边 & 视觉层次
+   ======================================================================== */
+/* 顶部标题栏渐变底部分隔线 */
+.unified-header {
+  position: relative;
+}
+.unified-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, oklch(62% 0.22 310 / 0.3), oklch(58% 0.25 265 / 0.3), transparent);
+  pointer-events: none;
+}
+
+/* 进度条底部渐变光晕 */
+#progress_section::after {
+  content: '';
+  position: absolute;
+  bottom: -8px; left: 10%; right: 10%;
+  height: 16px;
+  background: linear-gradient(180deg, oklch(62% 0.22 310 / 0.06), transparent);
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(4px);
+}
+#progress_section {
+  position: relative;
+}
+
+/* 画廊空状态 — 动画呼吸 */
+.gallery-empty-svg {
+  opacity: 0.25;
+  animation: emptyPulse 3s ease-in-out infinite;
+}
+@keyframes emptyPulse {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.05); }
+}
+
+/* 状态标签 — 文字发光 */
+.status-label {
+  filter: drop-shadow(0 0 6px oklch(62% 0.22 310 / 0.3));
+}
+
+/* 底部导航 — 活动项光晕 */
+.bottom-nav .bn-item.active .bn-icon {
+  filter: drop-shadow(0 0 10px oklch(62% 0.22 310 / 0.6));
+}
+
+/* Toast 通知 — 滑入光晕 */
+.toast-item.show {
+  box-shadow: var(--shadow-lg), 0 0 20px oklch(62% 0.22 310 / 0.08);
+}
+
+/* 响应式装饰调整 */
+@media(max-width:768px){
+  .unified-header::after {
+    left: 5%; right: 5%;
+  }
+  #progress_section::after {
+    bottom: -4px;
+    height: 8px;
+  }
+}
+
+/* 空状态图标背景装饰 */
+.gallery-empty {
+  position: relative;
+}
+.gallery-empty::before {
+  content: '';
+  position: absolute;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(62% 0.22 310 / 0.04), transparent);
+  pointer-events: none;
+  animation: emptyGlow 4s ease-in-out infinite;
+}
+@keyframes emptyGlow {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
 </style>
 </head>
 <body>
-<div id="bg_particles" aria-hidden="true"></div>
+<div id="bg_particles" aria-hidden="true">
+  <div class="orb"></div><div class="orb"></div>
+  <div class="orb"></div><div class="orb"></div>
+  <div class="orb"></div>
+  <div class="grid-overlay"></div>
+  <div class="noise"></div>
+  <div class="vignette"></div>
+</div>
 <!-- SVG Icon Sprite -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
   <!-- Keep all icon definitions from the original -->
@@ -2733,7 +3068,6 @@ textarea:focus-visible,
       </div>
       <div class="header-right">
         <div class="theme-group">
-          <button class="theme-btn" data-action="setThemeAuto" title="跟随系统" aria-label="跟随系统主题"><svg class="icon" aria-hidden="true"><use href="#icon-monitor"/></svg></button>
           <button class="theme-btn" data-action="setThemeLight" title="白天模式" aria-label="切换到白天模式"><svg class="icon" aria-hidden="true"><use href="#icon-sun"/></svg></button>
           <button class="theme-btn" data-action="setThemeDark" title="夜间模式" aria-label="切换到夜间模式"><svg class="icon" aria-hidden="true"><use href="#icon-moon"/></svg></button>
           <button class="theme-btn" data-action="showBgModal" title="背景设置" aria-label="打开背景设置"><svg class="icon" aria-hidden="true"><use href="#icon-image"/></svg></button>
@@ -2873,6 +3207,11 @@ textarea:focus-visible,
             <button class="btn btn-xs btn-secondary" data-action="testComfyUI" aria-label="测试连接"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plug"/></svg> 测试</button>
           </div>
           <hr class="settings-hr">
+          <div class="settings-row" style="justify-content:flex-start;gap:8px">
+            <input type="checkbox" id="cfg_show_prompt" style="accent-color:var(--primary)" onchange="saveShowPrompt()">
+            <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
+          </div>
+          <hr class="settings-hr">
           <button class="btn btn-xs btn-danger" data-action="resetAll"><svg class="icon" aria-hidden="true"><use href="#icon-warning"/></svg> 重置所有用户设定</button>
         </div>
       </div>
@@ -2883,7 +3222,6 @@ textarea:focus-visible,
   <div class="main-content">
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar" aria-label="工作流侧栏">
-      <div class="card" style="flex:1">
         <div class="card-header">
           <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-folder-closed"/></svg> 工作流</span>
           <button class="btn btn-xs btn-secondary" data-action="loadWorkflows" aria-label="刷新工作流"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg></button>
@@ -2904,7 +3242,6 @@ textarea:focus-visible,
           </div>
           <div class="empty-state" id="wf_empty" style="display:none">暂无工作流</div>
         </div>
-      </div>
     </nav>
 
     <!-- Canvas -->
@@ -2972,6 +3309,11 @@ textarea:focus-visible,
           <div id="upload_image_rows"></div>
         </div>
 
+        <div class="prep-section" id="prep_expanded_text" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-file-text"/></svg> 扩写后文本 <span class="section-badge" id="prep_exp_node_badge">节点: 无</span></div>
+          <div class="param-row" style="padding:8px 16px;font-size:11px;color:var(--text-sub)">将从此节点读取扩写后的提示词，取代原始输入存入提示词记录</div>
+        </div>
+
         <div class="prep-section" id="prep_unassigned_hint" style="display:none">
           <div class="section-title"><svg class="icon" aria-hidden="true"><use href="#icon-target"/></svg> 节点参数</div>
           <div class="empty-state empty-state-compact" style="padding:24px 16px;">
@@ -3001,7 +3343,7 @@ textarea:focus-visible,
           <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 节点列表</span>
         </div>
         <input type="text" id="search_nodes" placeholder="搜索节点名称或ID..." oninput="filterNodes()" aria-label="搜索节点" class="settings-input" style="margin-bottom:6px" autocomplete="off">
-        <div class="node-help-bar">🎯 正面提示词 <span style="color:var(--text-muted)">·</span> 🚫 负面提示词 <span style="color:var(--text-muted)">·</span> 🖼️ 1-3 载入图片 <span style="color:var(--text-muted)">·</span> 📐 分辨率</div>
+        <div class="node-help-bar"><span class="node-help-dot pos"></span> 正面提示词 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span> 负面提示词 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span> 载入图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span> 分辨率</div>
         <div class="node-grid" id="node_grid">
           <div class="empty-state" style="grid-column:1/-1">请先选择工作流</div>
         </div>
@@ -3573,6 +3915,8 @@ function $id(id) {
       'setLoadImageNode1': function() { setLoadImageNode(stripQuotes(el.dataset.nodeid), 1); },
       'setLoadImageNode2': function() { setLoadImageNode(stripQuotes(el.dataset.nodeid), 2); },
       'setResNode': function() { setResNode(stripQuotes(el.dataset.nodeid)); },
+      'setExpandedTextNode': function() { setExpandedTextNode(stripQuotes(el.dataset.nodeid)); },
+      'toggleDisableNode': function() { e.stopPropagation(); toggleDisableNode(stripQuotes(el.dataset.nodeid)); },
       'pickElement': function() {
         const rawId = el.dataset.elementid || '';
         const cleanId = rawId.replace(/^['"]|['"]|\)\.click\(.*$/g, '');
@@ -4145,9 +4489,10 @@ function _cropImage(src, x, y, w, h, cb) {
 // ========================================================================
 // 配置加载
 // ========================================================================
-let allParamsData = null, promptNodeId = '', resNodeId = '', loadImageNodeIds = ['', '', ''], negativeNodeId = '';
+let allParamsData = null, promptNodeId = '', resNodeId = '', loadImageNodeIds = ['', '', ''], negativeNodeId = '', expandedTextNodeId = '';
 let promptInputKey = '', negativeInputKey = '';
 let modelLists = {}, disabledGroups = {}, groupsSource = '', isBound = false, bindTarget = '', allWorkflows = [];
+let disabledNodes = [];
 
 // 侧栏分类折叠状态
 var _sidebarCatCollapsed = {};
@@ -4172,6 +4517,8 @@ function loadCfg() {
     $id('cfg_comfyui_url').value = c.comfyui_url || '127.0.0.1:8188';
     $id('cfg_workflow_dir').value = c.workflow_dir || '';
     $id('cfg_output_dir').value = c.output_dir || '';
+    const sp = document.getElementById('cfg_show_prompt');
+    if (sp) sp.checked = c.show_prompt_on_image === true;
   });
 }
 loadCfg();
@@ -4228,6 +4575,10 @@ async function saveComfyUrl() {
   await apiFetch('/api/config', { method:'POST', body:JSON.stringify({comfyui_url:u}) });
   toast('✅ 已保存');
   testComfyUI();
+}
+async function saveShowPrompt() {
+  const val = document.getElementById('cfg_show_prompt').checked;
+  await apiFetch('/api/config', { method:'POST', body:JSON.stringify({show_prompt_on_image:val}) });
 }
 
 // ========================================================================
@@ -4527,6 +4878,7 @@ async function loadParams() {
     loadImageNodeIds = ['', '', ''];
     imgIds.forEach((id, i) => { if (i < 3) loadImageNodeIds[i] = id; });
     negativeNodeId = wf.__negative_node__ || '';
+    expandedTextNodeId = wf.__expanded_text_node__ || '';
     // 自动检测正负面提示词的输入字段
     promptInputKey = promptNodeId ? _getNodeFirstStringKey(promptNodeId) : '';
     negativeInputKey = negativeNodeId ? _getNodeFirstStringKey(negativeNodeId) : '';
@@ -4534,6 +4886,7 @@ async function loadParams() {
     groupsSource = c.__groups_source__ || '';
     bindTarget = c.__bind_target__ || '';
     isBound = !!(c.__groups_data__ && c.__groups_data__.length > 0);
+    disabledNodes = c.__disabled_nodes__ || [];
 
     // 先清空 textarea，避免旧工作流的残留数据
     $id('prompt_textarea').value = '';
@@ -4613,14 +4966,16 @@ function showSkeletonNodes() {
 
 function updateNodeDisplay() {
   // 控制上方参数区域的显示/隐藏
-  const hasPos = !!promptNodeId, hasNeg = !!negativeNodeId, hasRes = !!resNodeId;
+  const hasPos = !!promptNodeId, hasNeg = !!negativeNodeId, hasRes = !!resNodeId, hasExp = !!expandedTextNodeId;
   const hasImg = loadImageNodeIds.some(id => !!id);
-  const hasAny = hasPos || hasNeg || hasRes || hasImg;
+  const hasDisabled = disabledNodes.length > 0;
+  const hasAny = hasPos || hasNeg || hasRes || hasImg || hasExp || hasDisabled;
   document.getElementById('prep_assigned_header').style.display = hasAny ? 'block' : 'none';
   document.getElementById('prep_positive').style.display = hasPos ? 'block' : 'none';
   document.getElementById('prep_negative').style.display = hasNeg ? 'block' : 'none';
   document.getElementById('prep_resolution').style.display = hasRes ? 'block' : 'none';
   document.getElementById('prep_upload_image').style.display = hasImg ? 'block' : 'none';
+  document.getElementById('prep_expanded_text').style.display = hasExp ? 'block' : 'none';
   document.getElementById('prep_unassigned_hint').style.display = hasAny ? 'none' : 'block';
   // 更新徽章
   document.getElementById('prep_pos_node_badge').textContent = `节点: ${  promptNodeId || '自动'}`;
@@ -4628,6 +4983,7 @@ function updateNodeDisplay() {
   document.getElementById('prep_res_node_badge').textContent = `节点: ${  resNodeId || '自动'}`;
   const imgBadge = loadImageNodeIds.filter(id => id).map((id, i) => `#${i+1}:${id}`).join(' ') || '自动';
   document.getElementById('prep_img_node_badge').textContent = `节点: ${  imgBadge}`;
+  document.getElementById('prep_exp_node_badge').textContent = `节点: ${  expandedTextNodeId || '无'}`;
   // 渲染上传行
   const uploadContainer = document.getElementById('upload_image_rows');
   if (uploadContainer) {
@@ -4651,6 +5007,8 @@ function updateNodeDisplay() {
   if (hasNeg) tagsHtml += '<span class="assigned-tag tag-negative"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 负面提示词 <button class="tag-remove" data-action="clearNodeRole" data-role="\'negative\'" aria-label="移除负面提示词指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   if (hasRes) tagsHtml += '<span class="assigned-tag tag-res"><svg class="icon-xs" aria-hidden="true"><use href="#icon-ruler"/></svg> 分辨率 <button class="tag-remove" data-action="clearNodeRole" data-role="\'resolution\'" aria-label="移除分辨率指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   if (hasImg) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <button class="tag-remove" data-action="clearNodeRole" data-role="\'load_image\'" aria-label="移除上传图片指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
+  if (hasExp) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-file-text"/></svg> 扩写后文本 <button class="tag-remove" data-action="clearNodeRole" data-role="\'expanded_text\'" aria-label="移除扩写后文本指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
+  if (hasDisabled) tagsHtml += '<span class="assigned-tag tag-disabled"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 已禁用 ' + disabledNodes.length + '节点 <button class="tag-remove" data-action="clearNodeRole" data-role="\'disabled\'" aria-label="清除所有禁用"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   document.getElementById('assigned_tags').innerHTML = tagsHtml || '<span style="font-size:11px;color:var(--text-sub)">尚未指定任何节点</span>';
 }
 
@@ -4664,6 +5022,7 @@ function setPromptNode(n) {
   if (negativeNodeId === n) negativeNodeId = '';
   if (resNodeId === n) resNodeId = '';
   for (let i = 0; i < loadImageNodeIds.length; i++) { if (loadImageNodeIds[i] === n) loadImageNodeIds[i] = ''; }
+  if (expandedTextNodeId === n) expandedTextNodeId = '';
   promptNodeId = n;
   updateNodeDisplay(); renderNodes();
   // 读取该节点的现有文本到 textarea
@@ -4680,6 +5039,7 @@ function setNegativeNode(n) {
   if (promptNodeId === n) promptNodeId = '';
   if (resNodeId === n) resNodeId = '';
   for (let i = 0; i < loadImageNodeIds.length; i++) { if (loadImageNodeIds[i] === n) loadImageNodeIds[i] = ''; }
+  if (expandedTextNodeId === n) expandedTextNodeId = '';
   negativeNodeId = n;
   updateNodeDisplay(); renderNodes();
   // 读取该节点的现有文本到 textarea
@@ -4724,9 +5084,30 @@ function setResNode(n) {
     if (promptNodeId === n) promptNodeId = '';
     if (negativeNodeId === n) negativeNodeId = '';
     for (let i = 0; i < loadImageNodeIds.length; i++) { if (loadImageNodeIds[i] === n) loadImageNodeIds[i] = ''; }
+    if (expandedTextNodeId === n) expandedTextNodeId = '';
     resNodeId = n;
   }
   updateNodeDisplay(); renderNodes();
+  setTimeout(() => saveParams(), 50);
+}
+function setExpandedTextNode(n) {
+  if (expandedTextNodeId === n) { expandedTextNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
+  if (promptNodeId === n) promptNodeId = '';
+  if (negativeNodeId === n) negativeNodeId = '';
+  if (resNodeId === n) resNodeId = '';
+  for (let i = 0; i < loadImageNodeIds.length; i++) { if (loadImageNodeIds[i] === n) loadImageNodeIds[i] = ''; }
+  expandedTextNodeId = n;
+  updateNodeDisplay(); renderNodes();
+  setTimeout(() => saveParams(), 50);
+}
+function toggleDisableNode(n) {
+  const idx = disabledNodes.indexOf(n);
+  if (idx >= 0) {
+    disabledNodes.splice(idx, 1);
+  } else {
+    disabledNodes.push(n);
+  }
+  renderNodes();
   setTimeout(() => saveParams(), 50);
 }
 function setLoadImageNode(n, idx) {
@@ -4739,6 +5120,7 @@ function setLoadImageNode(n, idx) {
     if (promptNodeId === n) promptNodeId = '';
     if (negativeNodeId === n) negativeNodeId = '';
     if (resNodeId === n) resNodeId = '';
+    if (expandedTextNodeId === n) expandedTextNodeId = '';
     loadImageNodeIds[idx] = n;
   }
   updateNodeDisplay(); renderNodes();
@@ -4750,14 +5132,16 @@ function clearNodeRole(role) {
   else if (role === 'negative') negativeNodeId = '';
   else if (role === 'resolution') resNodeId = '';
   else if (role === 'load_image') loadImageNodeIds = ['', '', ''];
+  else if (role === 'expanded_text') expandedTextNodeId = '';
+  else if (role === 'disabled') disabledNodes = [];
   updateNodeDisplay(); renderNodes();
   setTimeout(() => saveParams(), 50);
 }
 
 function clearAllNodeRoles() {
-  const hasAny = promptNodeId || negativeNodeId || resNodeId || loadImageNodeIds.some(id => id);
+  const hasAny = promptNodeId || negativeNodeId || resNodeId || expandedTextNodeId || loadImageNodeIds.some(id => id);
   if (!hasAny) return;
-  promptNodeId = ''; negativeNodeId = ''; resNodeId = ''; loadImageNodeIds = ['', '', ''];
+  promptNodeId = ''; negativeNodeId = ''; resNodeId = ''; expandedTextNodeId = ''; loadImageNodeIds = ['', '', ''];
   updateNodeDisplay(); renderNodes();
   setTimeout(() => saveParams(), 50);
   toast('已清除所有节点指定');
@@ -4776,35 +5160,43 @@ function renderNodes() {
     if (n.id === negativeNodeId) return 1;
     if (loadImageNodeIds.indexOf(n.id) >= 0) return 2;
     if (n.id === resNodeId) return 3;
-    return 4;
+    if (n.id === expandedTextNodeId) return 4;
+    if (disabledNodes.indexOf(n.id) >= 0) return 0;
+    return 5;
   };
   const sortedNodes = [...allParamsData.nodes].sort((a, b) => groupOrder(a) - groupOrder(b));
   sortedNodes.forEach((n) => {
     const iL = loadImageNodeIds.map(id => id === n.id);
     const iL0 = iL[0], iL1 = iL[1], iL2 = iL[2];
     const iLany = iL0 || iL1 || iL2;
-    const iP = n.id === promptNodeId, iR = n.id === resNodeId, iN = n.id === negativeNodeId;
-    const isAssigned = iP || iR || iLany || iN;
+    const iP = n.id === promptNodeId, iR = n.id === resNodeId, iN = n.id === negativeNodeId, iE = n.id === expandedTextNodeId;
+    const isAssigned = iP || iR || iLany || iN || iE;
+    const isDisabled = disabledNodes.indexOf(n.id) >= 0;
     let cls = 'node-card';
     if (iP) cls += ' prompt-active';
     if (iR) cls += ' res-active';
     if (iLany) cls += ' load-active';
     if (iN) cls += ' neg-active';
-    const icon = iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '📐' : '📦')));
+    if (iE) cls += ' exp-active';
+    if (isDisabled) cls += ' node-disabled';
+    const icon = isDisabled ? '⛔' : (iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '📐' : (iE ? '📝' : '📦')))));
     // 角色标签（已指定时显示在卡片右上角）
     let roleLabel = '';
     if (iP) roleLabel = '<span class="node-role-label role-prompt">🎯 正面</span>';
     else if (iN) roleLabel = '<span class="node-role-label role-negative">🚫 负面</span>';
     else if (iLany) roleLabel = '<span class="node-role-label role-load">🖼️ 图片</span>';
     else if (iR) roleLabel = '<span class="node-role-label role-res">📐 分辨率</span>';
+    else if (iE) roleLabel = '<span class="node-role-label role-exp">📝 扩写文本</span>';
+    else if (isDisabled) roleLabel = '<span class="node-role-label role-disabled">⛔ 已禁用</span>';
     // 互斥按钮
     const posDisabled = (promptNodeId && !iP) || (isAssigned && !iP) ? ' disabled' : '';
     const negDisabled = (negativeNodeId && !iN) || (isAssigned && !iN) ? ' disabled' : '';
     const resDisabled = (resNodeId && !iR) || (isAssigned && !iR) ? ' disabled' : '';
+    const expDisabled = (expandedTextNodeId && !iE) || (isAssigned && !iE) ? ' disabled' : '';
     // LoadImage 各槽位独立禁用
-    const imgDisabled0 = (loadImageNodeIds[0] && !iL0) ? ' disabled' : '';
-    const imgDisabled1 = (loadImageNodeIds[1] && !iL1) ? ' disabled' : '';
-    const imgDisabled2 = (loadImageNodeIds[2] && !iL2) ? ' disabled' : '';
+    const imgDisabled0 = (loadImageNodeIds[0] && !iL0) || (isAssigned && !iL0) ? ' disabled' : '';
+    const imgDisabled1 = (loadImageNodeIds[1] && !iL1) || (isAssigned && !iL1) ? ' disabled' : '';
+    const imgDisabled2 = (loadImageNodeIds[2] && !iL2) || (isAssigned && !iL2) ? ' disabled' : '';
     let tags = '';
     tags += `<button class="node-tag-btn${  iP ? ' active-success' : ''  }"${  posDisabled  } data-action="setPromptNode" data-nodeid="'${  n.id  }'" aria-label="设为正面提示词节点">🎯</button>`;
     tags += `<button class="node-tag-btn${  iN ? ' active-danger' : ''  }"${  negDisabled  } data-action="setNegativeNode" data-nodeid="'${  n.id  }'" aria-label="设为负面提示词节点">🚫</button>`;
@@ -4812,6 +5204,9 @@ function renderNodes() {
     tags += `<button class="node-tag-btn${  iL1 ? ' active-info' : ''  }"${  imgDisabled1  } data-action="setLoadImageNode1" data-nodeid="'${  n.id  }'" aria-label="设为载入图片2">🖼️2</button>`;
     tags += `<button class="node-tag-btn${  iL2 ? ' active-info' : ''  }"${  imgDisabled2  } data-action="setLoadImageNode2" data-nodeid="'${  n.id  }'" aria-label="设为载入图片3">🖼️3</button>`;
     tags += `<button class="node-tag-btn${  iR ? ' active-warning' : ''  }"${  resDisabled  } data-action="setResNode" data-nodeid="'${  n.id  }'" aria-label="设为分辨率节点">📐</button>`;
+    tags += `<button class="node-tag-btn${  iE ? ' active-accent' : ''  }"${  expDisabled  } data-action="setExpandedTextNode" data-nodeid="'${  n.id  }'" aria-label="设为扩写后文本节点">📝</button>`;
+    // 禁用/启用切换按钮（用于 Lora 等节点）
+    tags += `<button class="node-tag-btn${  isDisabled ? ' active-danger' : ''  }" data-action="toggleDisableNode" data-nodeid="'${  n.id  }'" aria-label="禁用/启用此节点">${  isDisabled ? '✅' : '⛔'  }</button>`;
     h += `<div class="${  cls  }" data-search="${  (`${n.title  } ${  n.id  } ${  n.class_type}`).toLowerCase()  }" data-action="showNodeDetail" data-nodeid="'${  n.id  }'" tabindex="0" role="button" onkeydown="if(event.key==='Enter')showNodeDetail('${  n.id  }')" aria-label="节点 ${  n.title  }">`;
     h += roleLabel;
     h += `<div><span class="node-icon">${  icon  }</span><span class="node-id">#${  n.id  }</span></div>`;
@@ -4841,21 +5236,7 @@ function showNodeDetail(nid) {
   if (!node) return;
   document.getElementById('node_modal_title').textContent = `#${  node.id  } ${  node.title}`;
   const body = document.getElementById('node_modal_body');
-  let currentRole = '';
-  const imgIdx = loadImageNodeIds.indexOf(node.id);
-  if (node.id === promptNodeId) currentRole = 'prompt';
-  else if (node.id === negativeNodeId) currentRole = 'negative';
-  else if (imgIdx >= 0) currentRole = 'load_image';
-  else if (node.id === resNodeId) currentRole = 'resolution';
   let html = `<p style="font-size:11px;color:var(--text-sub);margin-bottom:8px">类型: ${  node.class_type  }</p>`;
-  html += '<div class="param-row"><label for="node_role_selector">节点角色</label>';
-  html += `<select id="node_role_selector" onchange="applyNodeRole(this.value,'${  node.id  }')">`;
-  html += '<option value="">— 无特殊角色 —</option>';
-  html += `<option value="prompt"${  currentRole === 'prompt' ? ' selected' : ''  }>🎯 正面提示词</option>`;
-  html += `<option value="negative"${  currentRole === 'negative' ? ' selected' : ''  }>🚫 负面提示词</option>`;
-  html += `<option value="load_image"${  currentRole === 'load_image' ? ' selected' : ''  }>🖼️ 载入图片</option>`;
-  html += `<option value="resolution"${  currentRole === 'resolution' ? ' selected' : ''  }>📐 分辨率</option>`;
-  html += '</select></div>';
   node.params.forEach((p) => {
     const modelKey = `${node.class_type  }_${  p.key}`;
     const elId = `param_${  node.id  }_${  p.key}`;
@@ -4883,21 +5264,6 @@ function showNodeDetail(nid) {
   document.getElementById('node_modal').classList.add('active');
 }
 
-function applyNodeRole(role, nid) {
-  // 清除该节点的所有角色
-  if (promptNodeId === nid) promptNodeId = '';
-  if (negativeNodeId === nid) negativeNodeId = '';
-  for (let i = 0; i < loadImageNodeIds.length; i++) { if (loadImageNodeIds[i] === nid) loadImageNodeIds[i] = ''; }
-  if (resNodeId === nid) resNodeId = '';
-  if (role === 'prompt') { promptNodeId = nid; }
-  else if (role === 'negative') { negativeNodeId = nid; }
-  else if (role === 'load_image') { loadImageNodeIds[0] = nid; } // 详情面板只设第一个载入槽
-  else if (role === 'resolution') { resNodeId = nid; }
-  updateNodeDisplay();
-  renderNodes();
-  setTimeout(() => { showNodeDetail(nid); }, 50);
-}
-
 function closeNodeModal() {
   // 关闭弹窗前自动保存当前节点的参数
   const body = document.getElementById('node_modal_body');
@@ -4919,6 +5285,7 @@ function closeNodeModal() {
       saveData.__prompt_node__ = promptNodeId;
       saveData.__negative_node__ = negativeNodeId;
       saveData.__resolution_node__ = resNodeId;
+      saveData.__expanded_text_node__ = expandedTextNodeId;
       saveData.__load_image_nodes__ = loadImageNodeIds.filter(id => id).join(',');
       // 异步保存，不阻塞关闭
       apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify(saveData) }, true)
@@ -4959,9 +5326,11 @@ async function saveParams() {
       __prompt_node__: promptNodeId,
       __resolution_node__: resNodeId,
       __load_image_nodes__: loadImageNodeIds.filter(id => id).join(','),
-      __negative_node__: negativeNodeId
+      __negative_node__: negativeNodeId,
+      __expanded_text_node__: expandedTextNodeId,
+      __disabled_nodes__: disabledNodes
     };
-    console.log('[saveParams] sending:', cW, JSON.stringify({...d, __prompt_node__: d.__prompt_node__, __resolution_node__: d.__resolution_node__, __load_image_nodes__: d.__load_image_nodes__, __negative_node__: d.__negative_node__}));
+    console.log('[saveParams] sending:', cW, JSON.stringify({...d, __prompt_node__: d.__prompt_node__, __resolution_node__: d.__resolution_node__, __load_image_nodes__: d.__load_image_nodes__, __negative_node__: d.__negative_node__, __expanded_text_node__: d.__expanded_text_node__}));
 
     // 收集所有已知节点的参数值（不仅是当前弹窗的）
     if (allParamsData && allParamsData.nodes) {
@@ -6160,17 +6529,35 @@ function initFabDrag() {
     const saved = localStorage.getItem('gallery_fab_pos');
     if (saved) {
       const pos = JSON.parse(saved);
-      wrap.style.left = pos.left + 'px';
-      wrap.style.top = pos.top + 'px';
-      wrap.style.right = 'auto';
-      wrap.style.bottom = 'auto';
+      // 校验保存的位置是否在视口内，防止跨分辨率/损坏数据导致 FAB 飞出屏幕
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const fw = 60; // FAB 约 52px + 边距
+      const fh = 60;
+      if (typeof pos.left === 'number' && typeof pos.top === 'number' &&
+          pos.left >= 0 && pos.top >= 0 &&
+          pos.left + fw <= vw && pos.top + fh <= vh &&
+          vw > 200 && vh > 200) {
+        wrap.style.left = pos.left + 'px';
+        wrap.style.top = pos.top + 'px';
+        wrap.style.right = 'auto';
+        wrap.style.bottom = 'auto';
+      } else {
+        // 位置无效，清除 localStorage，使用默认位置
+        localStorage.removeItem('gallery_fab_pos');
+        throw new Error('invalid pos');
+      }
     } else {
-      // 默认位置：右下角
-      const isMobile = window.innerWidth <= 768;
-      wrap.style.right = isMobile ? '16px' : '20px';
-      wrap.style.bottom = isMobile ? 'calc(70px + env(safe-area-inset-bottom,0px))' : '80px';
+      throw new Error('no saved pos');
     }
-  } catch(e) {}
+  } catch(e) {
+    // 默认位置：右下角
+    const isMobile = window.innerWidth <= 768;
+    wrap.style.right = isMobile ? '16px' : '16px';
+    wrap.style.bottom = isMobile ? 'calc(70px + env(safe-area-inset-bottom,0px))' : '80px';
+    wrap.style.left = 'auto';
+    wrap.style.top = 'auto';
+  }
   // 鼠标拖拽
   fab.addEventListener('mousedown', _onFabDragStart);
   // 触摸拖拽

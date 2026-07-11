@@ -1,6 +1,6 @@
 name: "comfyui_allinone"
-version: "3.1.7"
-description: "AstrBot ComfyUI 插件，支持文生图、图生图、视频、编辑，自带 WebUI 面板。"
+version: "3.3.1"
+description: "AstrBot ComfyUI 插件，支持文生图、图生图、视频、编辑，自带 WebUI 面板。支持引用图片查询提示词、扩写后文本读取、图片附带提示词开关。"
 author: "lxmsqm,黑谷"
 license: "MIT"
 repository: "https://github.com/lxmsqm/astrbot-omnipotent-comfyui"

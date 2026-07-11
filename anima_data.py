@@ -205,13 +205,17 @@ class AnimaDataManager:
             display_name = name_zh or name_en
             if not display_name:
                 continue
-            tags = (item.get("tags_zh") or item.get("tags") or "").strip()
+            tags_en = (item.get("tags") or "").strip()
+            tags_zh = (item.get("tags_zh") or "").strip()
+            tags = tags_en or tags_zh
             categories = item.get("categories") or []
             traits = item.get("traits") or []
             items.append({
                 "name": display_name,
                 "name_en": name_en,
                 "tags": tags,
+                "tags_en": tags_en,
+                "tags_zh": tags_zh,
                 "category": "; ".join(categories) if categories else "",
                 "note": " | ".join(traits) if traits else "",
                 "source": "anima_tools",
@@ -325,7 +329,10 @@ class AnimaDataManager:
         # 按评分排序取 top_k
         scored = []
         for (cat, idx), score in matched_scores.items():
-            item = self._datasets[cat][idx]
+            items = self._datasets.get(cat)
+            if items is None or idx >= len(items):
+                continue
+            item = items[idx]
             scored.append((score, cat, item))
 
         scored.sort(key=lambda x: -x[0])
@@ -483,13 +490,17 @@ def load_anima_tools_source(source_name: str) -> list[dict]:
             display_name = name_zh or name_en
             if not display_name:
                 continue
-            tags = (item.get("tags_zh") or item.get("tags") or "").strip()
+            tags_en = (item.get("tags") or "").strip()
+            tags_zh = (item.get("tags_zh") or "").strip()
+            tags = tags_en or tags_zh
             categories = item.get("categories") or []
             traits = item.get("traits") or []
             items.append({
                 "name": display_name,
                 "name_en": name_en,
                 "tags": tags,
+                "tags_en": tags_en,
+                "tags_zh": tags_zh,
                 "category": "; ".join(categories) if categories else "",
                 "note": " | ".join(traits) if traits else "",
                 "source": "anima_tools",
