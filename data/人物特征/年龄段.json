@@ -1,0 +1,32 @@
+[
+  {
+    "name": "青少年",
+    "tags": "teen",
+    "category": "年龄段"
+  },
+  {
+    "name": "成年",
+    "tags": "adult",
+    "category": "年龄段"
+  },
+  {
+    "name": "成熟",
+    "tags": "mature",
+    "category": "年龄段"
+  },
+  {
+    "name": "年轻",
+    "tags": "young",
+    "category": "年龄段"
+  },
+  {
+    "name": "二十代",
+    "tags": "twenties",
+    "category": "年龄段"
+  },
+  {
+    "name": "三十代",
+    "tags": "thirties",
+    "category": "年龄段"
+  }
+]

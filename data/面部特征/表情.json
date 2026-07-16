@@ -1,0 +1,112 @@
+[
+  {
+    "name": "微笑",
+    "tags": "smile",
+    "category": "表情"
+  },
+  {
+    "name": "咧嘴笑",
+    "tags": "grin",
+    "category": "表情"
+  },
+  {
+    "name": "脸红",
+    "tags": "blush",
+    "category": "表情"
+  },
+  {
+    "name": "尴尬",
+    "tags": "embarrassed",
+    "category": "表情"
+  },
+  {
+    "name": "生气",
+    "tags": "angry",
+    "category": "表情"
+  },
+  {
+    "name": "悲伤",
+    "tags": "sad",
+    "category": "表情"
+  },
+  {
+    "name": "惊讶",
+    "tags": "surprised",
+    "category": "表情"
+  },
+  {
+    "name": "无表情",
+    "tags": "expressionless",
+    "category": "表情"
+  },
+  {
+    "name": "眨眼",
+    "tags": "wink",
+    "category": "表情"
+  },
+  {
+    "name": "撅嘴",
+    "tags": "pout",
+    "category": "表情"
+  },
+  {
+    "name": "魅惑微笑",
+    "tags": "seductive smile",
+    "category": "表情"
+  },
+  {
+    "name": "眼泪",
+    "tags": "tears",
+    "category": "表情"
+  },
+  {
+    "name": "眼神接触",
+    "tags": "eye contact",
+    "category": "表情"
+  },
+  {
+    "name": "看向观众",
+    "tags": "looking at viewer",
+    "category": "表情"
+  },
+  {
+    "name": "看向别处",
+    "tags": "looking away",
+    "category": "表情"
+  },
+  {
+    "name": "向上看",
+    "tags": "looking up",
+    "category": "表情"
+  },
+  {
+    "name": "向下看",
+    "tags": "looking down",
+    "category": "表情"
+  },
+  {
+    "name": "闭眼",
+    "tags": "closed eyes",
+    "category": "表情"
+  },
+  {
+    "name": "微张嘴唇",
+    "tags": "parted lips",
+    "category": "表情"
+  },
+  {
+    "name": "张嘴",
+    "tags": "open mouth",
+    "category": "表情"
+  },
+  {
+    "name": "口红",
+    "tags": "lipstick",
+    "category": "表情"
+  },
+  {
+    "name": "眼下痣",
+    "tags": "mole under eye",
+    "category": "表情"
+  }
+]

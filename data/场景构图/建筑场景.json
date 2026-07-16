@@ -1,0 +1,52 @@
+[
+  {
+    "name": "城市",
+    "tags": "city",
+    "category": "建筑场景"
+  },
+  {
+    "name": "街道",
+    "tags": "street",
+    "category": "建筑场景"
+  },
+  {
+    "name": "建筑",
+    "tags": "building",
+    "category": "建筑场景"
+  },
+  {
+    "name": "学校",
+    "tags": "school",
+    "category": "建筑场景"
+  },
+  {
+    "name": "教室",
+    "tags": "classroom",
+    "category": "建筑场景"
+  },
+  {
+    "name": "卧室",
+    "tags": "bedroom",
+    "category": "建筑场景"
+  },
+  {
+    "name": "厨房",
+    "tags": "kitchen",
+    "category": "建筑场景"
+  },
+  {
+    "name": "图书馆",
+    "tags": "library",
+    "category": "建筑场景"
+  },
+  {
+    "name": "咖啡馆",
+    "tags": "cafe",
+    "category": "建筑场景"
+  },
+  {
+    "name": "商店",
+    "tags": "shop",
+    "category": "建筑场景"
+  }
+]

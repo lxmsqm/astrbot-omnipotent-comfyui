@@ -1,0 +1,87 @@
+[
+  {
+    "name": "长发",
+    "tags": "long hair",
+    "category": "发型"
+  },
+  {
+    "name": "短发",
+    "tags": "short hair",
+    "category": "发型"
+  },
+  {
+    "name": "中长发",
+    "tags": "medium hair",
+    "category": "发型"
+  },
+  {
+    "name": "超长发",
+    "tags": "very long hair",
+    "category": "发型"
+  },
+  {
+    "name": "马尾",
+    "tags": "ponytail",
+    "category": "发型"
+  },
+  {
+    "name": "双马尾",
+    "tags": "twintails",
+    "category": "发型"
+  },
+  {
+    "name": "辫子",
+    "tags": "braid",
+    "category": "发型"
+  },
+  {
+    "name": "侧辫",
+    "tags": "side braid",
+    "category": "发型"
+  },
+  {
+    "name": "波波头",
+    "tags": "bob cut",
+    "category": "发型"
+  },
+  {
+    "name": "姬发式",
+    "tags": "hime cut",
+    "category": "发型"
+  },
+  {
+    "name": "呆毛",
+    "tags": "ahoge",
+    "category": "发型"
+  },
+  {
+    "name": "刘海",
+    "tags": "bangs",
+    "category": "发型"
+  },
+  {
+    "name": "侧马尾",
+    "tags": "side ponytail",
+    "category": "发型"
+  },
+  {
+    "name": "低双马尾",
+    "tags": "low twintails",
+    "category": "发型"
+  },
+  {
+    "name": "波浪发",
+    "tags": "wavy hair",
+    "category": "发型"
+  },
+  {
+    "name": "卷发",
+    "tags": "curly hair",
+    "category": "发型"
+  },
+  {
+    "name": "直发",
+    "tags": "straight hair",
+    "category": "发型"
+  }
+]

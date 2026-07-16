@@ -1,0 +1,52 @@
+[
+  {
+    "name": "体积光",
+    "tags": "volumetric lighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "电影级光照",
+    "tags": "cinematic lighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "柔和光照",
+    "tags": "soft lighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "戏剧性光照",
+    "tags": "dramatic lighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "轮廓光",
+    "tags": "rim lighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "逆光",
+    "tags": "backlighting",
+    "category": "光影效果"
+  },
+  {
+    "name": "阳光",
+    "tags": "sunlight",
+    "category": "光影效果"
+  },
+  {
+    "name": "月光",
+    "tags": "moonlight",
+    "category": "光影效果"
+  },
+  {
+    "name": "霓虹灯",
+    "tags": "neon lights",
+    "category": "光影效果"
+  },
+  {
+    "name": "镜头光晕",
+    "tags": "lens flare",
+    "category": "光影效果"
+  }
+]

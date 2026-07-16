@@ -1,0 +1,77 @@
+[
+  {
+    "name": "肖像",
+    "tags": "portrait",
+    "category": "构图景别"
+  },
+  {
+    "name": "上半身",
+    "tags": "upper body",
+    "category": "构图景别"
+  },
+  {
+    "name": "七分身",
+    "tags": "cowboy shot",
+    "category": "构图景别"
+  },
+  {
+    "name": "全身",
+    "tags": "full body",
+    "category": "构图景别"
+  },
+  {
+    "name": "特写",
+    "tags": "close-up",
+    "category": "构图景别"
+  },
+  {
+    "name": "极端特写",
+    "tags": "extreme close-up",
+    "category": "构图景别"
+  },
+  {
+    "name": "正面",
+    "tags": "from front",
+    "category": "构图景别"
+  },
+  {
+    "name": "背后视角",
+    "tags": "from behind",
+    "category": "构图景别"
+  },
+  {
+    "name": "侧面",
+    "tags": "from side",
+    "category": "构图景别"
+  },
+  {
+    "name": "俯视",
+    "tags": "from above",
+    "category": "构图景别"
+  },
+  {
+    "name": "仰视",
+    "tags": "from below",
+    "category": "构图景别"
+  },
+  {
+    "name": "荷兰角",
+    "tags": "dutch angle",
+    "category": "构图景别"
+  },
+  {
+    "name": "居中构图",
+    "tags": "centered",
+    "category": "构图景别"
+  },
+  {
+    "name": "对称构图",
+    "tags": "symmetry",
+    "category": "构图景别"
+  },
+  {
+    "name": "三分法",
+    "tags": "rule of thirds",
+    "category": "构图景别"
+  }
+]

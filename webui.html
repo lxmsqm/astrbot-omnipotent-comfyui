@@ -636,6 +636,61 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   -webkit-overflow-scrolling:touch;touch-action:pan-y;
 }
 .node-grid::after{content:'';display:block;height:4px}
+
+/* Lora 管理面板 */
+.lora-list{display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.lora-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg);cursor:context-menu;transition:all .2s}
+.lora-item:hover{border-color:var(--primary)}
+.lora-item.lora-disabled{opacity:.5;border-color:var(--text-muted)}
+.lora-item .lora-status{flex-shrink:0;width:16px;text-align:center;font-size:13px;color:var(--success,#89B);cursor:help}
+.lora-item.lora-disabled .lora-status{color:var(--text-muted)}
+.lora-item .lora-select{flex:1;min-width:0;padding:3px 6px;border:1px solid var(--card-border);border-radius:4px;background:var(--bg-elevated);color:var(--text);font-size:11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
+.lora-item .lora-select:hover{border-color:var(--primary)}
+.lora-item{position:relative}
+.lora-dropdown-panel{position:fixed;z-index:99999;background:#1a1a2e!important;border:1px solid var(--card-border);border-radius:var(--radius-sm);box-shadow:0 8px 32px rgba(0,0,0,.5);max-height:260px;display:flex;flex-direction:column;opacity:1!important}
+.lora-dropdown-panel .ldp-search{padding:4px 6px;border-bottom:1px solid var(--card-border)}
+.lora-dropdown-panel .ldp-search input{width:100%;padding:4px 6px;border:1px solid var(--card-border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:11px;outline:none;box-sizing:border-box}
+.lora-dropdown-panel .ldp-search input:focus{border-color:var(--primary)}
+.lora-dropdown-panel .ldp-body{flex:1;overflow-y:auto;padding:2px 0}
+.lora-dropdown-panel .ldp-cat{font-size:10px;font-weight:700;color:var(--text-sub2);padding:4px 8px 2px;text-transform:uppercase;letter-spacing:.5px}
+.lora-dropdown-panel .ldp-subcat{padding:3px 8px 1px 18px;font-size:10px;color:var(--text-muted)}
+.lora-dropdown-panel .ldp-item{padding:4px 8px 4px 22px;font-size:11px;color:var(--text);cursor:pointer;transition:background .1s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lora-dropdown-panel .ldp-item:hover{background:var(--card-hover);color:var(--primary)}
+.lora-dropdown-panel .ldp-item.selected{background:var(--primary);color:#fff;font-weight:600}
+.lora-dropdown-panel .ldp-empty{padding:16px;text-align:center;color:var(--text-sub2);font-size:11px}
+.lora-item .lora-strength{flex:1;height:4px;max-width:80px;-webkit-appearance:none;appearance:none;background:var(--card-border);border-radius:2px;outline:none;cursor:pointer}
+.lora-item .lora-strength::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer;box-shadow:0 0 6px var(--primary-glow)}
+.lora-item .lora-strength::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer}
+.lora-item .lora-strength-val{min-width:28px;text-align:center;font-size:12px;color:var(--text);font-weight:700;font-family:var(--font-mono,'JetBrains Mono',monospace);background:transparent;border:none;padding:0;outline:none}
+.lora-item .lora-strength-val::-webkit-inner-spin-button{-webkit-appearance:none;display:none}
+.lora-item .lora-strength-val::-webkit-outer-spin-button{-webkit-appearance:none;display:none}
+.lora-item .lora-strength-val[type=number]{-moz-appearance:textfield}
+.lora-item.lora-disabled .lora-strength{opacity:.4}
+.lora-item.lora-disabled .lora-strength-val{color:var(--text-muted)}
+.lora-item.dragging{opacity:.4;border-style:dashed}
+.lora-item.drag-over{border-color:var(--primary);border-width:2px;background:var(--card-hover)}
+/* Lora 右键菜单 */
+.lora-context-menu{position:fixed;z-index:99999;background:var(--bg-elevated);border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:4px 0;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.4);backdrop-filter:blur(12px)}
+.lora-context-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--text);cursor:pointer;transition:background .15s}
+.lora-context-item:hover{background:var(--card-hover)}
+.lora-context-item.danger{color:var(--danger,#c66)}
+.lora-context-item .ctx-icon{flex-shrink:0;width:16px;text-align:center;font-size:11px}
+.lora-context-sep{height:1px;background:var(--card-border);margin:3px 8px}
+@media(max-width:480px){
+  .lora-item{flex-wrap:wrap;gap:3px;padding:4px 6px}
+  .lora-item .lora-status{font-size:11px;width:12px}
+  .lora-item .lora-select{flex:1 1 100%;order:1;min-width:0;font-size:10px;padding:2px 4px}
+  .lora-item .lora-strength-wrap{width:100%;order:2;gap:3px}
+  .lora-item .lora-strength{max-width:100%;flex:1}
+  .lora-item .lora-strength-val{font-size:10px;min-width:20px}
+  .lora-dropdown-panel{max-height:200px;min-width:150px;font-size:10px}
+  .lora-dropdown-panel .ldp-search input{font-size:10px;padding:3px 5px}
+  .lora-dropdown-panel .ldp-item{padding:3px 6px 3px 18px;font-size:10px}
+  .lora-dropdown-panel .ldp-cat{font-size:9px;padding:3px 6px 1px}
+  .lora-dropdown-panel .ldp-subcat{font-size:9px;padding:2px 6px 0 14px}
+  .lora-context-menu{font-size:10px;min-width:100px}
+  .lora-context-item{padding:5px 10px;font-size:10px}
+}
 .node-card{
   border:1px solid var(--card-border);border-radius:var(--radius-sm);
   padding:12px 14px;cursor:pointer;min-height:90px;
@@ -655,9 +710,9 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 }
 .node-card:hover::before{opacity:1;}
 .node-card:active{transform:translateY(-1px) scale(0.98);}
-.node-card.node-disabled{opacity:0.45;border-color:var(--danger,#e74c3c);filter:grayscale(0.6);}
-.node-card.node-disabled::before{background:var(--danger,#e74c3c);opacity:0.6;}
-.node-card.node-disabled:hover{transform:translateY(-2px);border-color:var(--danger,#e74c3c);}
+.node-card.node-disabled{opacity:0.7;border:1.5px solid var(--text-muted);filter:grayscale(0.35);}
+.node-card.node-disabled::before{background:var(--text-muted);opacity:0.5;}
+.node-card.node-disabled:hover{transform:translateY(-2px);border-color:var(--text-sub);}
 /* 选中节点 — 彩色边框 + 左色条 + 发光 + 置前 */
 .node-card.prompt-active{
   border-color:var(--success);border-width:2px;
@@ -688,6 +743,13 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   box-shadow:0 0 24px oklch(65% 0.25 290 / 0.35),var(--shadow-md);
   z-index:2;position:relative;
   border-left:4px solid var(--accent);
+}
+/* Lora 节点 — 紫色高亮（自动检测，无需指定） */
+.node-card.lora-active{
+  border-color:var(--primary);border-width:2px;
+  box-shadow:0 0 24px oklch(65% 0.28 315 / 0.35),var(--shadow-md);
+  z-index:2;position:relative;
+  border-left:4px solid var(--primary);
 }
 .node-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-sm);}
 
@@ -726,11 +788,13 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .node-tags{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;}
 .node-tag-btn{
   font-size:10px;padding:4px 8px;border-radius:6px;
-  border:1px solid var(--card-border);background:transparent;
+  border:1px solid var(--card-border);
+  background:color-mix(in oklch, var(--text-sub) 8%, transparent);
   cursor:pointer;min-width:30px;min-height:30px;
   display:inline-flex;align-items:center;justify-content:center;
   transition:all var(--transition-fast);
 }
+.node-tag-btn:hover{background:color-mix(in oklch, var(--text) 15%, transparent);border-color:var(--text-sub);}
 .node-tag-btn:active:not(:disabled){background:var(--card-hover);}
 .node-tag-btn.active-success{background:color-mix(in oklch, var(--success) 25%, transparent);border-color:var(--success);color:var(--role-prompt);font-weight:600;}
 .node-tag-btn.active-danger{background:color-mix(in oklch, var(--danger) 25%, transparent);border-color:var(--danger);color:var(--role-negative);font-weight:600;}
@@ -741,6 +805,8 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   opacity:0.45;cursor:not-allowed;transform:none!important;
   filter:grayscale(0.6);pointer-events:none;user-select:none;
 }
+.node-tag-btn svg{width:14px;height:14px;}
+.btn-badge{font-size:8px;font-weight:700;line-height:1;margin-left:1px;opacity:0.85;}
 .node-help-bar{
   font-size:11px;color:var(--text-sub);padding:8px 10px;margin-bottom:6px;
   background:var(--input-bg);border-radius:var(--radius-sm);
@@ -754,6 +820,9 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .node-help-dot.neg{background:var(--danger);box-shadow:0 0 6px var(--danger-glow);}
 .node-help-dot.img{background:var(--info);}
 .node-help-dot.res{background:var(--warning);}
+.node-help-dot.exp{background:var(--accent);box-shadow:0 0 6px color-mix(in oklch, var(--accent) 50%, transparent);}
+.node-help-dot.lora{background:var(--primary);box-shadow:0 0 6px color-mix(in oklch, var(--primary) 50%, transparent);}
+.node-help-dot.dis{background:var(--text-muted);}
 /* 魔导书IP分类 — 自定义下拉框 */
 .grm-cat-dropdown {
   position: relative;
@@ -1746,6 +1815,7 @@ select:not([class*="color"]):not([class*="date"]){
 .grm-item-btn.star:hover{background:color-mix(in oklch, var(--primary) 18%, transparent);color:var(--primary);}
 .grm-item-btn.star.active{opacity:1;color:var(--primary);filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.7)) drop-shadow(0 0 20px oklch(62% 0.22 310 / 0.3));}
 .grm-item-card.starred{box-shadow:inset 0 0 0 2px oklch(62% 0.22 310 / 0.5),var(--shadow-sm),0 0 20px oklch(62% 0.22 310 / 0.1);}
+.grm-item-card.pinned{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-sm),0 0 20px color-mix(in oklch, var(--accent) 30%, transparent);}
 
 /* 魔导书卡片图片缩略图 — 大图版 */
 .grm-item-img{
@@ -1875,7 +1945,7 @@ select:not([class*="color"]):not([class*="date"]){
   position:relative;overflow:hidden;
   border-left:3px solid transparent;
 }
-.source-item:hover{background:var(--card-hover);border-left-color:color-mix(in oklch, var(--primary) 30%, transparent);}
+.source-item:hover{background:var(--card-hover);border-left-color:color-mix(in oklch, var(--primary) 25%, transparent);}
 .source-item:active{background:var(--card-hover);}
 .source-item.active{
   background:color-mix(in oklch, var(--primary) 12%, transparent);
@@ -1891,11 +1961,24 @@ select:not([class*="color"]):not([class*="date"]){
   0%,100%{opacity:0.5}
   50%{opacity:1}
 }
+@keyframes pinGlow{
+  0%,100%{box-shadow:0 0 4px color-mix(in oklch, var(--accent) 30%, transparent);}
+  50%{box-shadow:0 0 10px color-mix(in oklch, var(--accent) 60%, transparent);}
+}
 .source-item .source-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.source-item.has-pin{box-shadow:0 0 0 2px var(--accent);border-left-color:var(--accent);}
+.source-item.has-pin::after{content:'';position:absolute;inset:-1px;border-radius:inherit;border:2px solid color-mix(in oklch, var(--accent) 40%, transparent);animation:pinGlow 2s ease-in-out infinite;pointer-events:none;}
 .source-item .source-count{
   font-size:10px;color:var(--text-sub2);
   background:var(--input-bg);padding:1px 6px;border-radius:8px;
 }
+/* 子分类拖拽排序 */
+.source-item.dragging{opacity:0.4;}
+.source-item.drag-over{border-left-color:var(--accent) !important;background:color-mix(in oklch, var(--accent) 10%, transparent) !important;}
+.source-item .drag-handle{display:none;cursor:grab;color:var(--text-sub3);font-size:14px;line-height:1;user-select:none;}
+.source-item:hover .drag-handle{display:inline-flex;}
+.source-group-children .source-item.dragging{opacity:0.4;}
+.source-group-children .source-item.drag-over{border-left:3px solid var(--accent) !important;background:color-mix(in oklch, var(--accent) 10%, transparent) !important;}
 .source-del-btn{
   width:22px;height:22px;border-radius:50%;border:none;
   display:none;align-items:center;justify-content:center;
@@ -1921,14 +2004,21 @@ select:not([class*="color"]):not([class*="date"]){
 
 /* 分类目录组 */
 .source-group{margin-bottom:4px;}
+.source-group[draggable="true"]{cursor:grab;}
+.source-group[draggable="true"]:active{cursor:grabbing;}
+.source-group.dragging{opacity:0.4;}
+.source-group.drag-over{border-top:2px solid var(--primary);}
 .source-group-header{
   display:flex;align-items:center;gap:6px;
-  padding:6px 8px;border-radius:var(--radius-xs);
-  cursor:pointer;font-size:12px;font-weight:600;
-  color:var(--text-sub);transition:all var(--transition-fast);
-  min-height:30px;user-select:none;
+  padding:8px 10px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:13px;font-weight:700;
+  color:var(--text);transition:all var(--transition-fast);
+  min-height:32px;user-select:none;
+  border-left:3px solid var(--primary);
+  background:color-mix(in oklch, var(--primary) 6%, transparent);
+  margin-bottom:6px;
 }
-.source-group-header:hover{background:var(--card-hover);color:var(--text);}
+.source-group-header:hover{background:color-mix(in oklch, var(--primary) 12%, transparent);color:var(--text);}
 .source-group-header .group-arrow{
   font-size:10px;transition:transform var(--transition-fast);
   width:14px;text-align:center;flex-shrink:0;
@@ -1968,8 +2058,19 @@ select:not([class*="color"]):not([class*="date"]){
    32. Responsive - Mobile (≤768px)
    ======================================================================== */
 @media(max-width:768px){
-  .app{padding:10px 12px;padding-bottom:calc(10px + var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}
-  :root{--sidebar-w:0px;--bottom-nav-h:64px;}
+  .app{padding:8px 10px;padding-bottom:calc(8px + var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));}
+  :root{--sidebar-w:0px;--bottom-nav-h:56px;}
+
+  /* 头部紧凑化 */
+  .unified-header{border-radius:var(--radius-sm)}
+  .header-top{padding:4px 10px;gap:6px}
+  .header-bottom{padding:4px 10px 6px;font-size:10px;min-height:auto;gap:4px}
+  .unified-header h1{font-size:14px}
+  .logo svg{width:20px;height:20px}
+  .theme-btn{width:28px;height:28px;font-size:11px}
+  .header-divider{margin:0 10px}
+  .status-dot{width:6px;height:6px}
+  .status-label{display:none!important}
   
   /* 侧栏 → 抽屉 */
   .sidebar{
@@ -1995,22 +2096,28 @@ select:not([class*="color"]):not([class*="date"]){
   .grimoire-sources{
     width:100%;border-right:none;
     border-bottom:1px solid var(--card-border);
-    max-height:140px;flex-shrink:0;
+    max-height:110px;flex-shrink:0;
   }
-  .grimoire-sources-header{padding:8px 12px 4px;}
-  .grimoire-source-list{display:flex;gap:4px;overflow-x:auto;padding:4px 8px 8px;flex-direction:row;}
+  .grimoire-sources-header{padding:4px 10px 2px;font-size:10px;}
+  .grimoire-source-list{display:flex;gap:3px;overflow-x:auto;padding:2px 6px 6px;flex-direction:row;}
   .source-item{
     white-space:nowrap;flex-shrink:0;
-    padding:6px 12px;border-radius:16px;font-size:11px;margin-bottom:0;
+    padding:4px 10px;border-radius:12px;font-size:10px;margin-bottom:0;
     border:1px solid var(--card-border);background:var(--input-bg);
   }
-  .source-item.active{background:color-mix(in oklch, var(--primary) 20%, transparent);border-left:3px solid var(--primary);}
+  .source-item.active{background:color-mix(in oklch, var(--primary) 20%, transparent);border-left:2px solid var(--primary);}
+  .source-item .source-count{display:none}
 
   .grimoire-detail-header{
-    flex-wrap:wrap;padding:8px 12px 6px;
+    flex-wrap:wrap;padding:4px 10px 3px;gap:4px;
   }
-  .grimoire-detail-search{width:100%;order:3;margin-top:4px;}
+  .grimoire-detail-search{width:100%;order:3;margin-top:2px;font-size:10px;padding:3px 6px}
   .grid-sources-header .source-count{display:none;}
+  .grimoire-detail-header .btn{font-size:10px;padding:3px 8px;min-height:auto}
+  /* 手机端：大分类标签放前面，展开全部按钮放后面 */
+  #grimoire_source_list{display:flex;flex-direction:column}
+  #grimoire_source_list .grm-toolbar{order:2}
+  #grimoire_source_list .source-group-list{order:1}
   
   /* 手机底部导航隐藏「生成」按钮 */
   .bn-generate{display:none!important;}
@@ -2046,7 +2153,8 @@ select:not([class*="color"]):not([class*="date"]){
   .header-bottom{padding:6px 12px 8px;}
   .theme-btn{width:32px;height:32px;font-size:13px;}
   
-  .node-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .node-grid{grid-template-columns:repeat(2,1fr);gap:8px;max-height:50vh;}
+  .node-grid::after{height:120px;}
   .node-card{padding:8px 10px;min-height:70px;}
   .node-card .node-title{font-size:10px;}
   .node-card .node-type{font-size:9px;}
@@ -2258,6 +2366,7 @@ select:not([class*="color"]):not([class*="date"]){
   border-radius:var(--radius-xs);
   box-shadow:var(--shadow-lg);
   user-select:none;-webkit-user-drag:none;
+  filter:brightness(1.08);
 }
 .gallery-media-wrap video{
   max-width:100%;max-height:calc(100vh - 200px);
@@ -2318,7 +2427,7 @@ select:not([class*="color"]):not([class*="date"]){
   z-index:81;
 }
 .fab-menu-item{
-  position:absolute;bottom:-22px;right:-22px; /* center on anchor */
+  position:absolute;left:-22px;top:-22px; /* center on anchor (统一用 left/top 而非 bottom/right，避免 RTL 翻转) */
   display:flex;align-items:center;justify-content:center;
   width:44px;height:44px;border-radius:50%;
   border:none;cursor:pointer;
@@ -2326,10 +2435,11 @@ select:not([class*="color"]):not([class*="date"]){
   box-shadow:var(--shadow-lg);
   opacity:0;
   pointer-events:none;
-  transform:translate(0,0) scale(0.3) rotate(0deg);
+  /* 用 left/top 直接定位（JS 控制）；默认收在 FAB 中心，缩到 0.3 */
+  left:-22px;top:-22px;
   font-family:inherit;
   z-index:82;
-  transition:transform 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.35s ease,background var(--transition-fast);
+  transition:left 0.35s cubic-bezier(0.16,1,0.3,1),top 0.35s cubic-bezier(0.16,1,0.3,1),opacity 0.35s ease,background var(--transition-fast);
 }
 .fab-menu-item:focus-visible{
   outline:2px solid var(--primary);outline-offset:2px;
@@ -2341,17 +2451,11 @@ select:not([class*="color"]):not([class*="date"]){
   opacity:1;transform:translateX(0);
   pointer-events:auto;
 }
-/* 菜单打开时以径向飞入（transition 模式，更稳定） */
+/* 菜单打开时由 JS 直接设置 left/top，避免 CSS 选择器/scale 冲突
+   画廊: -88px 左侧，-8px 略上
+   魔导书: -44px 左侧，-88px 上方（紧贴 FAB 左上方） */
 .fab-menu.open .fab-menu-item{
   opacity:1;pointer-events:auto;
-}
-.fab-menu.open .fab-menu-item:nth-child(1){
-  transform:translate(-88px,-8px) scale(1) rotate(0deg);
-  transition-delay:0.03s;
-}
-.fab-menu.open .fab-menu-item:nth-child(2){
-  transform:translate(-44px,-88px) scale(1) rotate(0deg);
-  transition-delay:0.08s;
 }
 .fab-menu:not(.open) .fab-menu-item{
   transition-delay:0s!important;
@@ -2726,12 +2830,14 @@ textarea:focus-visible,
   background: radial-gradient(ellipse 70% 60% at center, transparent 30%, oklch(0% 0 0 / 0.5) 100%);
   pointer-events: none;
 }
-/* 移动端降级 */
+/* 移动端降级 — 彻底关闭所有背景动画，只保留静态极简背景 */
 @media(max-width:768px){
   #bg_particles .orb { display: none; }
   #bg_particles .noise { display: none; }
-  #bg_particles::before { opacity: 0.25; animation-duration: 20s; }
-  #bg_particles::after { opacity: 0.15; }
+  #bg_particles .grid-overlay { display: none; }
+  #bg_particles::before { opacity: 0.15; animation: none; }
+  #bg_particles::after { opacity: 0.08; animation: none; }
+  #bg_particles .vignette { opacity: 0.3; }
 }
 [data-theme="light"] #bg_particles::before { opacity: 0.2; }
 [data-theme="light"] #bg_particles::after { opacity: 0.2; }
@@ -2900,6 +3006,50 @@ textarea:focus-visible,
   50% { transform: scale(1.2); opacity: 1; }
 }
 
+/* ========================================================================
+   Mobile Performance: 移动端关闭所有花哨的装饰性动画 (≤768px)
+   手机 GPU/CPU 有限，多个 CSS 动画 + DOM 操作会导致卡顿发热
+   ======================================================================== */
+@media(max-width:768px){
+  /* 霓虹标题 — 保留渐变文字，去掉动画和drop-shadow */
+  .unified-header h1 { animation: none !important; filter: none !important; }
+  /* 头部动态渐变边框 */
+  .unified-header::before { animation: none !important; }
+  /* Logo 呼吸脉冲 */
+  .card-header-icon::after { animation: none !important; }
+  /* 连接状态脉冲 — 去掉呼吸动画，只保留静态颜色 */
+  .status-dot { animation: none !important; }
+  /* 彩虹进度条 — 去掉流动动画，只保留静态渐变 */
+  #progress_section.generating #progress_bar { animation: none !important; }
+  /* 工作流选中发光条 */
+  .wf-item.active { animation: none !important; }
+  /* 底部导航活动指示器 */
+  .bn-active-indicator { animation: none !important; }
+  /* FAB 按钮呼吸灯 */
+  .gallery-fab { animation: none !important; }
+  .gallery-fab:hover { animation: none !important; }
+  /* 空状态浮动图标 */
+  .empty-state-icon { animation: none !important; }
+  /* 魔导书数据源指示条 */
+  .source-item.selected::before { animation: none !important; }
+  /* 收藏区霓虹标题 */
+  .grm-spells-header { animation: none !important; filter: none !important; }
+  /* 魔导书缓存状态加载点 */
+  .grm-cache-status .dot.loading { animation: none !important; }
+  /* Lora 下拉面板 — 去掉阴影动画 */
+  .lora-dropdown-panel { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+  .lora-dropdown-panel .ldp-item { transition: none !important; }
+  /* 节点卡片 — 去掉 hover 上浮效果 */
+  .node-card:hover { transform: none !important; box-shadow: var(--shadow-sm) !important; }
+  .node-card:active { transform: none !important; }
+  /* 魔导书 — 去掉过渡动画 */
+  .grimoire-sheet { transition: none !important; }
+  .source-item { transition: none !important; }
+  .grm-item-card { transition: none !important; }
+  /* 弹窗内容 — 去掉入场动画 */
+  .modal-content { animation: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -2925,6 +3075,10 @@ textarea:focus-visible,
     <symbol id="icon-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
     <!-- Settings / Gear -->
     <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <!-- Lora -->
+    <symbol id="icon-lora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
+    <!-- Plus -->
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
     <!-- Save / Floppy -->
     <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
     <!-- Folder / Open -->
@@ -3292,6 +3446,7 @@ textarea:focus-visible,
           </div>
           <div class="res-info" id="res_info">分辨率: 480 x 852</div>
           <div class="ratio-group" id="ratio_group" role="group" aria-label="比例选择">
+            <button class="ratio-btn" data-r="随机" data-action="setRatio">🎲 随机</button>
             <button class="ratio-btn" data-r="9:16" data-action="setRatio">9:16</button>
             <button class="ratio-btn active" data-r="1:1" data-action="setRatio">1:1</button>
             <button class="ratio-btn" data-r="16:9" data-action="setRatio">16:9</button>
@@ -3310,7 +3465,7 @@ textarea:focus-visible,
         </div>
 
         <div class="prep-section" id="prep_expanded_text" style="display:none">
-          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-file-text"/></svg> 扩写后文本 <span class="section-badge" id="prep_exp_node_badge">节点: 无</span></div>
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-document"/></svg> 扩写后文本 <span class="section-badge" id="prep_exp_node_badge">节点: 无</span></div>
           <div class="param-row" style="padding:8px 16px;font-size:11px;color:var(--text-sub)">将从此节点读取扩写后的提示词，取代原始输入存入提示词记录</div>
         </div>
 
@@ -3343,7 +3498,7 @@ textarea:focus-visible,
           <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 节点列表</span>
         </div>
         <input type="text" id="search_nodes" placeholder="搜索节点名称或ID..." oninput="filterNodes()" aria-label="搜索节点" class="settings-input" style="margin-bottom:6px" autocomplete="off">
-        <div class="node-help-bar"><span class="node-help-dot pos"></span> 正面提示词 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span> 负面提示词 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span> 载入图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span> 分辨率</div>
+        <div class="node-help-bar"><span class="node-help-dot pos"></span> 正面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span> 负面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span> 图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span> 尺寸 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot exp"></span> 文本 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot lora"></span> Lora <span style="color:var(--text-muted)">·</span> <span class="node-help-dot dis"></span> 禁用</div>
         <div class="node-grid" id="node_grid">
           <div class="empty-state" style="grid-column:1/-1">请先选择工作流</div>
         </div>
@@ -3411,6 +3566,13 @@ textarea:focus-visible,
         <div class="toggle-knob"></div>
       </div>
     </label>
+    <!-- 模型切换 + 添加子分类 -->
+    <div class="grm-model-select" style="display:flex;align-items:center;gap:4px;margin:0 4px">
+      <select id="grm_model_selector" class="grm-model-dropdown" onchange="changeGrimoireModel(this.value)" style="font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;max-width:80px">
+        <option value="anima">Anima</option>
+      </select>
+      <button class="btn btn-xs btn-secondary" onclick="addGrimoireSubCategory('','')" title="添加子分类" style="font-size:14px;padding:0 6px;line-height:20px">＋</button>
+    </div>
     <span class="grm-cache-status" id="grm_cache_status" style="display:none;margin:0 4px" onclick="cacheAllGrimoire()" title="点击缓存全部图片到本地">
       <span class="dot" id="grm_cache_dot"></span>
       <span id="grm_cache_text">📸 缓存</span>
@@ -3448,9 +3610,9 @@ textarea:focus-visible,
         </div>
         <div style="flex:1"></div>
         <input type="text" class="grimoire-detail-search desktop-only" id="grimoire_data_search" placeholder="搜索条目..." oninput="filterGrimoireData()">
-        <button class="btn btn-xs btn-secondary" id="btn_grimoire_edit_toggle" onclick="toggleGrimoireEditMode()" title="切换编辑模式" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> <span id="grm_edit_toggle_text">编辑</span></button>
+        <button class="btn btn-xs btn-secondary" id="btn_grimoire_edit_toggle" onclick="toggleGrimoireEditMode()" title="切换编辑模式"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> <span id="grm_edit_toggle_text">编辑</span></button>
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_batch" onclick="showGrimoireBatchModal()" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-upload"/></svg> <span>批量导入</span></button>
-        <button class="btn btn-xs btn-primary" id="btn_grimoire_add" onclick="showGrimoireAddModal()" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> <span class="desktop-only">新增</span></button>
+        <button class="btn btn-xs btn-primary" id="btn_grimoire_add" onclick="showGrimoireAddModal()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> <span class="desktop-only">新增</span></button>
       </div>
       <div class="grimoire-data-table" id="grimoire_data_table">
         <div style="padding:40px;text-align:center;color:var(--text-sub2);font-size:13px">请在左侧选择一个数据源</div>
@@ -3735,6 +3897,8 @@ textarea:focus-visible,
 // G. 按钮点击波纹 Ripple
 // ========================================================================
 document.addEventListener('click', function(e){
+  // 移动端不创建波纹 DOM 元素，减少卡顿
+  if (window.innerWidth <= 768) return;
   const btn = e.target.closest('button, .btn, .theme-btn, .bn-item, .node-tag-btn, .res-preset-btn, .ratio-btn, .gallery-btn, .gallery-tab, .gallery-filter, .wf-cat-tag, .grm-cat-trigger');
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
@@ -4045,16 +4209,26 @@ const _bgCropState = { x:0, y:0, w:0, h:0, imgW:0, imgH:0, dispW:0, dispH:0 };
   document.querySelectorAll('.theme-btn').forEach((b) => {
     b.classList.toggle('active', (b.getAttribute('onclick') || '').indexOf(theme) > -1);
   });
-  // 加载背景设置
-  const bg = Storage.get('custom_bg');
+  // 加载背景设置（优先从后端 /api/bg/image，后端没有则 fallback localStorage）
   const blur = Storage.get('bg_blur');
   const bright = Storage.get('bg_brightness');
-  if (bg) {
-    _bgRawData = bg;
-    document.documentElement.style.setProperty('--custom-bg', `url(${  bg  })`);
-    if (blur) document.documentElement.style.setProperty('--bg-blur', `${blur  }px`);
-    if (bright) document.documentElement.style.setProperty('--bg-brightness', bright);
-  }
+  // 先检查后端是否有背景图片
+  fetch('/api/bg/image', { method: 'HEAD' }).then((r) => {
+    if (r.ok) {
+      document.documentElement.style.setProperty('--custom-bg', 'url(/api/bg/image)');
+      if (blur) document.documentElement.style.setProperty('--bg-blur', `${blur}px`);
+      if (bright) document.documentElement.style.setProperty('--bg-brightness', bright);
+    } else {
+      // fallback localStorage
+      const bg = Storage.get('custom_bg');
+      if (bg) {
+        _bgRawData = bg;
+        document.documentElement.style.setProperty('--custom-bg', `url(${bg})`);
+        if (blur) document.documentElement.style.setProperty('--bg-blur', `${blur}px`);
+        if (bright) document.documentElement.style.setProperty('--bg-brightness', bright);
+      }
+    }
+  });
   // 加载透明度
   const op = Storage.get('ui_opacity');
   if (op) {
@@ -4254,18 +4428,26 @@ function _setBgPreview(dataUrl) {
   preview.style.backgroundImage = `url(${  dataUrl  })`;
   document.getElementById('bg_preview_text').textContent = '';
 }
-function saveBg() {
+async function saveBg() {
   const blur = document.getElementById('bg_blur_slider').value;
   const bright = document.getElementById('bg_brightness_slider').value;
-  try { localStorage.setItem('bg_blur', blur); } catch(e) {}
-  try { localStorage.setItem('bg_brightness', bright); } catch(e) {}
   // 内存变量优先，localStorage 兜底
   const bg = _bgRawData || localStorage.getItem('custom_bg');
   if (bg) {
-    document.documentElement.style.setProperty('--custom-bg', `url(${  bg  })`);
+    // 保存到后端（存为 PNG 文件）
+    await apiFetch('/api/bg/save', {
+      method: 'POST',
+      body: JSON.stringify({ bg, blur, brightness: bright })
+    }, true);
+    // 用后端 URL 替代 base64，避免 localStorage 存不下大图
+    document.documentElement.style.setProperty('--custom-bg', 'url(/api/bg/image)');
     try { localStorage.setItem('custom_bg', bg); } catch(e) {}
   } else {
     document.documentElement.style.removeProperty('--custom-bg');
+    await apiFetch('/api/bg/save', {
+      method: 'POST',
+      body: JSON.stringify({ bg: '', blur, brightness: bright })
+    }, true);
   }
   document.documentElement.style.setProperty('--bg-blur', `${blur  }px`);
   document.documentElement.style.setProperty('--bg-brightness', bright);
@@ -4493,6 +4675,8 @@ let allParamsData = null, promptNodeId = '', resNodeId = '', loadImageNodeIds = 
 let promptInputKey = '', negativeInputKey = '';
 let modelLists = {}, disabledGroups = {}, groupsSource = '', isBound = false, bindTarget = '', allWorkflows = [];
 let disabledNodes = [];
+let loraNodesConfig = {};     // 各节点的 Lora 配置 {nodeId: [{on, lora_name, strength_model, strength_clip}, ...]}
+let availableLoras = [];      // 从 ComfyUI 获取的可用 Lora 列表
 
 // 侧栏分类折叠状态
 var _sidebarCatCollapsed = {};
@@ -4931,6 +5115,15 @@ async function loadParams() {
     }
   }
 
+  // 初始化 Lora 配置
+  if (d && d.lora_nodes) {
+    loraNodesConfig = d.lora_nodes;
+  } else {
+    loraNodesConfig = {};
+  }
+  // 异步加载 Lora 列表（供弹窗下拉列表使用）
+  loadLoras();
+
   renderNodes();
   updateNodeDisplay();
   showGroupsBinding();
@@ -5007,7 +5200,7 @@ function updateNodeDisplay() {
   if (hasNeg) tagsHtml += '<span class="assigned-tag tag-negative"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 负面提示词 <button class="tag-remove" data-action="clearNodeRole" data-role="\'negative\'" aria-label="移除负面提示词指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   if (hasRes) tagsHtml += '<span class="assigned-tag tag-res"><svg class="icon-xs" aria-hidden="true"><use href="#icon-ruler"/></svg> 分辨率 <button class="tag-remove" data-action="clearNodeRole" data-role="\'resolution\'" aria-label="移除分辨率指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   if (hasImg) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <button class="tag-remove" data-action="clearNodeRole" data-role="\'load_image\'" aria-label="移除上传图片指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasExp) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-file-text"/></svg> 扩写后文本 <button class="tag-remove" data-action="clearNodeRole" data-role="\'expanded_text\'" aria-label="移除扩写后文本指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
+  if (hasExp) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-document"/></svg> 扩写后文本 <button class="tag-remove" data-action="clearNodeRole" data-role="\'expanded_text\'" aria-label="移除扩写后文本指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   if (hasDisabled) tagsHtml += '<span class="assigned-tag tag-disabled"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 已禁用 ' + disabledNodes.length + '节点 <button class="tag-remove" data-action="clearNodeRole" data-role="\'disabled\'" aria-label="清除所有禁用"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
   document.getElementById('assigned_tags').innerHTML = tagsHtml || '<span style="font-size:11px;color:var(--text-sub)">尚未指定任何节点</span>';
 }
@@ -5139,9 +5332,10 @@ function clearNodeRole(role) {
 }
 
 function clearAllNodeRoles() {
-  const hasAny = promptNodeId || negativeNodeId || resNodeId || expandedTextNodeId || loadImageNodeIds.some(id => id);
+  const hasAny = promptNodeId || negativeNodeId || resNodeId || expandedTextNodeId || loadImageNodeIds.some(id => id) || disabledNodes.length > 0;
   if (!hasAny) return;
   promptNodeId = ''; negativeNodeId = ''; resNodeId = ''; expandedTextNodeId = ''; loadImageNodeIds = ['', '', ''];
+  disabledNodes = [];
   updateNodeDisplay(); renderNodes();
   setTimeout(() => saveParams(), 50);
   toast('已清除所有节点指定');
@@ -5154,7 +5348,7 @@ function renderNodes() {
     document.getElementById('node_grid').innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-sub);font-size:12px">无节点数据</div>';
     return;
   }
-  // 已指定角色的节点排前面，其余按原序
+  // 已指定角色的节点排前面，Lora 节点紧随其后，其余按原序
   const groupOrder = (n) => {
     if (n.id === promptNodeId) return 0;
     if (n.id === negativeNodeId) return 1;
@@ -5162,6 +5356,8 @@ function renderNodes() {
     if (n.id === resNodeId) return 3;
     if (n.id === expandedTextNodeId) return 4;
     if (disabledNodes.indexOf(n.id) >= 0) return 0;
+    // 多 Lora 节点自动检测（如 Power Lora Loader），排在指定节点之后、普通节点之前
+    if (/power\s*lora/i.test(n.class_type) || /power\s*lora/i.test(n.title)) return 4.5;
     return 5;
   };
   const sortedNodes = [...allParamsData.nodes].sort((a, b) => groupOrder(a) - groupOrder(b));
@@ -5172,6 +5368,7 @@ function renderNodes() {
     const iP = n.id === promptNodeId, iR = n.id === resNodeId, iN = n.id === negativeNodeId, iE = n.id === expandedTextNodeId;
     const isAssigned = iP || iR || iLany || iN || iE;
     const isDisabled = disabledNodes.indexOf(n.id) >= 0;
+    const isLoraCard = !isAssigned && !isDisabled && (/power\s*lora/i.test(n.class_type) || /power\s*lora/i.test(n.title));
     let cls = 'node-card';
     if (iP) cls += ' prompt-active';
     if (iR) cls += ' res-active';
@@ -5179,8 +5376,9 @@ function renderNodes() {
     if (iN) cls += ' neg-active';
     if (iE) cls += ' exp-active';
     if (isDisabled) cls += ' node-disabled';
-    const icon = isDisabled ? '⛔' : (iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '📐' : (iE ? '📝' : '📦')))));
-    // 角色标签（已指定时显示在卡片右上角）
+    if (isLoraCard) cls += ' lora-active';
+    const icon = isDisabled ? '⛔' : (iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '📐' : (iE ? '📝' : (isLoraCard ? '🧩' : '📦'))))));
+    // 角色标签
     let roleLabel = '';
     if (iP) roleLabel = '<span class="node-role-label role-prompt">🎯 正面</span>';
     else if (iN) roleLabel = '<span class="node-role-label role-negative">🚫 负面</span>';
@@ -5188,6 +5386,7 @@ function renderNodes() {
     else if (iR) roleLabel = '<span class="node-role-label role-res">📐 分辨率</span>';
     else if (iE) roleLabel = '<span class="node-role-label role-exp">📝 扩写文本</span>';
     else if (isDisabled) roleLabel = '<span class="node-role-label role-disabled">⛔ 已禁用</span>';
+    else if (isLoraCard) roleLabel = '<span class="node-role-label role-lora">🧩 Lora</span>';
     // 互斥按钮
     const posDisabled = (promptNodeId && !iP) || (isAssigned && !iP) ? ' disabled' : '';
     const negDisabled = (negativeNodeId && !iN) || (isAssigned && !iN) ? ' disabled' : '';
@@ -5198,15 +5397,15 @@ function renderNodes() {
     const imgDisabled1 = (loadImageNodeIds[1] && !iL1) || (isAssigned && !iL1) ? ' disabled' : '';
     const imgDisabled2 = (loadImageNodeIds[2] && !iL2) || (isAssigned && !iL2) ? ' disabled' : '';
     let tags = '';
-    tags += `<button class="node-tag-btn${  iP ? ' active-success' : ''  }"${  posDisabled  } data-action="setPromptNode" data-nodeid="'${  n.id  }'" aria-label="设为正面提示词节点">🎯</button>`;
-    tags += `<button class="node-tag-btn${  iN ? ' active-danger' : ''  }"${  negDisabled  } data-action="setNegativeNode" data-nodeid="'${  n.id  }'" aria-label="设为负面提示词节点">🚫</button>`;
-    tags += `<button class="node-tag-btn${  iL0 ? ' active-info' : ''  }"${  imgDisabled0  } data-action="setLoadImageNode0" data-nodeid="'${  n.id  }'" aria-label="设为载入图片">🖼️1</button>`;
-    tags += `<button class="node-tag-btn${  iL1 ? ' active-info' : ''  }"${  imgDisabled1  } data-action="setLoadImageNode1" data-nodeid="'${  n.id  }'" aria-label="设为载入图片2">🖼️2</button>`;
-    tags += `<button class="node-tag-btn${  iL2 ? ' active-info' : ''  }"${  imgDisabled2  } data-action="setLoadImageNode2" data-nodeid="'${  n.id  }'" aria-label="设为载入图片3">🖼️3</button>`;
-    tags += `<button class="node-tag-btn${  iR ? ' active-warning' : ''  }"${  resDisabled  } data-action="setResNode" data-nodeid="'${  n.id  }'" aria-label="设为分辨率节点">📐</button>`;
-    tags += `<button class="node-tag-btn${  iE ? ' active-accent' : ''  }"${  expDisabled  } data-action="setExpandedTextNode" data-nodeid="'${  n.id  }'" aria-label="设为扩写后文本节点">📝</button>`;
+    tags += `<button class="node-tag-btn${  iP ? ' active-success' : ''  }"${  posDisabled  } data-action="setPromptNode" data-nodeid="'${  n.id  }'" aria-label="设为正面提示词节点"><svg class="icon-xs" aria-hidden="true"><use href="#icon-check"/></svg></button>`;
+    tags += `<button class="node-tag-btn${  iN ? ' active-danger' : ''  }"${  negDisabled  } data-action="setNegativeNode" data-nodeid="'${  n.id  }'" aria-label="设为负面提示词节点"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg></button>`;
+    tags += `<button class="node-tag-btn${  iL0 ? ' active-info' : ''  }"${  imgDisabled0  } data-action="setLoadImageNode0" data-nodeid="'${  n.id  }'" aria-label="设为载入图片1"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg><span class="btn-badge">1</span></button>`;
+    tags += `<button class="node-tag-btn${  iL1 ? ' active-info' : ''  }"${  imgDisabled1  } data-action="setLoadImageNode1" data-nodeid="'${  n.id  }'" aria-label="设为载入图片2"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg><span class="btn-badge">2</span></button>`;
+    tags += `<button class="node-tag-btn${  iL2 ? ' active-info' : ''  }"${  imgDisabled2  } data-action="setLoadImageNode2" data-nodeid="'${  n.id  }'" aria-label="设为载入图片3"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg><span class="btn-badge">3</span></button>`;
+    tags += `<button class="node-tag-btn${  iR ? ' active-warning' : ''  }"${  resDisabled  } data-action="setResNode" data-nodeid="'${  n.id  }'" aria-label="设为分辨率节点"><svg class="icon-xs" aria-hidden="true"><use href="#icon-ruler"/></svg></button>`;
+    tags += `<button class="node-tag-btn${  iE ? ' active-accent' : ''  }"${  expDisabled  } data-action="setExpandedTextNode" data-nodeid="'${  n.id  }'" aria-label="设为扩写后文本节点"><svg class="icon-xs" aria-hidden="true"><use href="#icon-document"/></svg></button>`;
     // 禁用/启用切换按钮（用于 Lora 等节点）
-    tags += `<button class="node-tag-btn${  isDisabled ? ' active-danger' : ''  }" data-action="toggleDisableNode" data-nodeid="'${  n.id  }'" aria-label="禁用/启用此节点">${  isDisabled ? '✅' : '⛔'  }</button>`;
+    tags += `<button class="node-tag-btn${  isDisabled ? ' active-danger' : ''  }" data-action="toggleDisableNode" data-nodeid="'${  n.id  }'" aria-label="禁用/启用此节点"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg></button>`;
     h += `<div class="${  cls  }" data-search="${  (`${n.title  } ${  n.id  } ${  n.class_type}`).toLowerCase()  }" data-action="showNodeDetail" data-nodeid="'${  n.id  }'" tabindex="0" role="button" onkeydown="if(event.key==='Enter')showNodeDetail('${  n.id  }')" aria-label="节点 ${  n.title  }">`;
     h += roleLabel;
     h += `<div><span class="node-icon">${  icon  }</span><span class="node-id">#${  n.id  }</span></div>`;
@@ -5227,6 +5426,302 @@ function renderNodes() {
   filterNodes();
 }
 
+// ========================================================================
+// Lora 管理
+// ========================================================================
+async function loadLoras() {
+  availableLoras = await apiFetch('/api/loras', {}, true) || [];
+}
+
+// ========================================================================
+// Lora 管理（节点弹窗内）
+// ========================================================================
+let _loraTouchTimer = null;
+let _loraTouchNodeId = null;
+let _loraTouchIdx = -1;
+let _loraTouchMoved = false;
+
+function onLoraTouchStart(event, nodeId, idx) {
+  _loraTouchMoved = false;
+  _loraTouchNodeId = nodeId;
+  _loraTouchIdx = idx;
+  _loraTouchTimer = setTimeout(() => {
+    if (!_loraTouchMoved) {
+      showLoraContextMenuInModal(nodeId, idx, event);
+    }
+    _loraTouchTimer = null;
+  }, 500);
+}
+function onLoraTouchEnd(event, nodeId, idx) {
+  if (_loraTouchTimer) { clearTimeout(_loraTouchTimer); _loraTouchTimer = null; }
+}
+function onLoraTouchMove() {
+  _loraTouchMoved = true;
+  if (_loraTouchTimer) { clearTimeout(_loraTouchTimer); _loraTouchTimer = null; }
+}
+
+// ========================================================================
+// Lora 下拉面板（搜索在面板顶部）
+// ========================================================================
+function toggleLoraDropdown(event, trigger, nodeId, idx) {
+  event.stopPropagation();
+  // 如果已有面板则关闭
+  const existing = trigger.parentElement.querySelector('.lora-dropdown-panel');
+  if (existing) { existing.remove(); return; }
+
+  const curVal = (loraNodesConfig[nodeId]?.[idx]?.lora_name) || '';
+
+  // 构建分类树
+  const tree = {};
+  availableLoras.forEach(lr => {
+    const parts = lr.split(/[\\\/]/);
+    const name = parts.pop();
+    const top = parts[0] || '根目录';
+    const sub = parts.slice(1).join('/') || '';
+    if (!tree[top]) tree[top] = {};
+    if (!tree[top][sub]) tree[top][sub] = [];
+    tree[top][sub].push({ full: lr, name });
+  });
+
+  const panel = document.createElement('div');
+  panel.className = 'lora-dropdown-panel';
+  panel.innerHTML = `
+    <div class="ldp-search"><input type="text" placeholder="Filter list" oninput="filterLdp(this, '${nodeId}', ${idx})" autocomplete="off"></div>
+    <div class="ldp-body">${buildLdpTree(tree, curVal, nodeId, idx)}</div>`;
+
+  trigger.parentElement.appendChild(panel);
+  // 定位到 trigger 正下方（viewport 坐标）
+  const tRect = trigger.getBoundingClientRect();
+  panel.style.left = tRect.left + 'px';
+  panel.style.top = (tRect.bottom + 2) + 'px';
+  panel.style.width = Math.max(200, tRect.width) + 'px';
+  // 移出到 body 确保 z-index 生效
+  document.body.appendChild(panel);
+  setTimeout(() => panel.querySelector('.ldp-search input')?.focus(), 50);
+}
+
+function buildLdpTree(tree, curVal, nodeId, idx) {
+  let html = '';
+  const tops = Object.keys(tree).sort((a, b) => a.localeCompare(b, 'zh'));
+  tops.forEach(top => {
+    html += `<div class="ldp-cat">${top}</div>`;
+    const subs = tree[top];
+    const subKeys = Object.keys(subs).sort((a, b) => {
+      if (!a) return 1; if (!b) return -1;
+      return a.localeCompare(b, 'zh');
+    });
+    subKeys.forEach(sub => {
+      const items = subs[sub].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+      if (sub) html += `<div class="ldp-subcat">${sub}</div>`;
+      items.forEach(lr => {
+        const sel = lr.full === curVal ? ' selected' : '';
+        html += `<div class="ldp-item${sel}" onclick="selectLdpItem('${nodeId}', ${idx}, '${lr.full.replace(/'/g, "\\'")}')">${lr.name}</div>`;
+      });
+    });
+  });
+  if (!html) html = '<div class="ldp-empty">无匹配</div>';
+  return html;
+}
+
+function filterLdp(input, nodeId, idx) {
+  const val = input.value.toLowerCase().trim();
+  const body = input.closest('.lora-dropdown-panel')?.querySelector('.ldp-body');
+  if (!body) return;
+  const curVal = (loraNodesConfig[nodeId]?.[idx]?.lora_name) || '';
+  const filtered = !val ? availableLoras : availableLoras.filter(lr => lr.toLowerCase().includes(val));
+  const tree = {};
+  filtered.forEach(lr => {
+    const parts = lr.split(/[\\\/]/);
+    const name = parts.pop();
+    const top = parts[0] || '根目录';
+    const sub = parts.slice(1).join('/') || '';
+    if (!tree[top]) tree[top] = {};
+    if (!tree[top][sub]) tree[top][sub] = [];
+    tree[top][sub].push({ full: lr, name });
+  });
+  body.innerHTML = buildLdpTree(tree, curVal, nodeId, idx);
+}
+
+function selectLdpItem(nodeId, idx, val) {
+  updateLoraForNode(nodeId, idx, 'lora_name', val);
+  // 更新触发器和所有同类面板
+  const triggers = document.querySelectorAll(`.lora-select`);
+  triggers.forEach(t => {
+    if (t.closest('.lora-item') && t.closest('.lora-item').querySelector('.lora-dropdown-panel')) {
+      t.textContent = val.replace(/^.*[\\\/]/, '');
+      t.closest('.lora-item').querySelector('.lora-dropdown-panel')?.remove();
+    }
+  });
+}
+
+// 点击外部关闭所有 Lora 面板
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.lora-dropdown-panel') && !e.target.closest('.lora-select')) {
+    document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
+  }
+});
+
+function addLoraForNode(nodeId) {
+  if (!availableLoras.length) {
+    toast('⚠️ 正在加载 Lora 列表，请稍后重试', 'warning');
+    return;
+  }
+  if (!loraNodesConfig[nodeId]) loraNodesConfig[nodeId] = [];
+  loraNodesConfig[nodeId].push({ on: true, lora_name: availableLoras[0] || '', strength_model: 1.0, strength_clip: null });
+  // 重新渲染弹窗
+  showNodeDetail(nodeId);
+}
+
+function toggleAllLoras(nodeId) {
+  const loras = loraNodesConfig[nodeId];
+  if (!loras || !loras.length) return;
+  // 判断当前状态：全部开？全部关？混合？
+  const allOn = loras.every(l => l.on);
+  const newState = !allOn; // 全开→全关，其他情况→全开
+  loras.forEach(l => { l.on = newState; });
+  showNodeDetail(nodeId);
+}
+
+// ========================================================================
+// Lora 拖拽排序
+// ========================================================================
+let _dragFromIdx = -1;
+let _dragNodeId = '';
+
+function onLoraDragStart(event, nodeId, idx) {
+  _dragFromIdx = idx;
+  _dragNodeId = nodeId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', idx);
+  event.target.classList.add('dragging');
+}
+
+function onLoraDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  // 移除其他项的 drag-over 类
+  document.querySelectorAll('.lora-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  event.currentTarget.classList.add('drag-over');
+}
+
+function onLoraDrop(event, nodeId, toIdx) {
+  event.preventDefault();
+  const loras = loraNodesConfig[nodeId];
+  if (!loras || _dragFromIdx < 0 || _dragFromIdx === toIdx) return;
+  // 交换位置
+  const item = loras.splice(_dragFromIdx, 1)[0];
+  loras.splice(toIdx, 0, item);
+  _dragFromIdx = -1;
+  showNodeDetail(nodeId);
+}
+
+function onLoraDragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.querySelectorAll('.lora-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  _dragFromIdx = -1;
+  _dragNodeId = '';
+}
+
+function updateLoraForNode(nodeId, idx, key, val) {
+  if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId][idx][key] = val;
+  }
+}
+
+function showLoraContextMenuInModal(nodeId, idx, event) {
+  const old = document.getElementById('lora_context_menu');
+  if (old) old.remove();
+  const loras = loraNodesConfig[nodeId];
+  if (!loras || !loras[idx]) return;
+  const l = loras[idx];
+  const canMoveUp = idx > 0;
+  const canMoveDown = idx < loras.length - 1;
+  const menu = document.createElement('div');
+  menu.id = 'lora_context_menu';
+  menu.className = 'lora-context-menu';
+  menu.innerHTML = `
+    <div class="lora-context-item" data-action="toggle">
+      <span class="ctx-icon">${l.on ? '○' : '●'}</span>
+      ${l.on ? '禁用 Lora' : '启用 Lora'}
+    </div>
+    <div class="lora-context-sep"></div>
+    <div class="lora-context-item${canMoveUp ? '' : ' disabled'}" data-action="moveUp">
+      <span class="ctx-icon">↑</span>
+      上移
+    </div>
+    <div class="lora-context-item${canMoveDown ? '' : ' disabled'}" data-action="moveDown">
+      <span class="ctx-icon">↓</span>
+      下移
+    </div>
+    <div class="lora-context-sep"></div>
+    <div class="lora-context-item danger" data-action="remove">
+      <span class="ctx-icon">✕</span>
+      移除 Lora
+    </div>`;
+  const x = event.clientX || (event.touches && event.touches[0].clientX) || 0;
+  const y = event.clientY || (event.touches && event.touches[0].clientY) || 0;
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.querySelectorAll('.lora-context-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const action = item.dataset.action;
+      if (action === 'toggle') {
+        loras[idx].on = !loras[idx].on;
+        showNodeDetail(nodeId);
+      } else if (action === 'moveUp' && idx > 0) {
+        [loras[idx - 1], loras[idx]] = [loras[idx], loras[idx - 1]];
+        showNodeDetail(nodeId);
+      } else if (action === 'moveDown' && idx < loras.length - 1) {
+        [loras[idx], loras[idx + 1]] = [loras[idx + 1], loras[idx]];
+        showNodeDetail(nodeId);
+      } else if (action === 'remove') {
+        loras.splice(idx, 1);
+        showNodeDetail(nodeId);
+      }
+      menu.remove();
+    });
+  });
+  const closeMenu = (e) => {
+    if (!menu.contains(e.target)) {
+      menu.remove();
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 10);
+  document.body.appendChild(menu);
+}
+
+function addLora() {
+  if (!availableLoras.length) {
+    toast('⚠️ 正在加载 Lora 列表，请稍后重试', 'warning');
+    return;
+  }
+  savedLoras.push({ on: true, lora_name: availableLoras[0] || '', strength_model: 1.0, strength_clip: null });
+  renderLoraPanel();
+  saveParams();
+}
+
+function removeLora(idx) {
+  savedLoras.splice(idx, 1);
+  renderLoraPanel();
+  saveParams();
+}
+
+function toggleLora(idx) {
+  if (savedLoras[idx]) {
+    savedLoras[idx].on = !savedLoras[idx].on;
+    renderLoraPanel();
+    saveParams();
+  }
+}
+
+function updateLora(idx, key, val) {
+  if (savedLoras[idx]) {
+    savedLoras[idx][key] = val;
+    saveParams();
+  }
+}
+
 function showNodeDetail(nid) {
   if (!allParamsData || !allParamsData.nodes) return;
   let node = null;
@@ -5237,7 +5732,64 @@ function showNodeDetail(nid) {
   document.getElementById('node_modal_title').textContent = `#${  node.id  } ${  node.title}`;
   const body = document.getElementById('node_modal_body');
   let html = `<p style="font-size:11px;color:var(--text-sub);margin-bottom:8px">类型: ${  node.class_type  }</p>`;
+
+  // 判断是否为多 Lora 节点（如 Power Lora Loader）
+  const isLoraNode = /power\s*lora/i.test(node.class_type) || /power\s*lora/i.test(node.title);
+
+  // 如果是 Lora 节点，先渲染 Lora 管理面板
+  if (isLoraNode) {
+    const loras = loraNodesConfig[node.id] || [];
+    html += `<div class="lora-section-in-modal">
+      <div class="section-title" style="margin-bottom:6px"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 列表</div>
+      <div class="lora-list" id="lora_list_${node.id}">`;
+    if (loras.length === 0) {
+      html += '<div class="empty-state" style="padding:8px;text-align:center;color:var(--text-sub2);font-size:11px">暂无 Lora，点击下方「添加」按钮</div>';
+    } else {
+      for (let li = 0; li < loras.length; li++) {
+        const l = loras[li];
+        const disabledCls = l.on ? '' : ' lora-disabled';
+        const statusIcon = l.on ? '●' : '○';
+        html += `<div class="lora-item${disabledCls}" data-idx="${li}"
+          draggable="true"
+          ondragstart="onLoraDragStart(event, '${node.id}', ${li})"
+          ondragover="onLoraDragOver(event)"
+          ondrop="onLoraDrop(event, '${node.id}', ${li})"
+          ondragend="onLoraDragEnd(event)"
+          oncontextmenu="showLoraContextMenuInModal('${node.id}', ${li}, event);return false"
+          ontouchstart="onLoraTouchStart(event, '${node.id}', ${li})"
+          ontouchend="onLoraTouchEnd(event, '${node.id}', ${li})"
+          ontouchmove="onLoraTouchMove()">
+          <span class="lora-status" title="${l.on ? '已启用' : '已禁用'}">${statusIcon}</span>
+          <div class="lora-select" onclick="toggleLoraDropdown(event, this, '${node.id}', ${li})">
+            ${l.lora_name ? l.lora_name.replace(/^.*[\\\/]/, '') : '— 选择 Lora —'}
+          </div>
+          <span class="lora-strength-wrap">
+            <input class="lora-strength" type="range" min="-2" max="5" step="0.05" value="${l.strength_model ?? 1.0}"
+              oninput="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.nextElementSibling.value = parseFloat(this.value).toFixed(2)"
+              title="权重 (-2~5)" aria-label="Lora 权重">
+            <input class="lora-strength-val" type="number" min="-2" max="5" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
+              onchange="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-2, Math.min(5, parseFloat(this.value) || 0))"
+              title="直接输入数值" aria-label="Lora 权重数值">
+          </span>
+        </div>`;
+      }
+    }
+    html += `</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-xs btn-primary" onclick="addLoraForNode('${node.id}')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> 添加 Lora</button>
+        <button class="btn btn-xs btn-secondary" onclick="toggleAllLoras('${node.id}')" title="全部启用/禁用">⏻ 全部开关</button>
+      </div>
+      <hr style="margin:12px 0;border-color:var(--card-border)">
+    </div>`;
+  }
+
+  // 渲染常规参数（对 Lora 节点过滤掉已由新 UI 管理的参数）
+  const loraFilterKeys = isLoraNode ? ['add lora', 'lora_', 'strength_model', 'strength_clip'] : [];
   node.params.forEach((p) => {
+    // 跳过 Lora 相关参数
+    if (isLoraNode && loraFilterKeys.some(k => p.key.toLowerCase().includes(k))) return;
+    // 跳过对象类型的值（由新 UI 管理）
+    if (typeof p.value === 'object') return;
     const modelKey = `${node.class_type  }_${  p.key}`;
     const elId = `param_${  node.id  }_${  p.key}`;
     html += `<div class="param-row"><label for="${  elId  }">${  p.key  }</label>`;
@@ -5279,6 +5831,10 @@ function closeNodeModal() {
         });
       }
     });
+    // 如果有 Lora 配置，也保存
+    if (loraNodesConfig[nid]) {
+      saveData.__lora_nodes__ = { ...loraNodesConfig };
+    }
     // 如果有变化的值，立即保存到后端
     const keys = Object.keys(saveData);
     if (keys.length > 0) {
@@ -5328,7 +5884,8 @@ async function saveParams() {
       __load_image_nodes__: loadImageNodeIds.filter(id => id).join(','),
       __negative_node__: negativeNodeId,
       __expanded_text_node__: expandedTextNodeId,
-      __disabled_nodes__: disabledNodes
+      __disabled_nodes__: disabledNodes,
+      __lora_nodes__: loraNodesConfig
     };
     console.log('[saveParams] sending:', cW, JSON.stringify({...d, __prompt_node__: d.__prompt_node__, __resolution_node__: d.__resolution_node__, __load_image_nodes__: d.__load_image_nodes__, __negative_node__: d.__negative_node__, __expanded_text_node__: d.__expanded_text_node__}));
 
@@ -6490,8 +7047,38 @@ function toggleFabMenu(e) {
   const menu = document.getElementById('fab_menu');
   const fab = document.getElementById('gallery_fab');
   if (!menu || !fab) return;
-  _fabMenuOpen = !_fabMenuOpen;
-  menu.classList.toggle('open', _fabMenuOpen);
+  // 强制清理任何残留状态
+  if (_fabMenuOpen) {
+    // 关闭
+    menu.classList.remove('open');
+    menu.querySelectorAll('.fab-menu-item').forEach((item) => {
+      item.style.left = '-22px';
+      item.style.top = '-22px';
+      item.style.opacity = '0';
+      item.style.pointerEvents = 'none';
+    });
+    _fabMenuOpen = false;
+  } else {
+    // 打开：先清残留，再强制 reflow，再设目标位置
+    menu.classList.remove('open');
+    menu.querySelectorAll('.fab-menu-item').forEach((item) => {
+      item.style.left = '-22px';
+      item.style.top = '-22px';
+      item.style.opacity = '';
+      item.style.pointerEvents = '';
+    });
+    void menu.offsetWidth; // 强制 reflow 让 transition 重置
+    menu.classList.add('open');
+    // 直接设目标位置（L 形 90° 排列）：画廊在左，魔导书在正上方
+    const items = menu.querySelectorAll('.fab-menu-item');
+    if (items[0]) {
+      setTimeout(() => { items[0].style.left = '-100px'; items[0].style.top = '0px'; }, 30);
+    }
+    if (items[1]) {
+      setTimeout(() => { items[1].style.left = '0px'; items[1].style.top = '-100px'; }, 80);
+    }
+    _fabMenuOpen = true;
+  }
   // 切换 FAB 图标
   const defIcon = fab.querySelector('.fab-icon-default');
   const closeIcon = fab.querySelector('.fab-icon-close');
@@ -6507,7 +7094,15 @@ function toggleFabMenu(e) {
 function closeFabMenu() {
   const menu = document.getElementById('fab_menu');
   const fab = document.getElementById('gallery_fab');
-  if (menu) menu.classList.remove('open');
+  if (menu) {
+    menu.classList.remove('open');
+    menu.querySelectorAll('.fab-menu-item').forEach((item) => {
+      item.style.left = '-22px';
+      item.style.top = '-22px';
+      item.style.opacity = '0';
+      item.style.pointerEvents = 'none';
+    });
+  }
   if (fab) {
     const defIcon = fab.querySelector('.fab-icon-default');
     const closeIcon = fab.querySelector('.fab-icon-close');
@@ -7166,6 +7761,8 @@ const GRIMOIRE_CN_NAMES = {
 };
 
 function showGrimoire() {
+  // 确保 FAB 菜单关闭（防御性：底部导航/外部入口也走这里）
+  if (typeof closeFabMenu === 'function') closeFabMenu();
   const sheet = document.getElementById('grimoire_sheet');
   const backdrop = document.getElementById('grimoire_backdrop');
   if (!sheet || !backdrop) return;
@@ -7177,6 +7774,8 @@ function showGrimoire() {
 }
 
 function hideGrimoire() {
+  // 关闭时也保险性关闭 FAB 菜单（处理其他入口/残留状态）
+  if (typeof closeFabMenu === 'function') closeFabMenu();
   const sheet = document.getElementById('grimoire_sheet');
   const backdrop = document.getElementById('grimoire_backdrop');
   if (!sheet || !backdrop) return;
@@ -7192,6 +7791,23 @@ async function loadGrimoireData() {
   try {
     const status = await apiFetch('/api/grimoire/status', {}, true);
     if (status) updateGrimoireToggle(status.enabled);
+  } catch (e) {}
+  
+  // Load models
+  try {
+    const modelData = await apiFetch('/api/grimoire/models', {}, true);
+    if (modelData && modelData.models) {
+      const sel = document.getElementById('grm_model_selector');
+      const current = await apiFetch('/api/grimoire/model', {}, true);
+      sel.innerHTML = '';
+      for (const m of modelData.models) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        if (current && current.model === m.id) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
   } catch (e) {}
   
   // Load sources
@@ -7255,6 +7871,23 @@ async function toggleGrimoireSwitch() {
   if (!toggle) return;
   const current = toggle.dataset.enabled === '1';
   const next = !current;
+
+async function changeGrimoireModel(model) {
+  try {
+    const res = await apiFetch('/api/grimoire/model', {
+      method: 'POST',
+      body: JSON.stringify({model: model})
+    }, true);
+    if (res && res.ok) {
+      // 刷新源列表（顺序可能因模型不同而变化）
+      const srcData = await apiFetch('/api/grimoire/sources', {}, true);
+      if (srcData && srcData.sources) {
+        _grimoireSources = srcData.sources;
+        renderGrimoireSources();
+      }
+    }
+  } catch (e) {}
+}
   const result = await apiFetch('/api/grimoire/status', {
     method: 'POST',
     body: JSON.stringify({ enabled: next })
@@ -7289,13 +7922,12 @@ function renderGrimoireSources() {
     groups[dir].total += s.count || 0;
   });
   
-  // 目录排序：anima 排第一，custom 排最后，其余按字母
+  // 目录排序：按后端返回的顺序（Anima section 顺序），不重新按拼音排
   const dirOrder = Object.keys(groups).sort((a, b) => {
-    if (a === 'anima') return -1;
-    if (b === 'anima') return 1;
-    if (a === 'custom') return 1;
-    if (b === 'custom') return -1;
-    return a.localeCompare(b);
+    // 找到每个目录在 sources 数组中最先出现的位置
+    const idxA = sources.findIndex(s => (s.dir || '') === a);
+    const idxB = sources.findIndex(s => (s.dir || '') === b);
+    return (idxA >= 0 ? idxA : 999) - (idxB >= 0 ? idxB : 999);
   });
   
   function cnDir(d) {
@@ -7306,7 +7938,10 @@ function renderGrimoireSources() {
     return GRIMOIRE_CN_NAMES[key] || s.name;
   }
   
-  let html = '<div class="source-group-list">';
+  let html = '<div class="grm-toolbar">' +
+    `<button class="btn btn-xs btn-secondary" id="grm_toggle_all_btn" onclick="toggleAllGrimoireGroups()" title="展开/收起全部"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder-open"/></svg> <span id="grm_toggle_all_text">展开全部</span></button>` +
+    '</div>';
+  html += '<div class="source-group-list" ondragover="event.preventDefault()">';
   dirOrder.forEach(dir => {
     const g = groups[dir];
     const displayDir = cnDir(dir || '其他');
@@ -7315,13 +7950,11 @@ function renderGrimoireSources() {
       ? `<button class="group-action-btn" onclick="event.stopPropagation();renameGrimoireCategory('${esc(dir)}','${esc(displayDir)}')" title="重命名分类"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg></button>` +
         `<button class="group-action-btn del" onclick="event.stopPropagation();deleteGrimoireCategory('${esc(dir)}','${esc(displayDir)}')" title="删除分类">🗑️</button>`
       : '';
-    const addSubBtn = _grimoireEditMode
-      ? `<button class="group-action-btn" onclick="event.stopPropagation();addGrimoireSubCategory('${esc(dir)}','${esc(displayDir)}')" title="添加子分类">➕</button>`
-      : '';
-    const isCollapsed = _grimoireCollapsedDirs && _grimoireCollapsedDirs[dir];
+    const addSubBtn = '';
+    const isCollapsed = _grimoireCollapsedDirs ? _grimoireCollapsedDirs[dir] !== false : true;
     const arrowClass = isCollapsed ? 'collapsed' : '';
     
-    html += `<div class="source-group">`;
+    html += `<div class="source-group" draggable="true" data-dir="${esc(dir)}" ondragstart="onDirDragStart(event)" ondragover="onDirDragOver(event)" ondrop="onDirDrop(event)" ondragend="onDirDragEnd(event)">`;
     html += `<div class="source-group-header" onclick="toggleGrimoireGroup('${esc(dir)}')">` +
       `<span class="group-arrow ${arrowClass}">▼</span>` +
       `<span class="group-name">${esc(displayDir)}</span>` +
@@ -7340,6 +7973,10 @@ function renderGrimoireSources() {
         // 池子比较也用正斜杠，与后端存储格式一致
         const poolPath = safePath;
         const inPool = _grimoireRandPool && _grimoireRandPool.includes(poolPath);
+        const hasPin = _grimoirePins && _grimoirePins[safePath] && (
+          Array.isArray(_grimoirePins[safePath]) ? _grimoirePins[safePath].length > 0 : true
+        );
+        const pinClass = hasPin ? ' has-pin' : '';
         const poolBtn = !_grimoireEditMode
           ? `<button class="source-pool-btn${inPool ? ' active' : ''}" onclick="event.stopPropagation();toggleRandPool('${esc(safePath)}')" title="${inPool ? '移出随机池' : '加入随机池'}"><svg class="icon-sm" aria-hidden="true"><use href="#icon-shuffle"/></svg></button>`
           : '';
@@ -7347,7 +7984,13 @@ function renderGrimoireSources() {
           ? `<button class="source-del-btn" onclick="event.stopPropagation();renameGrimoireSource('${esc(safePath)}','${esc(displayName)}')" title="重命名"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg></button>` +
             `<button class="source-del-btn" onclick="event.stopPropagation();deleteGrimoireSource('${esc(safePath)}','${esc(displayName)}')" title="删除">🗑️</button>`
           : '';
-        html += `<div class="source-item${active}" data-path="${esc(s.path)}" onclick="selectGrimoireSource(this.dataset.path)">` +
+        html += `<div class="source-item${active}${pinClass}" draggable="true"
+              ondragstart="onSourceDragStart(event)"
+              ondragover="onSourceDragOver(event)"
+              ondrop="onSourceDrop(event)"
+              ondragend="onSourceDragEnd(event)"
+              data-path="${esc(s.path)}" onclick="selectGrimoireSource(this.dataset.path)">` +
+          `<span class="drag-handle">⠿</span>` +
           `<span class="source-name">${esc(displayName)}</span>` +
           `<span class="source-count">${s.count || 0}</span>${poolBtn}${delBtn}` +
           `</div>`;
@@ -7360,6 +8003,126 @@ function renderGrimoireSources() {
   list.innerHTML = html;
 }
 
+// ── 魔导书子分类拖拽排序 ──
+let _srcDragEl = null;
+
+function onSourceDragStart(e) {
+  _srcDragEl = e.target.closest('.source-item');
+  if (!_srcDragEl) return;
+  _srcDragEl.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', _srcDragEl.dataset.path || '');
+}
+
+function onSourceDragOver(e) {
+  e.preventDefault();
+  const target = e.target.closest('.source-item');
+  if (!target || target === _srcDragEl) return;
+  document.querySelectorAll('.source-item').forEach((el) => el.classList.remove('drag-over'));
+  target.classList.add('drag-over');
+}
+
+async function onSourceDrop(e) {
+  e.preventDefault();
+  const target = e.target.closest('.source-item');
+  if (!target || target === _srcDragEl) return;
+  // 获取当前同一总分类下的所有 source-item
+  const parent = _srcDragEl.closest('.source-group-children');
+  if (!parent) return;
+  const items = Array.from(parent.querySelectorAll('.source-item'));
+  const fromIdx = items.indexOf(_srcDragEl);
+  const toIdx = items.indexOf(target);
+  if (fromIdx < 0 || toIdx < 0) return;
+  // 收集被拖拽的 path 和目标 path
+  const fromPath = _srcDragEl.dataset.path;
+  const toPath = target.dataset.path;
+  // 重排数组
+  items.splice(fromIdx, 1);
+  items.splice(toIdx < fromIdx ? toIdx : toIdx, 0, items.splice(fromIdx > toIdx ? fromIdx - 1 : fromIdx, 1)[0]);
+  // 获取目录名
+  const groupNameEl = _srcDragEl.closest('.source-group')?.querySelector('.source-group-header .group-name');
+  const dir = groupNameEl?.textContent?.trim() || '';
+  // 收集新顺序
+  const newOrder = items.map((el) => el.dataset.path).filter(Boolean);
+  // 保存到后端
+  const result = await apiFetch('/api/grimoire/source-order', {
+    method: 'POST',
+    body: JSON.stringify({ order: { [dir]: newOrder } })
+  }, true);
+  if (result?.ok) {
+    // 重新加载以应用后端排序
+    loadGrimoireData();
+  }
+}
+
+function onSourceDragEnd(e) {
+  document.querySelectorAll('.source-item').forEach((el) => el.classList.remove('dragging', 'drag-over'));
+  _srcDragEl = null;
+}
+
+/* ─── 目录组拖拽排序 ─── */
+let _dirDragEl = null;
+
+function onDirDragStart(e) {
+  _dirDragEl = e.target.closest('.source-group');
+  if (!_dirDragEl) return;
+  _dirDragEl.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  const nameEl = _dirDragEl.querySelector('.group-name');
+  e.dataTransfer.setData('text/plain', nameEl?.textContent?.trim() || '');
+}
+
+function onDirDragOver(e) {
+  e.preventDefault();
+  const target = e.target.closest('.source-group');
+  if (!target || target === _dirDragEl) return;
+  document.querySelectorAll('.source-group').forEach(el => el.classList.remove('drag-over'));
+  target.classList.add('drag-over');
+}
+
+async function onDirDrop(e) {
+  e.preventDefault();
+  const target = e.target.closest('.source-group');
+  if (!target || target === _dirDragEl) return;
+  const parent = _dirDragEl.closest('.source-group-list');
+  if (!parent) return;
+  
+  // 先把 DOM 元素移到目标位置（用户立刻看到变化）
+  if (target.parentNode === parent) {
+    parent.insertBefore(_dirDragEl, target.nextSibling);
+  }
+  
+  // 收集新顺序（读 data-dir）
+  const items = Array.from(parent.querySelectorAll('.source-group'));
+  const newDirOrder = items.map(el => el.dataset.dir || '').filter(Boolean);
+  
+  // 更新 _grimoireSources 数组，让下次 renderGrimoireSources() 使用正确顺序
+  if (_grimoireSources) {
+    const dirRank = {};
+    newDirOrder.forEach((d, i) => { dirRank[d] = i; });
+    _grimoireSources.sort((a, b) => {
+      const ra = dirRank[a.dir] ?? 999;
+      const rb = dirRank[b.dir] ?? 999;
+      return ra - rb || (a.name || '').localeCompare(b.name || '');
+    });
+  }
+  
+  // 后台保存，不 reload
+  const result = await apiFetch('/api/grimoire/dir-order', {
+    method: 'POST',
+    body: JSON.stringify({ order: newDirOrder })
+  }, true);
+  if (!result?.ok) {
+    toast('❌ 保存失败', 'error');
+    loadGrimoireData(); // 失败时回滚
+  }
+}
+
+function onDirDragEnd(e) {
+  document.querySelectorAll('.source-group').forEach(el => el.classList.remove('dragging', 'drag-over'));
+  _dirDragEl = null;
+}
+
 function filterGrimoireSources() {
   const input = document.getElementById('grimoire_source_search');
   _grimoireSourceFilter = input ? input.value : '';
@@ -7368,10 +8131,8 @@ function filterGrimoireSources() {
 
 async function selectGrimoireSource(path) {
   if (!path) return;
-  // 退出编辑模式
+  // 退出编辑模式（但保留按钮可见）
   _grimoireEditMode = false;
-  const editToggle = document.getElementById('btn_grimoire_edit_toggle');
-  if (editToggle) editToggle.style.display = 'none';
   
   _grimoireCurrentSource = (path || '').replace(/\\/g, '/');
   _grimoireCurrentPage = 1;
@@ -7405,6 +8166,45 @@ function toggleGrimoireGroup(dir) {
   if (!_grimoireCollapsedDirs) _grimoireCollapsedDirs = {};
   _grimoireCollapsedDirs[dir] = !_grimoireCollapsedDirs[dir];
   renderGrimoireSources();
+}
+
+/** 一键展开/收起所有分类（单击切换） */
+function toggleAllGrimoireGroups() {
+  if (!_grimoireCollapsedDirs) _grimoireCollapsedDirs = {};
+  // 判断当前状态：如果任意目录是展开的，就全部收起；否则全部展开
+  const list = document.querySelector('.source-group-list');
+  let anyExpanded = false;
+  if (list) {
+    list.querySelectorAll('.source-group').forEach(el => {
+      const dirName = el.dataset.dir || '';
+      if (dirName && _grimoireCollapsedDirs[dirName] === false) anyExpanded = true;
+      if (dirName && _grimoireCollapsedDirs[dirName] === undefined) anyExpanded = true;
+    });
+  }
+  const collapse = anyExpanded; // 有展开的 → 收起；全收起 → 展开
+  if (list) {
+    list.querySelectorAll('.source-group').forEach(el => {
+      const dirName = el.dataset.dir || '';
+      if (dirName) _grimoireCollapsedDirs[dirName] = collapse;
+    });
+  }
+  for (const key of Object.keys(_grimoireCollapsedDirs)) {
+    _grimoireCollapsedDirs[key] = collapse;
+  }
+  renderGrimoireSources();
+  // 更新按钮文字和图标
+  const btn = document.getElementById('grm_toggle_all_btn');
+  const txt = document.getElementById('grm_toggle_all_text');
+  if (btn && txt) {
+    const icon = btn.querySelector('use');
+    if (collapse) {
+      txt.textContent = '展开全部';
+      if (icon) icon.setAttribute('href', '#icon-folder-open');
+    } else {
+      txt.textContent = '收起全部';
+      if (icon) icon.setAttribute('href', '#icon-folder-closed');
+    }
+  }
 }
 
 /** ===== 魔导书图片缓存 ===== */
@@ -7824,12 +8624,19 @@ function renderGrimoireData(total, page) {
     return;
   }
   
-  // 收藏排序：收藏的项目排在前
+  // 收藏+固定排序：收藏排最前，已固定排第二，其余在后
   const stars = _grimoireStars && _grimoireStars[_grimoireCurrentSource];
+  const pinData = _grimoirePins && _grimoirePins[_grimoireCurrentSource];
+  const pinNames = new Set();
+  if (pinData) {
+    (Array.isArray(pinData) ? pinData : [pinData]).forEach(p => { if (p.name) pinNames.add(p.name); });
+  }
   const sorted = [..._grimoireCurrentData].sort((a, b) => {
-    const aStar = stars && stars.has(a.name) ? 1 : 0;
-    const bStar = stars && stars.has(b.name) ? 1 : 0;
-    return bStar - aStar;
+    const aStar = stars && stars.has(a.name) ? 2 : 0;
+    const bStar = stars && stars.has(b.name) ? 2 : 0;
+    const aPin = pinNames.has(a.name) ? 1 : 0;
+    const bPin = pinNames.has(b.name) ? 1 : 0;
+    return (bStar + bPin) - (aStar + aPin);
   });
 
   let html = '';
@@ -7853,7 +8660,10 @@ function renderGrimoireData(total, page) {
       ? `<button class="grm-item-btn edit" onclick="showGrimoireEditModal(${origIdx})" title="编辑"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg></button>` +
         `<button class="grm-item-btn del" onclick="deleteGrimoireItem(${origIdx})" title="删除"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg></button>`
       : '';
-    const isPinned = _grimoirePins && _grimoirePins[_grimoireCurrentSource] && _grimoirePins[_grimoireCurrentSource].name === item.name;
+    const isPinned = _grimoirePins && _grimoirePins[_grimoireCurrentSource] && 
+    (Array.isArray(_grimoirePins[_grimoireCurrentSource]) 
+      ? _grimoirePins[_grimoireCurrentSource].some(x => x.name === item.name)
+      : _grimoirePins[_grimoireCurrentSource].name === item.name);
     const pinBtn = !_grimoireEditMode
       ? `<button class="grm-item-btn pin${isPinned ? ' active' : ''}" onclick="toggleGrimoirePin(${origIdx})" title="${isPinned ? '取消固定' : '固定标签'}"><svg class="icon-sm" aria-hidden="true"><use href="#icon-pin"/></svg></button>`
       : '';
@@ -7880,7 +8690,7 @@ function renderGrimoireData(total, page) {
         ? `<span class="grm-item-cached-badge">✓</span>`
         : `<span class="grm-item-uncached-badge">⋯</span>`;
     }
-    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${hasImgClass}" style="position:relative">` +
+    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}" style="position:relative">` +
       checkbox +
       imgHtml +
       cachedBadge +
@@ -8145,14 +8955,9 @@ async function toggleGrimoirePin(idx) {
   const item = _grimoireCurrentData[idx];
   if (!item || !_grimoireCurrentSource) return;
   const src = _grimoireCurrentSource;
-  const isPinned = _grimoirePins[src] && _grimoirePins[src].name === item.name;
+  const pinData = _grimoirePins[src];
+  const isPinned = pinData && (Array.isArray(pinData) ? pinData.some(x => x.name === item.name) : pinData.name === item.name);
   const action = isPinned ? 'unpin' : 'pin';
-  
-  // 固定时检查互斥：同一子分类只能固定一个
-  if (action === 'pin' && _grimoirePins[src]) {
-    toast('❌ 该子分类已固定了「' + _grimoirePins[src].name + '」，请先取消', 'error');
-    return;
-  }
   
   const result = await apiFetch('/api/grimoire/pin', {
     method: 'POST',
@@ -8216,14 +9021,17 @@ function updatePinnedBar() {
     html += '<span class="grm-pinned-title"><svg class="icon-xs" aria-hidden="true"><use href="#icon-pin"/></svg></span>';
     for (const [src, info] of pinEntries) {
       const label = src.replace('.json','').split(/[/\\]/).pop();
-      html += `<span class="grm-pinned-tag">${esc(label)}: ${esc(info.name || '')} <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
+      const items = Array.isArray(info) ? info : [info];
+      for (const item of items) {
+        html += `<span class="grm-pinned-tag">${esc(label)}: ${esc(item.name || '')} <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}','${esc(item.name||'')}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
+      }
     }
   }
   if (poolCount > 0) {
     html += '<span class="grm-pinned-title" style="margin-left:6px"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg></span>';
-    html += `<span class="grm-pinned-tag" style="cursor:default">${poolCount} 个随机池</span>`;
+    html += `<span class="grm-pinned-tag">${poolCount} 个随机池 <button class="grm-pinned-remove" onclick="clearAllPins()" title="清空随机池"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
   }
-  if (pinEntries.length > 0) {
+  if (pinEntries.length > 0 || poolCount > 0) {
     html += `<button class="btn btn-xs btn-danger" onclick="clearAllPins()" style="margin-left:auto;font-size:10px">清空</button>`;
   }
   html += '</div>';
@@ -8232,10 +9040,12 @@ function updatePinnedBar() {
 }
 
 /** 取消指定数据源的固定 */
-async function unpinSource(src) {
+async function unpinSource(src, name) {
+  const body = { source: src, action: 'unpin' };
+  if (name) body.item = { name: name };
   const result = await apiFetch('/api/grimoire/pin', {
     method: 'POST',
-    body: JSON.stringify({ source: src, action: 'unpin' })
+    body: JSON.stringify(body)
   }, true);
   if (result && result.ok) {
     _grimoirePins = {};

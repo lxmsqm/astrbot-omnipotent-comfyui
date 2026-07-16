@@ -1,0 +1,27 @@
+[
+  {
+    "name": "抛光金属",
+    "tags": "polished metal",
+    "category": "金属"
+  },
+  {
+    "name": "铬金属",
+    "tags": "chrome",
+    "category": "金属"
+  },
+  {
+    "name": "黄金质感",
+    "tags": "gold texture",
+    "category": "金属"
+  },
+  {
+    "name": "哑光金属",
+    "tags": "matte metal",
+    "category": "金属"
+  },
+  {
+    "name": "拉丝金属",
+    "tags": "brushed metal",
+    "category": "金属"
+  }
+]

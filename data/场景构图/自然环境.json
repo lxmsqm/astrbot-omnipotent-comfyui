@@ -1,0 +1,52 @@
+[
+  {
+    "name": "户外",
+    "tags": "outdoors",
+    "category": "自然环境"
+  },
+  {
+    "name": "自然",
+    "tags": "nature",
+    "category": "自然环境"
+  },
+  {
+    "name": "森林",
+    "tags": "forest",
+    "category": "自然环境"
+  },
+  {
+    "name": "山",
+    "tags": "mountain",
+    "category": "自然环境"
+  },
+  {
+    "name": "海滩",
+    "tags": "beach",
+    "category": "自然环境"
+  },
+  {
+    "name": "海洋",
+    "tags": "ocean",
+    "category": "自然环境"
+  },
+  {
+    "name": "河流",
+    "tags": "river",
+    "category": "自然环境"
+  },
+  {
+    "name": "湖泊",
+    "tags": "lake",
+    "category": "自然环境"
+  },
+  {
+    "name": "花海",
+    "tags": "flower field",
+    "category": "自然环境"
+  },
+  {
+    "name": "樱花",
+    "tags": "cherry blossoms",
+    "category": "自然环境"
+  }
+]

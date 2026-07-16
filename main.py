@@ -399,7 +399,13 @@ class ComfyUIRandomImageTool(FunctionTool):
         import aiohttp
         count = max(1, min(count, 10))
         pins = plugin.workflow_config.get('__grimoire_pins__', {})
-        pin_names = [info.get('name','') for info in pins.values() if info.get('name')]
+        # 兼容新旧 pin 格式
+        pin_names = []
+        for info in pins.values():
+            entries = info if isinstance(info, list) else [info]
+            for e in entries:
+                if e.get('name'):
+                    pin_names.append(e['name'])
         pin_info = f"，固定了: {', '.join(pin_names)}" if pin_names else ""
         if not plugin.current_workflow_name:
             return "❌ 未选中工作流，请先选择工作流"
@@ -438,6 +444,12 @@ class ComfyUILocalPlugin(Star):
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context, config)
         if config is not None: self.config = config
+
+        # ── 统一用户数据目录 data/user/（必须最先初始化，后续方法依赖它） ──
+        _plugin_root = Path(__file__).resolve().parent
+        self._user_data_dir = _plugin_root / "data" / "user"
+        self._user_data_dir.mkdir(parents=True, exist_ok=True)
+
         local_cfg = self._load_local_config()
         self.comfyui_url = local_cfg.get("comfyui_url") or self.config.get("comfyui_url", "127.0.0.1:8188")
         # 目录配置：本地配置存在但键不存在/为空时，不fallback到config默认值，保持为空让前端显示占位符
@@ -458,7 +470,18 @@ class ComfyUILocalPlugin(Star):
         self._config_lock = asyncio.Lock()   # 保护 workflow_config 的并发写入
         self._ctx_lock = asyncio.Lock()      # 保护 _context_workflows 的并发写入
         self.workflow_config = {}
-        config_path = Path(__file__).resolve().parent / "plugin_config.json"
+
+        # 迁移旧版配置 → data/user/config.json
+        old_config = _plugin_root / "plugin_config.json"
+        new_config = self._user_data_dir / "config.json"
+        if old_config.exists() and not new_config.exists():
+            try:
+                old_config.rename(new_config)
+                logger.info(f"[ComfyUI] 迁移配置: {old_config} → {new_config}")
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 配置迁移失败: {e}")
+
+        config_path = new_config if new_config.exists() else old_config
         if config_path.exists():
             try:
                 with open(str(config_path), 'r', encoding='utf-8') as f:
@@ -479,7 +502,7 @@ class ComfyUILocalPlugin(Star):
         # 魔导书开关（启用后 LLM 画图强制先搜数据库）
         self.grimoire_enabled = self.workflow_config.get('__grimoire_enabled__', False)
         # 魔导书图片缓存目录
-        self._grimoire_cache_dir = Path(__file__).resolve().parent / "data" / "cache"
+        self._grimoire_cache_dir = self._user_data_dir / "cache"
         self._grimoire_cache_dir.mkdir(parents=True, exist_ok=True)
         # 缓存任务进度 {source: {"running": bool, "total": int, "done": int, "success": int, "failed": int, "message": str}}
         self._cache_progress = {}
@@ -492,7 +515,7 @@ class ComfyUILocalPlugin(Star):
         # 提示词记录（引用图片查提示词用）
         self._prompt_log = []
         self._prompt_log_lock = asyncio.Lock()
-        self._prompt_log_path = Path(__file__).resolve().parent / "data" / "prompt_log.json"
+        self._prompt_log_path = self._user_data_dir / "prompt_log.json"
         self._prompt_log_path.parent.mkdir(parents=True, exist_ok=True)
         self.prompt_log_days = int(self.config.get("prompt_log_days", 3))
         if self._prompt_log_path.exists():
@@ -522,7 +545,7 @@ class ComfyUILocalPlugin(Star):
         # 图片消息是否附带提示词
         self.show_prompt_on_image = bool(local_cfg.get("show_prompt_on_image", False) or self.config.get("show_prompt_on_image", False))
         # 比例列表（纯字符串，宽高由质量动态计算）
-        self.aspect_ratios = ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]
+        self.aspect_ratios = ["随机", "1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]
         self.default_ratio = local_cfg.get("default_ratio") or self.config.get("default_ratio", "9:16")
         # 默认宽高由质量和比例动态计算
         self.default_width, self.default_height = self._calc_resolution(self.default_quality, self.default_ratio)
@@ -531,7 +554,7 @@ class ComfyUILocalPlugin(Star):
         self._refresh_workflow_list()
         # 加载 Anima 数据
         data_dir = Path(__file__).parent / "data"
-        self.anima_data = AnimaDataManager(str(data_dir))
+        self.anima_data = AnimaDataManager(str(data_dir), str(self._user_data_dir))
         self.anima_data.load_all()
         self._register_tools()
         # 创建后台任务。AstrBot 的 __init__ 在事件循环中执行，使用 get_running_loop
@@ -546,7 +569,7 @@ class ComfyUILocalPlugin(Star):
         logger.info(f"[ComfyUI] WebUI: http://127.0.0.1:{self.webui_port}{lan}{ipv6} | 工作流目录: {wdir}")
 
     def _load_local_config(self):
-        p = Path(__file__).resolve().parent / "plugin_config.json"
+        p = self._user_data_dir / "config.json"
         if p.exists():
             try:
                 with open(str(p), 'r', encoding='utf-8-sig') as f:
@@ -560,7 +583,7 @@ class ComfyUILocalPlugin(Star):
         """保存 __local_config__ 到文件，失败时不会破坏原文件"""
         if not updates:
             return
-        p = Path(__file__).resolve().parent / "plugin_config.json"
+        p = self._user_data_dir / "config.json"
         tmp_p = p.with_suffix('.json.tmp')
         try:
             existing = {}
@@ -604,15 +627,14 @@ class ComfyUILocalPlugin(Star):
         # 实例变量优先（用于用户已通过 WebUI 保存过的目录）
         if self.workflow_dir.parts:
             return self.workflow_dir
-        p = Path(__file__).resolve().parent / "plugin_config.json"
-        if p.exists():
-            try:
-                with open(p, 'r', encoding='utf-8-sig') as f:
-                    data = json.load(f)
-                d = data.get('__local_config__', {}).get("workflow_dir", "")
-                if d: return Path(d)
-            except Exception as e:
-                logger.warning(f"[ComfyUI] 读取工作流目录配置失败: {e}")
+        p = self._user_data_dir / "config.json"
+        try:
+            with open(p, 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+            d = data.get('__local_config__', {}).get("workflow_dir", "")
+            if d: return Path(d)
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 读取工作流目录配置失败: {e}")
         return Path(self.config.get("workflow_dir", "E:\\AIwork\\NapCat.Shell.Windows.Node\\napcat\\temp\\comfyui_data\\workflows"))
 
     def _save_workflow_dir(self, path):
@@ -622,7 +644,7 @@ class ComfyUILocalPlugin(Star):
 
     async def _save_workflow_config(self):
         """持久化 workflow_config 到文件（线程安全 + 原子写入防并发丢失）"""
-        config_path = Path(__file__).resolve().parent / "plugin_config.json"
+        config_path = self._user_data_dir / "config.json"
         try:
             # 先读取文件最新内容，合并到内存数据中，防止丢失 __local_config__ 等
             if config_path.exists():
@@ -1032,7 +1054,7 @@ class ComfyUILocalPlugin(Star):
         return resp
 
     def _start_webui(self):
-        app = web.Application()
+        app = web.Application(client_max_size=20 * 1024 * 1024)  # 20MB 限制，支持大背景图上传
         app.router.add_get('/', self._serve_webui)
         app.router.add_get('/favicon.ico', lambda r: web.Response(status=204))  # 静默处理 favicon 请求
         app.router.add_get('/api/config', lambda r: web.json_response({
@@ -1052,6 +1074,7 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/workflows/switch', self._webui_switch_workflow)
         app.router.add_post('/api/workflows/toggle-hidden', self._webui_toggle_hidden)
         app.router.add_get('/api/comfy-models', self._webui_get_models)
+        app.router.add_get('/api/loras', self._webui_get_loras)
         app.router.add_get('/api/progress', self._webui_get_progress)
         app.router.add_post('/api/open-dir', self._webui_open_dir)
         app.router.add_post('/api/workflow-dir', self._webui_set_workflow_dir)
@@ -1072,6 +1095,9 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/set-quality', self._webui_set_quality)
         app.router.add_post('/api/set-ratio', self._webui_set_ratio)
         app.router.add_post('/api/reset', self._webui_reset_all)
+        # 背景设置 API
+        app.router.add_post('/api/bg/save', self._webui_bg_save)
+        app.router.add_get('/api/bg/image', self._webui_bg_image)
         # 画廊 API
         app.router.add_get('/api/gallery', self._webui_get_gallery)
         app.router.add_get('/api/gallery/file', self._webui_gallery_file)
@@ -1090,6 +1116,8 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/grimoire/source', self._webui_grimoire_new_source)
         app.router.add_put('/api/grimoire/source', self._webui_grimoire_rename_source)
         app.router.add_delete('/api/grimoire/source', self._webui_grimoire_delete_source)
+        app.router.add_post('/api/grimoire/source-order', self._webui_grimoire_save_source_order)
+        app.router.add_post('/api/grimoire/dir-order', self._webui_grimoire_save_dir_order)
         app.router.add_post('/api/grimoire/category', self._webui_grimoire_new_category)
         app.router.add_put('/api/grimoire/category', self._webui_grimoire_rename_category)
         app.router.add_delete('/api/grimoire/category', self._webui_grimoire_delete_category)
@@ -1102,6 +1130,10 @@ class ComfyUILocalPlugin(Star):
         app.router.add_get('/api/grimoire/rand-pool', self._webui_grimoire_get_rand_pool)
         app.router.add_post('/api/grimoire/rand-pool', self._webui_grimoire_set_rand_pool)
         app.router.add_post('/api/grimoire/random-pick', self._webui_grimoire_random_pick)
+        # 模型切换 API
+        app.router.add_get('/api/grimoire/models', self._webui_grimoire_get_models)
+        app.router.add_get('/api/grimoire/model', self._webui_grimoire_get_model)
+        app.router.add_post('/api/grimoire/model', self._webui_grimoire_set_model)
         # 收藏（Star）API
         app.router.add_get('/api/grimoire/stars', self._webui_grimoire_get_stars)
         app.router.add_post('/api/grimoire/stars', self._webui_grimoire_set_stars)
@@ -1685,6 +1717,24 @@ class ComfyUILocalPlugin(Star):
             logger.warning(f"[ComfyUI] 获取模型失败: {e}")
             return web.json_response({})
 
+    async def _webui_get_loras(self, request):
+        """从 ComfyUI 获取所有可用 Lora 列表"""
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(f"http://{self.comfyui_url}/object_info/LoraLoader",
+                                 timeout=aiohttp.ClientTimeout(total=5)) as r:
+                    if r.status == 200:
+                        data = await r.json()
+                        info = data.get('LoraLoader', {})
+                        required = info.get('input', {}).get('required', {})
+                        lora_list = required.get('lora_name', [None])[0]
+                        if isinstance(lora_list, list):
+                            return web.json_response(lora_list)
+            return web.json_response([])
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 获取 Lora 列表失败: {e}")
+            return web.json_response([])
+
     async def _webui_get_workflow_params(self, request):
         if not self.workflow_path: self._refresh_workflow_list()
         if not self.workflow_path: return web.json_response({"error": "没有工作流"})
@@ -1700,6 +1750,31 @@ class ComfyUILocalPlugin(Star):
                     ck = f"{node['id']}_{p['key']}"
                     if ck in wf_saved:
                         p["value"] = wf_saved[ck]
+            # 包含已保存的 Lora 配置（per-node），并合并工作流 JSON 中已有的 lora 数据
+            lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+            # 扫描工作流 JSON，提取 PowerLoraLoader 等节点中已有的 lora 输入
+            for nid, node in wf.items():
+                if not isinstance(node, dict): continue
+                ct = node.get('class_type', '')
+                # 只处理多 Lora 节点（跳过标准 LoraLoader）
+                if ct == 'LoraLoader': continue
+                inputs = node.get('inputs', {})
+                raw_loras = []
+                for key in sorted(inputs.keys()):
+                    if not key.startswith('lora_'): continue
+                    val = inputs[key]
+                    if isinstance(val, dict) and 'lora' in val:
+                        raw_loras.append({
+                            "on": val.get('on', True),
+                            "lora_name": val.get('lora', ''),
+                            "strength_model": val.get('strength', 1.0),
+                            "strength_clip": val.get('strengthTwo', None),
+                        })
+                if raw_loras:
+                    # 已保存的配置优先，没有则用 JSON 中的
+                    if nid not in lora_nodes or not lora_nodes[nid]:
+                        lora_nodes[nid] = raw_loras
+            result["lora_nodes"] = lora_nodes
             return web.json_response(result)
         except Exception as e:
             logger.warning(f"[ComfyUI] 获取工作流参数失败: {e}")
@@ -1720,15 +1795,18 @@ class ComfyUILocalPlugin(Star):
                 if rk in data:
                     logger.info(f"[ComfyUI]   save role {rk}={data[rk]!r}")
             async with self._config_lock:
-                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__negative_node__', '__expanded_text_node__']:
+                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__negative_node__', '__expanded_text_node__', '__disabled_nodes__', '__lora_nodes__']:
                     if key_name in data:
                         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
                         wf_configs[wf_name] = wf_configs.get(wf_name, {})
                         wf_configs[wf_name][key_name] = data.pop(key_name)
                         data['__workflow_node_configs__'] = wf_configs
-                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__disabled_nodes__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
+                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
                 for key in preserved_keys:
                     if key not in data and key in self.workflow_config: data[key] = self.workflow_config[key]
+                # 清理已迁移到 per-workflow 的根级别旧数据（之前 bug 遗留的）
+                for old_key in ['__disabled_nodes__']:
+                    self.workflow_config.pop(old_key, None)
                 # 将 {nodeId}_{key} 类的键存入工作流专属配置，防止跨工作流泄漏
                 wf_configs = data.get('__workflow_node_configs__', {}) or {}
                 wf_configs[wf_name] = wf_configs.get(wf_name, {})
@@ -1796,7 +1874,7 @@ class ComfyUILocalPlugin(Star):
         })
 
     async def _webui_get_workflow_params_config(self, request):
-        config_path = Path(__file__).resolve().parent / "plugin_config.json"
+        config_path = self._user_data_dir / "config.json"
         if config_path.exists():
             try:
                 with open(str(config_path), 'r', encoding='utf-8') as f:
@@ -1819,7 +1897,7 @@ class ComfyUILocalPlugin(Star):
             "__commands__": self.workflow_config.get("__commands__", {}),
             "__groups_source__": self.workflow_config.get("__groups_source__", ""),
             "__disabled_groups__": self.workflow_config.get("__disabled_groups__", {}),
-            "__disabled_nodes__": self.workflow_config.get("__disabled_nodes__", []),
+            "__disabled_nodes__": wf_config.get("__disabled_nodes__", []),
             "__bind_target__": self.workflow_config.get("__bind_target__", ""),
             "__groups_data__": self.workflow_config.get("__groups_data__", []),
             "__hidden_workflows__": self.workflow_config.get("__hidden_workflows__", []),
@@ -1860,6 +1938,11 @@ class ComfyUILocalPlugin(Star):
             ratio = data.get("ratio", "")
             if ratio not in self.aspect_ratios:
                 return web.json_response({"ok": False, "error": f"未知比例: {ratio}"})
+            if ratio == "随机":
+                # 存为"随机"，出图时动态随机选
+                self.default_ratio = "随机"
+                self._save_local_config({"default_ratio": "随机"})
+                return web.json_response({"ok": True, "ratio": "随机", "width": 0, "height": 0, "quality": self.default_quality})
             w, h = self._calc_resolution(self.default_quality, ratio)
             self.default_ratio = ratio
             self.default_width, self.default_height = w, h
@@ -1871,7 +1954,7 @@ class ComfyUILocalPlugin(Star):
             return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_reset_all(self, request):
-        """重置所有用户设定：清空 plugin_config.json 中的所有配置，回到全新状态"""
+        """重置所有用户设定：清空 data/user/config.json 中的所有配置，回到全新状态"""
         try:
             # 清空内存中所有配置
             self.workflow_config = {}
@@ -1890,11 +1973,41 @@ class ComfyUILocalPlugin(Star):
             self.default_quality = "720p"
             self.default_ratio = "9:16"
             self.default_width, self.default_height = self._calc_resolution(self.default_quality, self.default_ratio)
-            # 写回一个干净的配置文件（保留 __local_config__ 和 __group_bindings__ 空结构）
-            config_path = Path(__file__).resolve().parent / "plugin_config.json"
+            # 写回一个干净的配置文件（与 清空用户配置.py 一致，不碰 data/ 下的魔导书数据）
+            config_path = self._user_data_dir / "config.json"
+            # 清除缓存的背景图片
+            bg_file = self._user_data_dir / "cache" / "bg.png"
+            if bg_file.exists():
+                bg_file.unlink()
             clean = {
                 "__local_config__": {},
-                "__group_bindings__": {}
+                "__group_bindings__": {},
+                "__wf_categories__": {},
+                "__disabled_groups__": {},
+                "__groups_source__": "",
+                "__bind_target__": "",
+                "__groups_data__": [],
+                "__hidden_workflows__": [],
+                "__workflow_aliases__": {},
+                "__workflow_node_configs__": {},
+                "__workflow_categories__": {},
+                "__category_order__": [],
+                "__grimoire_enabled__": False,
+                "__grimoire_pins__": {},
+                "__grimoire_rand_pool__": [],
+                "__grimoire_stars__": {},
+                "quality_presets": {
+                    "480p": {"name": "SD", "pixels": 399360},
+                    "720p": {"name": "标清", "pixels": 921600},
+                    "1080p": {"name": "高清", "pixels": 2073600},
+                    "2K": {"name": "超清", "pixels": 3686400},
+                    "4K": {"name": "原画", "pixels": 8294400},
+                },
+                "aspect_ratios": ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"],
+                "current_quality": "720p",
+                "current_ratio": "9:16",
+                "current_width": 720,
+                "current_height": 1280,
             }
             async with self._config_lock:
                 with open(str(config_path), 'w', encoding='utf-8') as f:
@@ -1903,6 +2016,44 @@ class ComfyUILocalPlugin(Star):
         except Exception as e:
             logger.warning(f"[ComfyUI] WebUI 重置失败: {e}")
             return web.json_response({"ok": False, "error": str(e)})
+
+    async def _webui_bg_save(self, request):
+        """保存背景设置：base64 解码后存为 PNG 文件，config 只存 blur/brightness"""
+        try:
+            data = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
+        bg_data = data.get('bg', '')
+        blur = data.get('blur', '0')
+        brightness = data.get('brightness', '100')
+        # 存模糊/亮度到 config
+        async with self._config_lock:
+            self.workflow_config['__bg_blur__'] = blur
+            self.workflow_config['__bg_brightness__'] = brightness
+        await self._save_workflow_config()
+        # base64 解码后存为 PNG 文件
+        bg_file = self._user_data_dir / "cache" / "bg.png"
+        bg_file.parent.mkdir(parents=True, exist_ok=True)
+        if bg_data and ',' in bg_data:
+            try:
+                import base64
+                encoded = bg_data.split(',', 1)[1]
+                with open(bg_file, 'wb') as f:
+                    f.write(base64.b64decode(encoded))
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 保存背景图片文件失败: {e}")
+        elif not bg_data:
+            # 清空背景
+            if bg_file.exists():
+                bg_file.unlink()
+        return web.json_response({"ok": True})
+
+    async def _webui_bg_image(self, request):
+        """返回已保存的背景图片文件"""
+        bg_file = self._user_data_dir / "cache" / "bg.png"
+        if bg_file.exists():
+            return web.FileResponse(bg_file)
+        return web.Response(status=404)
 
     def _refresh_workflow_list(self):
         wdir = self._get_workflow_dir(); wdir.mkdir(parents=True, exist_ok=True)
@@ -2081,13 +2232,77 @@ class ComfyUILocalPlugin(Star):
                             continue
                     elif isinstance(orig, bool): val = str(val).lower() in ('true', '1', 'yes')
                     elif not isinstance(orig, str): continue
+                    # 清理路径前缀：如果是完整路径（含盘符如 E:\...），只取文件名部分
+                    # 但保留 ComfyUI 子文件夹引用（如 "Anima/角色lora/穗穗.safetensors"）
+                    if isinstance(val, str) and ':' in val:
+                        val = os.path.basename(val.replace('\\', '/'))
+                    # 保护：如果原值是 dropdown 选择（模型名/Lora 名等），且保存的值与原值不同，
+                    # 跳过写回，避免过期的旧值导致 ComfyUI 校验失败。
+                    # 注意：只对来自旧版根级配置的值做保护（非 wf_saved_texts），
+                    # 用户通过 WebUI 主动保存的值（在 wf_saved_texts 中）始终写入。
+                    # 否则用户切换 Lora/模型后，val(新值) != orig(工作流旧值) 会被误拦截。
+                    is_model_key = key.endswith('_name') or key in ('llm_service', 'service')
+                    if is_model_key and val != orig and ck not in wf_saved_texts:
+                        logger.info(f"[ComfyUI] 跳过过期的模型参数: {ck}={val!r} (当前值={orig!r})")
+                        continue
                     workflow[nid]['inputs'][key] = val
+
+    def _apply_loras(self, workflow):
+        """将每个节点保存的 Lora 配置直接写入节点输入参数。
+
+        对 PowerLoraLoader 类节点，将 lora 列表写入 lora_1, lora_2, ... 输入。
+        不创建新节点，避免 ComfyUI 校验失败。
+        """
+        wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+        wf_cfg = wf_configs.get(self.current_workflow_name, {})
+        lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+        if not lora_nodes:
+            return
+
+        for node_id, loras in list(lora_nodes.items()):
+            if not isinstance(loras, list) or not loras:
+                continue
+            if node_id not in workflow:
+                continue
+
+            node = workflow[node_id]
+            ct = node.get('class_type', '')
+
+            # 跳过标准 LoraLoader（由 _apply_workflow_config 处理）
+            if ct == 'LoraLoader':
+                continue
+
+            enabled = [l for l in loras if l.get('on', True) and l.get('lora_name')]
+            if not enabled:
+                continue
+
+            # 直接写入节点的 lora_1, lora_2, ... 输入
+            # PowerLoraLoader 期望格式: {on, lora, strength, strengthTwo}
+            idx = 1
+            # 先清理旧的 lora_* 输入（保留非 lora 输入如 model, clip）
+            for key in list(node.get('inputs', {}).keys()):
+                if key.startswith('lora_'):
+                    del node['inputs'][key]
+            # 写入新的 lora 数据
+            for lora in enabled:
+                lora_entry = {
+                    "on": lora.get('on', True),
+                    "lora": lora.get('lora_name', ''),
+                    "strength": lora.get('strength_model') or 1.0,
+                }
+                clip_str = lora.get('strength_clip') or lora.get('strength_model') or 1.0
+                if clip_str != lora_entry['strength']:
+                    lora_entry['strengthTwo'] = clip_str
+                node['inputs'][f'lora_{idx}'] = lora_entry
+                idx += 1
+
+            logger.info(f"[ComfyUI] 节点 #{node_id} 写入 {len(enabled)} 个 Lora 到输入")
 
     def _inject_prompt(self, workflow, prompt, target_node=None):
         nid = target_node or self._find_positive_prompt_node(workflow)
         if nid and nid in workflow:
             inputs = workflow[nid].get('inputs', {})
-            # 自动找到第一个字符串字段，追加而非覆盖
+            # 追加而非覆盖：让 WebUI 保存的提示词作为基础，QQ 命令提示词追加在后面
             for key, val in inputs.items():
                 if isinstance(val, str):
                     existing = val.strip()
@@ -2095,21 +2310,6 @@ class ComfyUILocalPlugin(Star):
                         workflow[nid]['inputs'][key] = f"{existing}, {prompt}"
                     else:
                         workflow[nid]['inputs'][key] = prompt
-                    return True
-        return False
-
-    def _inject_negative_prompt(self, workflow, negative_prompt):
-        nid = self._find_negative_prompt_node(workflow)
-        if nid and nid in workflow:
-            inputs = workflow[nid].get('inputs', {})
-            # 自动找到第一个字符串字段，追加而非覆盖
-            for key, val in inputs.items():
-                if isinstance(val, str):
-                    existing = val.strip()
-                    if existing:
-                        workflow[nid]['inputs'][key] = f"{existing}, {negative_prompt}"
-                    else:
-                        workflow[nid]['inputs'][key] = negative_prompt
                     return True
         return False
 
@@ -2290,6 +2490,22 @@ class ComfyUILocalPlugin(Star):
                     logger.warning(f"[ComfyUI] 解码 image_urls base64 图片失败: {e}")
             if ok:
                 saved_images.append(str(save_path))
+        # 提取回复消息的 ID 并注入上下文（供 LLM 查提示词用）
+        reply_id = ''
+        for comp in event.get_messages():
+            d = comp.__dict__ if hasattr(comp, '__dict__') else {}
+            if d.get('type') == 'Reply':
+                reply_id = str(d.get('id', '') or '')
+                break
+        if reply_id:
+            hint = f"\n[你回复了消息 ID: {reply_id}，如需查看该消息的完整提示词，可调用 comfyui_get_prompt 工具（不传 message_id 即可自动提取）]"
+            # 只追加到最后一个 context（用户当前消息），避免重复
+            for ctx in reversed(req.contexts):
+                content = ctx.get("content")
+                if isinstance(content, list):
+                    content.append({"type": "text", "text": hint})
+                    break
+
         # 清空图片 URL 列表，防止上层再次组装
         req.image_urls = []
         if saved_images:
@@ -2661,6 +2877,11 @@ class ComfyUILocalPlugin(Star):
             #    只有用户通过 /比例 或 /分辨率 命令显式指定时才重新计算
             quality = quality_override if (quality_override and quality_override in self.quality_presets) else self.default_quality
             effective_ratio = ratio or self.default_ratio or "9:16"
+            # 如果比例为"随机"，每次生成时随机选一个
+            if effective_ratio == "随机":
+                import random
+                real_ratios = [r for r in self.aspect_ratios if r != "随机"]
+                effective_ratio = random.choice(real_ratios)
             should_set_resolution = False
             if w is not None and h is not None:
                 # 工作流已有宽高，使用工作流的
@@ -2673,6 +2894,10 @@ class ComfyUILocalPlugin(Star):
 
             # 5. 应用配置 + 写入分辨率
             self._apply_workflow_config(wf)
+            try:
+                self._apply_loras(wf)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] Lora 应用失败（已跳过）: {e}")
             disabled_groups = self.workflow_config.get('__disabled_groups__', {})
             groups_data = self.workflow_config.get('__groups_data__', [])
             bind_target = self.workflow_config.get('__bind_target__', '')
@@ -2692,29 +2917,43 @@ class ComfyUILocalPlugin(Star):
                                 to_delete.append(nid)
                         for nid in to_delete:
                             del wf[nid]
-            # 处理单个禁用节点（如 Lora 加载器）
-            disabled_nodes = self.workflow_config.get('__disabled_nodes__', []) or []
+                        # 处理单个禁用节点（删除节点 + 重新连线下游）
+            # 注意：ComfyUI API 模式下 mode 字段不生效，必须物理删除节点
+            disabled_nodes = wf_cfg.get('__disabled_nodes__', []) or []
             if disabled_nodes:
                 for nid in disabled_nodes:
                     nid_str = str(nid)
-                    if nid_str in wf:
-                        node = wf[nid_str]
-                        ct = node.get('class_type', '')
-                        # 将 Lora 的强度归零，而非修改 lora_name（None 不在有效列表中）
-                        # 强度归零后 Lora 加载器仍然运行但完全不生效
-                        inputs = node.get('inputs', {})
-                        lora_strength_keys = ['strength', 'strength_model', 'strength_clip', 'model_strength', 'clip_strength']
-                        has_strength = False
-                        for sk in lora_strength_keys:
-                            if sk in inputs:
-                                inputs[sk] = 0
-                                has_strength = True
-                        if not has_strength:
-                            # 没有强度参数的节点，尝试设置为空字符
-                            lora_name_keys = ['lora_name', 'lora', 'lora1', 'lora2']
-                            for lk in lora_name_keys:
-                                if lk in inputs:
-                                    inputs[lk] = ""
+                    if nid_str not in wf: continue
+                    node = wf[nid_str]
+                    node_inputs = node.get('inputs', {})
+                    # 收集本节点的"输入端连线"（即上游传来的连接），用于重连下游
+                    # 比如 LoraLoader 的 model 输入端是 ["6", 0]，这里就存下 model 对应的上游连接
+                    input_connections = {}
+                    direct_str_values = {}
+                    for k, v in node_inputs.items():
+                        if isinstance(v, list) and len(v) == 2:
+                            input_connections[k] = v
+                        elif isinstance(v, str) and v:
+                            direct_str_values[k] = v
+                    # 查找哪些节点引用了本节点的输出，尝试重连
+                    for onid, onode in list(wf.items()):
+                        if not isinstance(onode, dict): continue
+                        for k, v in list(onode.get('inputs', {}).items()):
+                            if isinstance(v, list) and len(v) == 2 and str(v[0]) == nid_str:
+                                # 下游节点引用了本节点的输出 (v[1] 是输出索引)
+                                output_idx = v[1]
+                                # 尝试找到本节点对应的输入端连接，直通给下游
+                                # 规则：输出索引0通常对应model/第一个输入，输出索引1对应clip/第二个输入
+                                input_keys = list(input_connections.keys())
+                                if output_idx < len(input_keys):
+                                    onode['inputs'][k] = input_connections[input_keys[output_idx]]
+                                elif direct_str_values:
+                                    # 没有对应连线，用第一个字符串值兜底
+                                    onode['inputs'][k] = list(direct_str_values.values())[0]
+                                else:
+                                    onode['inputs'][k] = ""
+                    # 删除本节点
+                    del wf[nid_str]
             if cmd_config:
                 # 只应用 cmd_config 中与 workflow_config 不同的值（避免覆盖已保存的配置）
                 for ck, val in cmd_config.items():
@@ -2732,7 +2971,10 @@ class ComfyUILocalPlugin(Star):
                                 except ValueError: continue
                             elif isinstance(orig, bool): val = str(val).lower() in ('true', '1', 'yes')
                             wf[nid]['inputs'][key] = val
-            if should_set_resolution:
+            # 注意：_apply_workflow_config 可能用 wf_saved_texts 中的旧值覆盖了分辨率节点，
+            # 无论 should_set_resolution 是 True 还是 False，都需要在这里重新写入一次
+            # 确保 WebUI 中刚设置的比例/质量生效
+            if w is not None and h is not None:
                 self._set_resolution(wf, w, h)
             if image_path: await self._set_load_image(wf, image_path)
             if prompt:
@@ -2763,6 +3005,8 @@ class ComfyUILocalPlugin(Star):
                 else:
                     logger.warning(f"[ComfyUI] 正面提示词注入失败！未找到提示词节点或节点无可写文本字段")
             # 写入负面提示词（从 __saved_texts__ 或根级别读取）
+            # 注意：直接设置（set）而非追加（append），因为 __saved_texts__ 的值本身就是完整内容。
+            # 追加模式下会与 _apply_workflow_config 写入的值重复。
             neg_nid = self._find_negative_prompt_node(wf)
             if neg_nid:
                 neg_ck = f"{neg_nid}_text"
@@ -2771,9 +3015,12 @@ class ComfyUILocalPlugin(Star):
                 wf_cfg = wf_configs.get(self.current_workflow_name, {})
                 wf_saved = wf_cfg.get('__saved_texts__', {}) or {}
                 neg_val = wf_saved.get(neg_ck) or self.workflow_config.get(neg_ck)
-                if neg_val:
-                    self._inject_negative_prompt(wf, neg_val)
-                    logger.info(f"[ComfyUI] 注入负面提示词: {neg_val[:200]}")
+                if neg_val and neg_nid in wf:
+                    for k in wf[neg_nid].get('inputs', {}):
+                        if isinstance(wf[neg_nid]['inputs'][k], str):
+                            wf[neg_nid]['inputs'][k] = neg_val
+                            logger.info(f"[ComfyUI] 设置负面提示词 #{neg_nid}.{k} = {neg_val[:200]}")
+                            break
             cid = self._ws_client_id  # 使用固定 client_id 以确保 WS 监听器能收到进度消息
             async with aiohttp.ClientSession() as s:
                 total_q, _, _ = await self._get_queue_status()
@@ -3763,6 +4010,9 @@ class ComfyUILocalPlugin(Star):
         if data_dir.exists():
             for fpath in sorted(data_dir.rglob("*.json")):
                 rel = fpath.relative_to(data_dir)
+                # 跳过非数据文件
+                if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user'):
+                    continue
                 try:
                     with open(fpath, 'r', encoding='utf-8') as f:
                         content = f.read().strip()
@@ -3778,7 +4028,6 @@ class ComfyUILocalPlugin(Star):
                     "size": fpath.stat().st_size,
                     "readonly": False,
                 })
-                # 记录已有的 anima 源（去掉 .json 后缀）
                 rel_normal = str(rel.parent / rel.stem).replace('\\', '/')
                 have_anima_sources.add(rel_normal)
 
@@ -3797,6 +4046,25 @@ class ComfyUILocalPlugin(Star):
                     "readonly": True,
                 })
                 logger.info(f"[魔导书] 补充 Anima-Tools 源: {label} ({count} 条)")
+
+        # 应用子分类排序（按目录分组）
+        source_order = self.workflow_config.get('__grimoire_source_order__', {})
+        if source_order:
+            from functools import cmp_to_key
+            def source_sort_key(a, b):
+                dir_a = a.get('dir', '')
+                dir_b = b.get('dir', '')
+                if dir_a != dir_b:
+                    return -1 if dir_a < dir_b else 1
+                order_list = source_order.get(dir_a, [])
+                if not order_list:
+                    return -1 if (a.get('path') or '') < (b.get('path') or '') else 1
+                pa = (a.get('path') or '').replace('\\', '/')
+                pb = (b.get('path') or '').replace('\\', '/')
+                ia = order_list.index(pa) if pa in order_list else len(order_list)
+                ib = order_list.index(pb) if pb in order_list else len(order_list)
+                return ia - ib
+            sources.sort(key=cmp_to_key(source_sort_key))
 
         return web.json_response({"sources": sources})
 
@@ -3928,11 +4196,8 @@ class ComfyUILocalPlugin(Star):
                 cat_count[c] = cat_count.get(c, 0) + 1
                 if c not in cat_cn:
                     cat_cn[c] = (it.get("category_cn") or "").strip() or c
-        # 角色数据只返回热度前 50（826 个太多），服装/画师全返回
-        is_character_source = _is_anima_source(source) and 'character' in source.lower()
+        # 角色数据现已全部添加中文翻译，不再限制只返回前 50
         sorted_by_count = sorted(cat_count.items(), key=lambda x: -x[1])
-        if is_character_source and len(sorted_by_count) > 50:
-            sorted_by_count = sorted_by_count[:50]
         sorted_cats = [c for c, _ in sorted_by_count]
         categories_with_cn = [{"category": c, "name_cn": cat_cn[c], "count": cat_count[c]} for c in sorted_cats]
         return web.json_response({
@@ -4132,7 +4397,16 @@ class ComfyUILocalPlugin(Star):
     async def _webui_grimoire_get_pins(self, request):
         """获取所有固定的标签"""
         pins = self.workflow_config.get('__grimoire_pins__', {})
-        return web.json_response({"ok": True, "pins": pins})
+        # 兼容：旧格式 {源: {name,tags}} → 统一为 {源: [{name,tags}]}
+        normalized = {}
+        for k, v in pins.items():
+            if isinstance(v, dict):
+                normalized[k] = [v]
+            elif isinstance(v, list):
+                normalized[k] = v
+            else:
+                normalized[k] = []
+        return web.json_response({"ok": True, "pins": normalized})
 
     async def _webui_grimoire_set_pin(self, request):
         """固定/取消固定某条标签"""
@@ -4151,20 +4425,42 @@ class ComfyUILocalPlugin(Star):
         for k, v in (self.workflow_config.get('__grimoire_pins__', {})).items():
             pins[k.replace('\\', '/')] = v  # 统一已有键的格式
         if action == 'unpin':
-            pins.pop(source, None)
+            if source in pins:
+                name = (item or {}).get("name", "")
+                if name:
+                    # 只移除指定名称的固定标签
+                    old_list = pins[source]
+                    if isinstance(old_list, list):
+                        pins[source] = [x for x in old_list if x.get("name") != name]
+                        if not pins[source]:
+                            del pins[source]
+                    else:
+                        # 兼容旧格式（单个对象）
+                        del pins[source]
+                else:
+                    del pins[source]
             # 也尝试匹配旧的带反斜杠的键（清理老数据）
             pins.pop(source.replace('/', '\\'), None)
         elif action == 'pin':
             if not item.get('tags'):
                 return web.json_response({"ok": False, "error": "缺少标签"})
-            pins[source] = {"name": item.get("name",""), "tags": item.get("tags","")}
+            entry = {"name": item.get("name",""), "tags": item.get("tags","")}
+            if source not in pins:
+                pins[source] = []
+            elif isinstance(pins[source], dict):
+                # 兼容旧格式：转成数组
+                pins[source] = [pins[source]]
+            # 检查是否已固定相同名称的标签（避免重复）
+            if not any(x.get("name") == entry["name"] for x in pins[source]):
+                pins[source].append(entry)
         else:
             return web.json_response({"ok": False, "error": "未知操作"})
         self.workflow_config['__grimoire_pins__'] = pins
         await self._save_workflow_config()
-        # 保存后立即验证写入是否成功
+        # 保存后验证（对旧格式单条做兼容检查）
         saved = self.workflow_config.get('__grimoire_pins__', {})
-        if action == 'unpin' and source in saved:
+        if action == 'unpin' and isinstance(saved.get(source), dict) and source in saved:
+            # 旧格式单条：取消后源不应还在
             logger.warning(f"[魔导书] 取消固定失败: {source} 仍然存在")
             return web.json_response({"ok": False, "error": "保存失败，请重试"})
         return web.json_response({"ok": True, "pins": pins})
@@ -4215,30 +4511,41 @@ class ComfyUILocalPlugin(Star):
         return web.json_response({"ok": True})
 
     async def _webui_grimoire_random_pick(self, request):
-        """从随机池中每个子分类随机取一条，合并固定标签返回（去重）"""
+        """从随机池中每个子分类随机取一条，合并固定标签返回（去重 + 智能排序 + 冲突检测）"""
+        from .random_prompt import shuffle as sc_shuffle, matches_body_group, check_conflict, get_prompt_section
+
         data_dir = Path(__file__).resolve().parent / "data"
         pool = self.workflow_config.get('__grimoire_rand_pool__', [])
         pins = self.workflow_config.get('__grimoire_pins__', {})
-        
+
         # 已固定的数据源不参与随机（避免同源出重复）
         pinned_sources = set(pins.keys())
         active_pool = [s for s in pool if s not in pinned_sources]
-        
+
         import random
         seen_tags = set()
         all_tags = []
-        
+        all_tag_objects = []  # 保留标签对象用于后续智能排序
+
         # 1. 固定标签（总是包含）
         for src, info in pins.items():
-            t = (info.get("tags") or "").strip()
-            if t:
-                for part in t.split(","):
-                    p = part.strip().lower()
-                    if p and len(p) > 1 and p not in seen_tags:
-                        seen_tags.add(p)
-                        all_tags.append(part.strip())
-        
-        # 2. 从随机池各子分类随机取一条
+            # 兼容：新格式 [{name,tags}] 和旧格式 {name,tags}
+            entries = info if isinstance(info, list) else [info]
+            for entry in entries:
+                t = (entry.get("tags") or "").strip()
+                if t:
+                    for part in t.split(","):
+                        p = part.strip().lower()
+                        if p and len(p) > 1 and p not in seen_tags:
+                            seen_tags.add(p)
+                            all_tags.append(part.strip())
+                            all_tag_objects.append({
+                                "en": part.strip(),
+                                "category": "固定",
+                                "subcategory": "",
+                            })
+
+        # 2. 从随机池各子分类随机取一条（增强版）
         for src in active_pool:
             fpath = data_dir / src.replace('/', os.sep).replace('\\', os.sep)
             if not fpath.suffix: fpath = fpath.with_suffix('.json')
@@ -4255,9 +4562,42 @@ class ComfyUILocalPlugin(Star):
                 items = load_anima_tools_source(source_name)
             if not isinstance(items, list) or not items:
                 continue
+
+            # 用 Fisher-Yates 洗牌替代 random.choice，让每次选取更均匀
+            shuffled = sc_shuffle(items)
+            picked = None
+            for candidate in shuffled:
+                t = (candidate.get("tags") or "").strip()
+                if not t:
+                    continue
+                # 拆分成单个标签检查冲突
+                parts = [x.strip() for x in t.split(",") if x.strip()]
+                # 检查是否有任一标签与已选冲突
+                conflict = False
+                for part in parts:
+                    if part.lower() in seen_tags:
+                        conflict = True
+                        break
+                    # 身体标签组冲突检测（比如选了"small breasts"就不能再选"large breasts"）
+                    group = matches_body_group(part)
+                    if group:
+                        for sel_tag in seen_tags:
+                            for gt in group:
+                                if gt.lower() == sel_tag:
+                                    conflict = True
+                                    break
+                            if conflict:
+                                break
+                    if conflict:
+                        break
+                if not conflict:
+                    picked = candidate
+                    break
+
+            if picked is None:
+                continue
+
             try:
-                import random
-                picked = random.choice(items)
                 t = (picked.get("tags") or "").strip()
                 if t:
                     for part in t.split(","):
@@ -4265,16 +4605,92 @@ class ComfyUILocalPlugin(Star):
                         if p and len(p) > 1 and p not in seen_tags:
                             seen_tags.add(p)
                             all_tags.append(part.strip())
+                            # 记录标签对象供后续排序用
+                            style = picked.get("style", "")
+                            subcat = picked.get("category", "")
+                            all_tag_objects.append({
+                                "en": part.strip(),
+                                "category": style if style and style != "general" else "",
+                                "subcategory": subcat,
+                                "source": src,  # 记录来源路径
+                            })
             except Exception:
                 continue
-        
+
+        # 3. "no human" 过滤
+        if any("no human" in t.lower() for t in all_tags):
+            human_categories = {"发型与发色", "五官与表情", "服装与配饰", "动作姿态", "NSFW", "人物主体"}
+            filtered_tags = []
+            for i, t in enumerate(all_tags):
+                cat = all_tag_objects[i]["category"] if i < len(all_tag_objects) else ""
+                if cat in human_categories:
+                    continue
+                if cat == "人物主体" and all_tag_objects[i].get("subcategory") != "人数与性别":
+                    continue
+                filtered_tags.append(t)
+            all_tags = filtered_tags
+
+        # 3.5 服装-动作冲突检查（防"穿着长袜+脱袜子"这类矛盾）
+        if len(all_tags) >= 2:
+            conflict_indices = check_conflict(all_tags)
+            if conflict_indices:
+                removed = [all_tags[i] for i in conflict_indices]
+                all_tags = [t for i, t in enumerate(all_tags) if i not in conflict_indices]
+                logger.info(f"[随机图] 冲突检测移除: {removed}")
+
+        # 4. 按模型提示词顺序排序
+        prompt_model = self.workflow_config.get('__prompt_model__', 'anima')
+        if all_tags and all_tag_objects:
+            def section_sort_key(item):
+                tag_text, idx = item
+                obj = all_tag_objects[idx] if idx < len(all_tag_objects) else {}
+                src = obj.get("source", "")
+                subcat = obj.get("subcategory", obj.get("category", ""))
+                sec_idx, sec_name = get_prompt_section(src, subcat, model=prompt_model)
+                return (sec_idx, idx)
+
+            tagged = [(t, i) for i, t in enumerate(all_tags)]
+            tagged.sort(key=section_sort_key)
+            all_tags = [t for t, _ in tagged]
+
         pick_names = []
         for src in active_pool:
             if src in pinned_sources: continue
             pick_names.append(src.replace('.json','').split('/')[-1])
-        
-        logger.info(f"[随机图] 固定标签: {len(pins)}个, 随机池: {len(active_pool)}个源, 合并后 {len(all_tags)} 个标签")
+
+        logger.info(f"[随机图] 固定标签: {len(pins)}个, 随机池: {len(active_pool)}个源, 合并后 {len(all_tags)} 个标签 (SmartComfy增强)")
         return web.json_response({"ok": True, "tags": ", ".join(all_tags)})
+
+    async def _webui_grimoire_get_models(self, request):
+        """返回可用的提示词模型列表"""
+        from .random_prompt import PROMPT_SECTION_ORDER
+        models = []
+        for model_id, cfg in PROMPT_SECTION_ORDER.items():
+            models.append({
+                "id": model_id,
+                "name": model_id,
+                "sections": cfg.get("section_order", []),
+            })
+        return web.json_response({"ok": True, "models": models})
+
+    async def _webui_grimoire_get_model(self, request):
+        """返回当前选中的模型"""
+        model = self.workflow_config.get('__prompt_model__', 'anima')
+        return web.json_response({"ok": True, "model": model})
+
+    async def _webui_grimoire_set_model(self, request):
+        """设置当前使用的模型"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "请求体格式错误"})
+        model = body.get("model", "anima").strip()
+        from .random_prompt import PROMPT_SECTION_ORDER
+        if model not in PROMPT_SECTION_ORDER:
+            return web.json_response({"ok": False, "error": f"不支持的模型: {model}"})
+        self.workflow_config['__prompt_model__'] = model
+        await self._save_workflow_config()
+        return web.json_response({"ok": True, "model": model})
 
     async def _webui_grimoire_update(self, request):
         """编辑指定数据源的某条数据（按索引）"""
@@ -4530,6 +4946,34 @@ class ComfyUILocalPlugin(Star):
             logger.warning(f"[魔导书] 重载数据失败: {e}")
         return web.json_response({"ok": True})
 
+    async def _webui_grimoire_save_source_order(self, request):
+        """保存魔导书子分类拖动排序"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
+        order = body.get('order', {})
+        if not isinstance(order, dict):
+            return web.json_response({"ok": False, "error": "order 必须为对象"})
+        async with self._config_lock:
+            self.workflow_config['__grimoire_source_order__'] = order
+        await self._save_workflow_config()
+        return web.json_response({"ok": True})
+
+    async def _webui_grimoire_save_dir_order(self, request):
+        """保存魔导书目录拖动排序"""
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
+        dir_order = body.get('order', [])
+        if not isinstance(dir_order, list):
+            return web.json_response({"ok": False, "error": "order 必须为数组"})
+        async with self._config_lock:
+            self.workflow_config['__grimoire_dir_order__'] = dir_order
+        await self._save_workflow_config()
+        return web.json_response({"ok": True})
+
     async def _webui_grimoire_status(self, request):
         """获取魔导书开关状态"""
         return web.json_response({"enabled": self.grimoire_enabled})
@@ -4542,8 +4986,8 @@ class ComfyUILocalPlugin(Star):
             return web.json_response({"ok": False, "error": "请求体格式错误"})
         enabled = body.get('enabled', not self.grimoire_enabled)
         self.grimoire_enabled = bool(enabled)
-        # 持久化到 plugin_config.json
-        config_path = Path(__file__).resolve().parent / "plugin_config.json"
+        # 持久化到 data/user/config.json
+        config_path = self._user_data_dir / "config.json"
         async with self._config_lock:
             try:
                 existing = {}
@@ -4581,14 +5025,16 @@ class ComfyUILocalPlugin(Star):
         tags = []
         seen = set()
         for src, info in pins.items():
-            t = (info.get("tags") or "").strip()
-            if t:
-                for part in t.split(","):
-                    p_stripped = part.strip()
-                    p_lower = p_stripped.lower()
-                    if p_lower and len(p_lower) > 1 and p_lower not in seen:
-                        seen.add(p_lower)
-                        tags.append(p_stripped)
+            entries = info if isinstance(info, list) else [info]
+            for entry in entries:
+                t = (entry.get("tags") or "").strip()
+                if t:
+                    for part in t.split(","):
+                        p_stripped = part.strip()
+                        p_lower = p_stripped.lower()
+                        if p_lower and len(p_lower) > 1 and p_lower not in seen:
+                            seen.add(p_lower)
+                            tags.append(p_stripped)
         return ", ".join(tags)
 
     def _merge_prompt_with_pins(self, prompt: str) -> str:
@@ -4653,6 +5099,8 @@ class ComfyUILocalPlugin(Star):
                 "environment": "scene/environment.json", "framing": "shot/framing.json",
             }
             src = name_map.get(source.lower().strip())
+            if not src:
+                src = self._grimoire_find_source_path(source)  # 动态兜底
             if not src:
                 return f"未知数据源: {source}"
             fpath = Path(__file__).resolve().parent / "data" / src.replace('/', os.sep)
@@ -4750,21 +5198,18 @@ class ComfyUILocalPlugin(Star):
         if not pool and not pins:
             return f"魔导书当前{'已启用' if enabled else '已禁用'}，随机池和固定标签均为空"
         lines = [f"魔导书: {'✅ 已启用' if enabled else '❌ 已禁用'}"]
-        all_sources = [
-            "anima/artists.json", "anima/characters.json", "anima/clothing.json",
-            "lighting/lighting.json", "pose_action/Normal posture.json", "pose_action/Sex positions.json",
-            "scene/environment.json", "shot/framing.json",
-        ]
-        lines.append("\n📦 可用数据源:")
-        for src in all_sources:
-            name = src.split("/")[-1].replace(".json","")
-            in_pool = "⭐ 池中" if src in pool else ""
+        all_sources = self._grimoire_sources()
+        lines.append(f"\n📦 可用数据源 ({len(all_sources)} 个):")
+        for s in all_sources:
+            src_path = s["path"]
+            name = s["name"]
+            in_pool = "⭐ 池中" if src_path in pool else ""
             pinned_name = ""
             for ps, pi in pins.items():
-                if ps.replace('\\','/') == src:
+                if ps.replace('\\','/') == src_path:
                     pinned_name = f"📌 {pi.get('name','')}"
                     break
-            lines.append(f"  {name}: {in_pool} {pinned_name}".strip())
+            lines.append(f"  {name}{' ('+s['dir']+')' if s['dir'] else ''}: {s['count']}条 {in_pool} {pinned_name}".strip())
         if pool:
             lines.append(f"\n🎲 随机池中的源 ({len(pool)} 个): {', '.join(s.split('/')[-1].replace('.json','') for s in pool)}")
         if pins:
@@ -4791,6 +5236,8 @@ class ComfyUILocalPlugin(Star):
             "environment": "scene/environment.json", "framing": "shot/framing.json",
         }
         src = name_map.get(source.lower().strip())
+        if not src:
+            src = self._grimoire_find_source_path(source)
         if not src:
             return f"未知数据源: {source}，可选: {', '.join(name_map.keys())}"
         pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
@@ -4857,6 +5304,8 @@ class ComfyUILocalPlugin(Star):
         }
         src = name_map.get(source.lower().strip())
         if not src:
+            src = self._grimoire_find_source_path(source)
+        if not src:
             return f"未知数据源: {source}"
         action = action.lower().strip()
         if action == "pin":
@@ -4864,7 +5313,13 @@ class ComfyUILocalPlugin(Star):
                 return "固定标签需要提供 name 和 tags 参数"
             source_key = src.replace('/', '\\')
             pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
-            pins[source_key] = {"name": name, "tags": tags}
+            # 兼容：统一用列表格式
+            if source_key not in pins:
+                pins[source_key] = []
+            elif isinstance(pins[source_key], dict):
+                pins[source_key] = [pins[source_key]]
+            if not any(e.get('name') == name for e in pins[source_key]):
+                pins[source_key].append({"name": name, "tags": tags})
             self.workflow_config['__grimoire_pins__'] = pins
             await self._save_workflow_config()
             return f"✅ 已固定 {source}/{name}: {tags}"
@@ -4964,6 +5419,239 @@ class ComfyUILocalPlugin(Star):
             tag = it.get("tags") or ""
             lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
         return "\n".join(lines)
+
+    # ==================================================================
+    # 魔导书 LLM 管理工具：增删改查
+    # ==================================================================
+
+    def _grimoire_sources(self) -> list[dict]:
+        """动态扫描 data/ 目录，返回所有可用的魔导书数据源列表"""
+        from .random_prompt import get_prompt_section, PROMPT_SECTION_ORDER
+
+        data_dir = Path(__file__).resolve().parent / "data"
+        sources = []
+        dirs_seen = {}
+        for fpath in sorted(data_dir.rglob("*.json")):
+            rel = fpath.relative_to(data_dir)
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    items = json.loads(content) if content else []
+                count = len(items) if isinstance(items, list) else 0
+            except Exception:
+                count = 0
+            d = str(fpath.parent.relative_to(data_dir)).replace('\\', '/') if fpath.parent != data_dir else ""
+            sources.append({
+                "path": str(rel).replace('\\', '/'),
+                "name": fpath.stem,
+                "dir": d,
+                "count": count,
+            })
+            if d:
+                dirs_seen[d] = True
+        # 按自定义目录顺序排序（如果有）否则按 Anima section 排序
+        dir_order = self.workflow_config.get('__grimoire_dir_order__', [])
+        if dir_order:
+            # 只保留存在的目录
+            valid_order = [d for d in dir_order if d in dirs_seen]
+            # 没在自定义顺序中的目录排最后
+            remaining = sorted(set(dirs_seen.keys()) - set(valid_order))
+            dir_rank = {d: i for i, d in enumerate(valid_order + remaining)}
+            def sort_key(s):
+                r = dir_rank.get(s["dir"], 999)
+                return (0, r, s["name"]) if s["dir"] else (1, 0, s["name"])
+        else:
+            def sort_key(s):
+                sec_idx, _ = get_prompt_section(s["path"], s["name"], model="anima")
+                return (0, sec_idx, s["dir"], s["name"]) if s["dir"] else (1, 0, s["name"])
+        sources.sort(key=sort_key)
+        return sources
+
+    def _grimoire_find_source_path(self, name_or_path: str) -> str | None:
+        """通过关键词匹配数据源路径（支持：中文名、文件名、路径片段）"""
+        name_or_path = name_or_path.lower().strip()
+        sources = self._grimoire_sources()
+        # 1. 精确匹配 path
+        for s in sources:
+            if name_or_path == s["path"].lower():
+                return s["path"]
+        # 2. 精确匹配 name（含中文名）
+        for s in sources:
+            if name_or_path == s["path"].split("/")[-1].replace(".json","").lower() or name_or_path == s["name"].lower():
+                return s["path"]
+        # 3. 关键字匹配
+        for s in sources:
+            if name_or_path in s["path"].lower() or name_or_path in s["name"].lower():
+                return s["path"]
+        return None
+
+    def _grimoire_read(self, source_path: str) -> list:
+        """读取魔导书 JSON 文件，返回列表"""
+        data_dir = Path(__file__).resolve().parent / "data"
+        fpath = data_dir / source_path.replace('/', os.sep)
+        if not fpath.exists():
+            return []
+        try:
+            with open(fpath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    def _grimoire_write(self, source_path: str, data: list) -> bool:
+        """写入魔导书 JSON 文件"""
+        data_dir = Path(__file__).resolve().parent / "data"
+        fpath = data_dir / source_path.replace('/', os.sep)
+        fpath.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(fpath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 写入魔导书文件失败 {source_path}: {e}")
+            return False
+
+    def _grimoire_anima_source_names(self) -> list[str]:
+        """返回 Anima-Tools 只读数据源名称"""
+        try:
+            from .anima_data import _ANIMA_SOURCE_NAMES
+            return [s[1] for s in _ANIMA_SOURCE_NAMES]
+        except ImportError:
+            return []
+
+    # ----- LLM 工具：增删改查 -----
+
+    @filter.llm_tool(name="comfyui_grimoire_add")
+    async def llm_grimoire_add(self, event: AstrMessageEvent, source: str, name: str, tags: str, style: str = "general"):
+        """向魔导书指定子分类添加一条新标签。支持动态检测子分类列表。
+
+        Args:
+            source (string): 数据源关键词，支持中文名/文件名/路径片段，如 "lighting"、"光影"、"lighting/lighting.json"、"pose_action"、"normal_posture"、"场景"、"environment"、"shot"、"framing"
+            name (string): 条目名称，如 "金色黄昏"、"回眸一笑"
+            tags (string): 逗号分隔的英文提示词，如 "golden hour, warm glow, rim light"
+            style (string): 样式，可选 "general"、"portrait"、"landscape"，默认 "general"
+        """
+        if not self.grimoire_enabled:
+            return "❌ 魔导书已禁用，请先在 WebUI 中启用"
+
+        src_path = self._grimoire_find_source_path(source)
+        if not src_path:
+            all_srcs = self._grimoire_sources()
+            hints = "\n".join(f"  {s['name']} ({s['path']}) [{s['count']}条]" for s in all_srcs[:20])
+            return f"❌ 未找到数据源「{source}」，可用数据源:\n{hints}\n(共 {len(all_srcs)} 个数据源)"
+
+        items = self._grimoire_read(src_path)
+
+        # 检查同名
+        for it in items:
+            if it.get("name") == name:
+                return f"❌ 条目「{name}」已在 {src_path} 中存在，如需修改请使用 grimoire_edit"
+
+        new_item = {
+            "name": name,
+            "tags": tags,
+            "style": style,
+        }
+        items.append(new_item)
+
+        if self._grimoire_write(src_path, items):
+            return f"✅ 已添加「{name}」→ {src_path}\n标签: {tags}"
+        else:
+            return f"❌ 写入失败，请检查文件权限"
+
+    @filter.llm_tool(name="comfyui_grimoire_delete")
+    async def llm_grimoire_delete(self, event: AstrMessageEvent, source: str, name: str):
+        """从魔导书指定子分类中删除一条标签。
+
+        Args:
+            source (string): 数据源关键词，如 "lighting"、"场景"、"shot"、"normal_posture"
+            name (string): 要删除的条目名称，如 "黄金时刻"
+        """
+        if not self.grimoire_enabled:
+            return "❌ 魔导书已禁用"
+
+        src_path = self._grimoire_find_source_path(source)
+        if not src_path:
+            return f"❌ 未找到数据源「{source}」"
+
+        items = self._grimoire_read(src_path)
+        before = len(items)
+        items = [it for it in items if it.get("name") != name]
+
+        if len(items) == before:
+            return f"❌ 在 {src_path} 中未找到「{name}」"
+
+        if self._grimoire_write(src_path, items):
+            return f"✅ 已从 {src_path} 删除「{name}」"
+        else:
+            return f"❌ 删除失败"
+
+    @filter.llm_tool(name="comfyui_grimoire_edit")
+    async def llm_grimoire_edit(self, event: AstrMessageEvent, source: str, name: str, new_name: str = "", new_tags: str = "", new_style: str = ""):
+        """编辑魔导书中已有的标签。支持修改名称、标签和样式。
+
+        Args:
+            source (string): 数据源关键词，如 "lighting"、"场景"、"shot"
+            name (string): 要编辑的条目当前名称
+            new_name (string): 新名称（如不需修改可不传）
+            new_tags (string): 新的逗号分隔英文提示词（如不需修改可不传）
+            new_style (string): 新样式（如不需修改可不传）
+        """
+        if not self.grimoire_enabled:
+            return "❌ 魔导书已禁用"
+
+        src_path = self._grimoire_find_source_path(source)
+        if not src_path:
+            return f"❌ 未找到数据源「{source}」"
+
+        items = self._grimoire_read(src_path)
+        found = None
+        for it in items:
+            if it.get("name") == name:
+                found = it
+                break
+
+        if not found:
+            return f"❌ 在 {src_path} 中未找到「{name}」"
+
+        if new_name:
+            found["name"] = new_name
+        if new_tags:
+            found["tags"] = new_tags
+        if new_style:
+            found["style"] = new_style
+
+        if self._grimoire_write(src_path, items):
+            return f"✅ 已更新「{name}」"
+        else:
+            return f"❌ 更新失败"
+
+    @filter.llm_tool(name="comfyui_get_prompt")
+    async def llm_get_prompt(self, event: AstrMessageEvent, message_id: str = ""):
+        """查询某条图片消息对应的生图提示词。用于从已生成的图片中提取完整描述。
+
+        Args:
+            message_id (string): 图片消息的 ID。如果不传，会自动从你回复的图片消息中提取。
+        """
+        if not message_id:
+            # 自动从事件上下文中提取回复的消息 ID
+            for comp in event.get_messages():
+                d = comp.__dict__ if hasattr(comp, '__dict__') else {}
+                if d.get('type') == 'Reply':
+                    message_id = str(d.get('id', '') or '')
+                    break
+        if not message_id:
+            return "请提供图片消息的 message_id"
+
+        results = []
+        for r in reversed(self._prompt_log):
+            if r['message_id'] == message_id:
+                results.append(f"提示词: {r['prompt']}")
+                break
+
+        if not results:
+            return f"未找到 message_id 为「{message_id}」的提示词记录（可能已过期，默认保留 {self.prompt_log_days} 天）"
+        return "\n".join(results)
 
     # ==================================================================
     # 魔导书图片缓存系统
@@ -5194,6 +5882,18 @@ class ComfyUILocalPlugin(Star):
 
     async def terminate(self):
         logger.info("[ComfyUI] 插件已卸载")
+        # 停止 WebUI 服务，避免端口残留
+        try:
+            if self._webui_site_lan:
+                await self._webui_site_lan.stop()
+            if self._webui_site_ipv6:
+                await self._webui_site_ipv6.stop()
+            if self._webui_site_local:
+                await self._webui_site_local.stop()
+            if self._webui_runner:
+                await self._webui_runner.cleanup()
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 停止 WebUI 服务时出错: {e}")
         async with self._task_lock:
             self.task_map.clear()
             self._cancelled_pids.clear()

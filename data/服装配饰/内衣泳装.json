@@ -1,0 +1,27 @@
+[
+  {
+    "name": "比基尼",
+    "tags": "bikini",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "泳装",
+    "tags": "swimsuit",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "内衣",
+    "tags": "lingerie",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "紧身衣",
+    "tags": "bodysuit",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "盔甲",
+    "tags": "armor",
+    "category": "内衣泳装"
+  }
+]

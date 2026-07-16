@@ -1,0 +1,52 @@
+[
+  {
+    "name": "过膝袜",
+    "tags": "thighhighs",
+    "category": "鞋袜"
+  },
+  {
+    "name": "及膝袜",
+    "tags": "kneehighs",
+    "category": "鞋袜"
+  },
+  {
+    "name": "袜子",
+    "tags": "socks",
+    "category": "鞋袜"
+  },
+  {
+    "name": "连裤袜",
+    "tags": "pantyhose",
+    "category": "鞋袜"
+  },
+  {
+    "name": "赤脚",
+    "tags": "barefoot",
+    "category": "鞋袜"
+  },
+  {
+    "name": "靴子",
+    "tags": "boots",
+    "category": "鞋袜"
+  },
+  {
+    "name": "高跟鞋",
+    "tags": "high heels",
+    "category": "鞋袜"
+  },
+  {
+    "name": "运动鞋",
+    "tags": "sneakers",
+    "category": "鞋袜"
+  },
+  {
+    "name": "凉鞋",
+    "tags": "sandals",
+    "category": "鞋袜"
+  },
+  {
+    "name": "乐福鞋",
+    "tags": "loafers",
+    "category": "鞋袜"
+  }
+]

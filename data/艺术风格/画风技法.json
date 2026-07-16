@@ -1,0 +1,32 @@
+[
+  {
+    "name": "数字绘画",
+    "tags": "digital art",
+    "category": "画风技法"
+  },
+  {
+    "name": "赛璐珞上色",
+    "tags": "cel shading",
+    "category": "画风技法"
+  },
+  {
+    "name": "水彩",
+    "tags": "watercolor",
+    "category": "画风技法"
+  },
+  {
+    "name": "粉彩",
+    "tags": "pastel color",
+    "category": "画风技法"
+  },
+  {
+    "name": "素描",
+    "tags": "sketch",
+    "category": "画风技法"
+  },
+  {
+    "name": "线稿",
+    "tags": "line art",
+    "category": "画风技法"
+  }
+]

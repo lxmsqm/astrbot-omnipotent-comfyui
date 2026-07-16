@@ -1,0 +1,177 @@
+[
+  {
+    "name": "衬衫",
+    "tags": "shirt",
+    "category": "上衣"
+  },
+  {
+    "name": "西装外套",
+    "tags": "blazer",
+    "category": "上衣"
+  },
+  {
+    "name": "毛衣",
+    "tags": "sweater",
+    "category": "上衣"
+  },
+  {
+    "name": "连帽衫",
+    "tags": "hoodie",
+    "category": "上衣"
+  },
+  {
+    "name": "T恤",
+    "tags": "t-shirt",
+    "category": "上衣"
+  },
+  {
+    "name": "吊带背心",
+    "tags": "tank top",
+    "category": "上衣"
+  },
+  {
+    "name": "开衫",
+    "tags": "cardigan",
+    "category": "上衣"
+  },
+  {
+    "name": "露肩",
+    "tags": "off shoulder",
+    "category": "上衣"
+  },
+  {
+    "name": "抹胸",
+    "tags": "strapless",
+    "category": "上衣"
+  },
+  {
+    "name": "露脐装",
+    "tags": "crop top",
+    "category": "上衣"
+  },
+  {
+    "name": "束身衣",
+    "tags": "corset",
+    "category": "上衣"
+  },
+  {
+    "name": "高领",
+    "tags": "turtleneck",
+    "category": "上衣"
+  },
+  {
+    "name": "外套",
+    "tags": "coat",
+    "category": "上衣"
+  },
+  {
+    "name": "夹克",
+    "tags": "jacket",
+    "category": "上衣"
+  },
+  {
+    "name": "背心",
+    "tags": "vest",
+    "category": "上衣"
+  },
+  {
+    "name": "牛仔夹克",
+    "tags": "denim jacket",
+    "category": "上衣"
+  },
+  {
+    "name": "皮夹克",
+    "tags": "leather jacket",
+    "category": "上衣"
+  },
+  {
+    "name": "飞行夹克",
+    "tags": "bomber jacket",
+    "category": "上衣"
+  },
+  {
+    "name": "风衣",
+    "tags": "trench coat",
+    "category": "上衣"
+  },
+  {
+    "name": "披风",
+    "tags": "cape",
+    "category": "上衣"
+  },
+  {
+    "name": "斗篷",
+    "tags": "cloak",
+    "category": "上衣"
+  },
+  {
+    "name": "披肩",
+    "tags": "shawl",
+    "category": "上衣"
+  },
+  {
+    "name": "水手服",
+    "tags": "sailor uniform",
+    "category": "上衣"
+  },
+  {
+    "name": "西装校服",
+    "tags": "blazer uniform",
+    "category": "上衣"
+  },
+  {
+    "name": "实验袍",
+    "tags": "lab coat",
+    "category": "上衣"
+  },
+  {
+    "name": "旗袍",
+    "tags": "cheongsam",
+    "category": "上衣"
+  },
+  {
+    "name": "旗袍改良",
+    "tags": "qipao",
+    "category": "上衣"
+  },
+  {
+    "name": "泡泡袖",
+    "tags": "puffy sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "短袖",
+    "tags": "short sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "长袖",
+    "tags": "long sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "卷袖",
+    "tags": "rolled-up sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "无袖",
+    "tags": "sleeveless",
+    "category": "上衣"
+  },
+  {
+    "name": "褶边",
+    "tags": "frills",
+    "category": "上衣"
+  },
+  {
+    "name": "花边皱褶",
+    "tags": "ruffles",
+    "category": "上衣"
+  },
+  {
+    "name": "蕾丝边",
+    "tags": "lace trim",
+    "category": "上衣"
+  }
+]

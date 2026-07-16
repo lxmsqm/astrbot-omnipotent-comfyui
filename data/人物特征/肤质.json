@@ -1,0 +1,17 @@
+[
+  {
+    "name": "白皙肌肤",
+    "tags": "pale skin",
+    "category": "肤质"
+  },
+  {
+    "name": "晒黑",
+    "tags": "tanned",
+    "category": "肤质"
+  },
+  {
+    "name": "深色肌肤",
+    "tags": "dark skin",
+    "category": "肤质"
+  }
+]

@@ -1,0 +1,52 @@
+[
+  {
+    "name": "晴空",
+    "tags": "clear sky",
+    "category": "天气时间"
+  },
+  {
+    "name": "多云",
+    "tags": "cloudy",
+    "category": "天气时间"
+  },
+  {
+    "name": "雨",
+    "tags": "rain",
+    "category": "天气时间"
+  },
+  {
+    "name": "雪",
+    "tags": "snow",
+    "category": "天气时间"
+  },
+  {
+    "name": "雾",
+    "tags": "fog",
+    "category": "天气时间"
+  },
+  {
+    "name": "夜晚",
+    "tags": "night",
+    "category": "天气时间"
+  },
+  {
+    "name": "日落",
+    "tags": "sunset",
+    "category": "天气时间"
+  },
+  {
+    "name": "日出",
+    "tags": "sunrise",
+    "category": "天气时间"
+  },
+  {
+    "name": "满月",
+    "tags": "full moon",
+    "category": "天气时间"
+  },
+  {
+    "name": "星空",
+    "tags": "starry sky",
+    "category": "天气时间"
+  }
+]

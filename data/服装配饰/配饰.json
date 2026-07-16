@@ -1,0 +1,197 @@
+[
+  {
+    "name": "发带",
+    "tags": "hair ribbon",
+    "category": "配饰"
+  },
+  {
+    "name": "蝴蝶结",
+    "tags": "hair bow",
+    "category": "配饰"
+  },
+  {
+    "name": "发箍",
+    "tags": "hairband",
+    "category": "配饰"
+  },
+  {
+    "name": "发卡",
+    "tags": "hairclip",
+    "category": "配饰"
+  },
+  {
+    "name": "头饰",
+    "tags": "hair ornament",
+    "category": "配饰"
+  },
+  {
+    "name": "耳环",
+    "tags": "earrings",
+    "category": "配饰"
+  },
+  {
+    "name": "项链",
+    "tags": "necklace",
+    "category": "配饰"
+  },
+  {
+    "name": "项圈",
+    "tags": "choker",
+    "category": "配饰"
+  },
+  {
+    "name": "手套",
+    "tags": "gloves",
+    "category": "配饰"
+  },
+  {
+    "name": "分离袖",
+    "tags": "detached sleeves",
+    "category": "配饰"
+  },
+  {
+    "name": "丝带",
+    "tags": "ribbon",
+    "category": "配饰"
+  },
+  {
+    "name": "手镯",
+    "tags": "bracelet",
+    "category": "配饰"
+  },
+  {
+    "name": "手表",
+    "tags": "watch",
+    "category": "配饰"
+  },
+  {
+    "name": "戒指",
+    "tags": "ring",
+    "category": "配饰"
+  },
+  {
+    "name": "腰带",
+    "tags": "belt",
+    "category": "配饰"
+  },
+  {
+    "name": "帽子",
+    "tags": "hat",
+    "category": "配饰"
+  },
+  {
+    "name": "贝雷帽",
+    "tags": "beret",
+    "category": "配饰"
+  },
+  {
+    "name": "棒球帽",
+    "tags": "baseball cap",
+    "category": "配饰"
+  },
+  {
+    "name": "牛仔帽",
+    "tags": "cowboy hat",
+    "category": "配饰"
+  },
+  {
+    "name": "毛线帽",
+    "tags": "beanie",
+    "category": "配饰"
+  },
+  {
+    "name": "围巾",
+    "tags": "scarf",
+    "category": "配饰"
+  },
+  {
+    "name": "包",
+    "tags": "bag",
+    "category": "配饰"
+  },
+  {
+    "name": "翅膀",
+    "tags": "wings",
+    "category": "配饰"
+  },
+  {
+    "name": "尾巴",
+    "tags": "tail",
+    "category": "配饰"
+  },
+  {
+    "name": "光环",
+    "tags": "halo",
+    "category": "配饰"
+  },
+  {
+    "name": "角",
+    "tags": "horns",
+    "category": "配饰"
+  },
+  {
+    "name": "兽耳",
+    "tags": "animal ears",
+    "category": "配饰"
+  },
+  {
+    "name": "小皇冠",
+    "tags": "tiara",
+    "category": "配饰"
+  },
+  {
+    "name": "王冠",
+    "tags": "crown",
+    "category": "配饰"
+  },
+  {
+    "name": "面纱",
+    "tags": "veil",
+    "category": "配饰"
+  },
+  {
+    "name": "蒙眼布",
+    "tags": "blindfold",
+    "category": "配饰"
+  },
+  {
+    "name": "眼罩面罩",
+    "tags": "eye mask",
+    "category": "配饰"
+  },
+  {
+    "name": "项圈领",
+    "tags": "collar",
+    "category": "配饰"
+  },
+  {
+    "name": "领结",
+    "tags": "bow tie",
+    "category": "配饰"
+  },
+  {
+    "name": "领带",
+    "tags": "necktie",
+    "category": "配饰"
+  },
+  {
+    "name": "领巾",
+    "tags": "ascot",
+    "category": "配饰"
+  },
+  {
+    "name": "吊坠",
+    "tags": "pendant",
+    "category": "配饰"
+  },
+  {
+    "name": "耳机",
+    "tags": "headphones",
+    "category": "配饰"
+  },
+  {
+    "name": "动物装",
+    "tags": "animal costume",
+    "category": "配饰"
+  }
+]

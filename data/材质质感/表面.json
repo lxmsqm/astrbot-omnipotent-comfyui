@@ -1,0 +1,42 @@
+[
+  {
+    "name": "光泽",
+    "tags": "glossy",
+    "category": "表面"
+  },
+  {
+    "name": "哑光",
+    "tags": "matte",
+    "category": "表面"
+  },
+  {
+    "name": "光滑",
+    "tags": "smooth",
+    "category": "表面"
+  },
+  {
+    "name": "粗糙",
+    "tags": "rough",
+    "category": "表面"
+  },
+  {
+    "name": "半透明",
+    "tags": "translucent",
+    "category": "表面"
+  },
+  {
+    "name": "不透明",
+    "tags": "opaque",
+    "category": "表面"
+  },
+  {
+    "name": "反光",
+    "tags": "reflective",
+    "category": "表面"
+  },
+  {
+    "name": "镜面",
+    "tags": "mirror surface",
+    "category": "表面"
+  }
+]

@@ -18,6 +18,9 @@ build/
 # Local runtime config (contains user machine paths)
 plugin_config.json
 
+# User data directory (gitignored — each user's personal config)
+data/user/
+
 # Local machine paths / OS
 previews/
 .DS_Store

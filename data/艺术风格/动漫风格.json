@@ -1,0 +1,77 @@
+[
+  {
+    "name": "动漫风格",
+    "tags": "anime style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "漫画风格",
+    "tags": "manga style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "动画截图风",
+    "tags": "anime screencap",
+    "category": "动漫风格"
+  },
+  {
+    "name": "主视觉",
+    "tags": "key visual",
+    "category": "动漫风格"
+  },
+  {
+    "name": "宣传绘",
+    "tags": "promotional art",
+    "category": "动漫风格"
+  },
+  {
+    "name": "游戏CG",
+    "tags": "game cg",
+    "category": "动漫风格"
+  },
+  {
+    "name": "视觉小说风",
+    "tags": "visual novel style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "复古动漫风",
+    "tags": "retro anime style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "90年代动漫风",
+    "tags": "90s anime style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "Q版",
+    "tags": "chibi",
+    "category": "动漫风格"
+  },
+  {
+    "name": "新海诚风",
+    "tags": "makoto shinkai style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "吉卜力风",
+    "tags": "studio ghibli style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "京阿尼风",
+    "tags": "kyoto animation style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "飞碟社风",
+    "tags": "ufotable style",
+    "category": "动漫风格"
+  },
+  {
+    "name": "扳机社风",
+    "tags": "trigger style",
+    "category": "动漫风格"
+  }
+]

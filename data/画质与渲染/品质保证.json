@@ -1,0 +1,42 @@
+[
+  {
+    "name": "杰作",
+    "tags": "masterpiece",
+    "category": "品质保证"
+  },
+  {
+    "name": "最佳品质",
+    "tags": "best quality",
+    "category": "品质保证"
+  },
+  {
+    "name": "高分辨率",
+    "tags": "highres",
+    "category": "品质保证"
+  },
+  {
+    "name": "超精细",
+    "tags": "ultra-detailed",
+    "category": "品质保证"
+  },
+  {
+    "name": "复杂细节",
+    "tags": "intricate details",
+    "category": "品质保证"
+  },
+  {
+    "name": "官方插画",
+    "tags": "official art",
+    "category": "品质保证"
+  },
+  {
+    "name": "详细背景",
+    "tags": "detailed background",
+    "category": "品质保证"
+  },
+  {
+    "name": "清晰对焦",
+    "tags": "sharp focus",
+    "category": "品质保证"
+  }
+]

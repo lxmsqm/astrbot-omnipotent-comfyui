@@ -1,0 +1,72 @@
+[
+  {
+    "name": "鲜艳色彩",
+    "tags": "vibrant colors",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "柔和色彩",
+    "tags": "pastel colors",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "单色",
+    "tags": "monochrome",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "暖色调",
+    "tags": "warm colors",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "冷色调",
+    "tags": "cool colors",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "高对比",
+    "tags": "high contrast",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "低饱和",
+    "tags": "muted colors",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "浪漫",
+    "tags": "romantic",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "神秘",
+    "tags": "mysterious",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "宁静",
+    "tags": "peaceful",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "戏剧性",
+    "tags": "dramatic",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "梦幻",
+    "tags": "dreamy",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "温馨",
+    "tags": "cozy",
+    "category": "色彩氛围"
+  },
+  {
+    "name": "活力",
+    "tags": "energetic",
+    "category": "色彩氛围"
+  }
+]

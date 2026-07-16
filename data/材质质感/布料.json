@@ -1,0 +1,67 @@
+[
+  {
+    "name": "缎面丝绸",
+    "tags": "satin silk",
+    "category": "布料"
+  },
+  {
+    "name": "透明薄纱",
+    "tags": "sheer translucent",
+    "category": "布料"
+  },
+  {
+    "name": "蕾丝面料",
+    "tags": "lace fabric",
+    "category": "布料"
+  },
+  {
+    "name": "丝带",
+    "tags": "silk ribbon",
+    "category": "布料"
+  },
+  {
+    "name": "雪纺",
+    "tags": "chiffon",
+    "category": "布料"
+  },
+  {
+    "name": "薄纱网眼",
+    "tags": "tulle",
+    "category": "布料"
+  },
+  {
+    "name": "哑光布料",
+    "tags": "matte cloth",
+    "category": "布料"
+  },
+  {
+    "name": "厚天鹅绒",
+    "tags": "thick velvet",
+    "category": "布料"
+  },
+  {
+    "name": "棉质纹理",
+    "tags": "cotton texture",
+    "category": "布料"
+  },
+  {
+    "name": "羊毛织物",
+    "tags": "wool fabric",
+    "category": "布料"
+  },
+  {
+    "name": "亚麻面料",
+    "tags": "linen fabric",
+    "category": "布料"
+  },
+  {
+    "name": "牛仔布纹理",
+    "tags": "denim texture",
+    "category": "布料"
+  },
+  {
+    "name": "帆布",
+    "tags": "canvas",
+    "category": "布料"
+  }
+]

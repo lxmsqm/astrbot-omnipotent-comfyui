@@ -1,0 +1,47 @@
+[
+  {
+    "name": "蓝眼",
+    "tags": "blue eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "红眼",
+    "tags": "red eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "绿眼",
+    "tags": "green eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "紫眼",
+    "tags": "purple eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "黄眼",
+    "tags": "yellow eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "异色瞳",
+    "tags": "heterochromia",
+    "category": "眼色"
+  },
+  {
+    "name": "水色眼",
+    "tags": "aqua eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "粉眼",
+    "tags": "pink eyes",
+    "category": "眼色"
+  },
+  {
+    "name": "大眼睛",
+    "tags": "large eyes",
+    "category": "眼色"
+  }
+]

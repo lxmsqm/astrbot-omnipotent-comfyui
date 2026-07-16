@@ -1,0 +1,87 @@
+[
+  {
+    "name": "景深",
+    "tags": "depth of field",
+    "category": "镜头效果"
+  },
+  {
+    "name": "散景",
+    "tags": "bokeh",
+    "category": "镜头效果"
+  },
+  {
+    "name": "变形宽银幕镜头",
+    "tags": "anamorphic lens",
+    "category": "镜头效果"
+  },
+  {
+    "name": "worm s eye view",
+    "tags": "worm s eye view",
+    "category": "镜头效果"
+  },
+  {
+    "name": "bird s eye view",
+    "tags": "bird s eye view",
+    "category": "镜头效果"
+  },
+  {
+    "name": "低角度拍摄",
+    "tags": "low angle shot",
+    "category": "镜头效果"
+  },
+  {
+    "name": "高角度拍摄",
+    "tags": "high angle shot",
+    "category": "镜头效果"
+  },
+  {
+    "name": "过肩视角",
+    "tags": "over the shoulder",
+    "category": "镜头效果"
+  },
+  {
+    "name": "第一人称视角",
+    "tags": "pov shot",
+    "category": "镜头效果"
+  },
+  {
+    "name": "强散景",
+    "tags": "strong bokeh",
+    "category": "镜头效果"
+  },
+  {
+    "name": "浅景深",
+    "tags": "shallow depth of field",
+    "category": "镜头效果"
+  },
+  {
+    "name": "深景深",
+    "tags": "deep depth of field",
+    "category": "镜头效果"
+  },
+  {
+    "name": "镜头光晕",
+    "tags": "lens flare",
+    "category": "镜头效果"
+  },
+  {
+    "name": "色差",
+    "tags": "chromatic aberration",
+    "category": "镜头效果"
+  },
+  {
+    "name": "暗角",
+    "tags": "vignette",
+    "category": "镜头效果"
+  },
+  {
+    "name": "运动模糊",
+    "tags": "motion blur",
+    "category": "镜头效果"
+  },
+  {
+    "name": "胶片颗粒",
+    "tags": "film grain",
+    "category": "镜头效果"
+  }
+]

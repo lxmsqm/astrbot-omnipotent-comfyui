@@ -1,0 +1,62 @@
+[
+  {
+    "name": "裙子",
+    "tags": "skirt",
+    "category": "下装"
+  },
+  {
+    "name": "百褶裙",
+    "tags": "pleated skirt",
+    "category": "下装"
+  },
+  {
+    "name": "迷你裙",
+    "tags": "miniskirt",
+    "category": "下装"
+  },
+  {
+    "name": "短裤",
+    "tags": "shorts",
+    "category": "下装"
+  },
+  {
+    "name": "牛仔裤",
+    "tags": "jeans",
+    "category": "下装"
+  },
+  {
+    "name": "长裤",
+    "tags": "trousers",
+    "category": "下装"
+  },
+  {
+    "name": "紧身裤",
+    "tags": "leggings",
+    "category": "下装"
+  },
+  {
+    "name": "运动裤",
+    "tags": "sweatpants",
+    "category": "下装"
+  },
+  {
+    "name": "热裤",
+    "tags": "hotpants",
+    "category": "下装"
+  },
+  {
+    "name": "长裙",
+    "tags": "long skirt",
+    "category": "下装"
+  },
+  {
+    "name": "背带裤",
+    "tags": "overalls",
+    "category": "下装"
+  },
+  {
+    "name": "吊带裤",
+    "tags": "suspenders",
+    "category": "下装"
+  }
+]

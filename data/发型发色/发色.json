@@ -1,0 +1,72 @@
+[
+  {
+    "name": "金发",
+    "tags": "blonde hair",
+    "category": "发色"
+  },
+  {
+    "name": "棕发",
+    "tags": "brown hair",
+    "category": "发色"
+  },
+  {
+    "name": "黑发",
+    "tags": "black hair",
+    "category": "发色"
+  },
+  {
+    "name": "银发",
+    "tags": "silver hair",
+    "category": "发色"
+  },
+  {
+    "name": "白发",
+    "tags": "white hair",
+    "category": "发色"
+  },
+  {
+    "name": "红发",
+    "tags": "red hair",
+    "category": "发色"
+  },
+  {
+    "name": "蓝发",
+    "tags": "blue hair",
+    "category": "发色"
+  },
+  {
+    "name": "绿发",
+    "tags": "green hair",
+    "category": "发色"
+  },
+  {
+    "name": "紫发",
+    "tags": "purple hair",
+    "category": "发色"
+  },
+  {
+    "name": "粉发",
+    "tags": "pink hair",
+    "category": "发色"
+  },
+  {
+    "name": "橙发",
+    "tags": "orange hair",
+    "category": "发色"
+  },
+  {
+    "name": "水色发",
+    "tags": "aqua hair",
+    "category": "发色"
+  },
+  {
+    "name": "多彩发色",
+    "tags": "multicolored hair",
+    "category": "发色"
+  },
+  {
+    "name": "渐变发色",
+    "tags": "gradient hair",
+    "category": "发色"
+  }
+]

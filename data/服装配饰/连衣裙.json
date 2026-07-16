@@ -1,0 +1,37 @@
+[
+  {
+    "name": "连衣裙",
+    "tags": "dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "夏日连衣裙",
+    "tags": "sundress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "围裙",
+    "tags": "apron",
+    "category": "连衣裙"
+  },
+  {
+    "name": "哥特萝莉",
+    "tags": "gothic lolita",
+    "category": "连衣裙"
+  },
+  {
+    "name": "洛丽塔",
+    "tags": "lolita fashion",
+    "category": "连衣裙"
+  },
+  {
+    "name": "女仆头饰",
+    "tags": "maid headdress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "圣诞装",
+    "tags": "santa costume",
+    "category": "连衣裙"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "亮面皮革",
+    "tags": "gloss leather",
+    "category": "皮革"
+  },
+  {
+    "name": "哑光皮革",
+    "tags": "matte leather",
+    "category": "皮革"
+  },
+  {
+    "name": "漆皮",
+    "tags": "patent leather",
+    "category": "皮革"
+  },
+  {
+    "name": "皮革纹理",
+    "tags": "leather texture",
+    "category": "皮革"
+  },
+  {
+    "name": "乳胶",
+    "tags": "latex",
+    "category": "皮革"
+  },
+  {
+    "name": "乙烯基",
+    "tags": "vinyl",
+    "category": "皮革"
+  }
+]
