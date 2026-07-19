@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>魔导书 — AStrBot ComfyUI</title>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -121,12 +120,12 @@
 [data-theme="light"], :root:not([data-theme="dark"]) {
   --bg:            oklch(96% 0.015 55);
   --bg-elevated:   oklch(98% 0.01 55);
-  --card:          #fff;
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --card-bg:       var(--card);
-  --card-border:   oklch(86% 0.02 55 / 0.5);
-  --bg-overlay:    oklch(96% 0.015 55 / 0.7);
-  --input-bg:      oklch(94% 0.015 55);
-  --card-hover:    oklch(91% 0.02 55);
+  --card-border:   color-mix(in oklch, oklch(86% 0.02 55 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --bg-overlay:    color-mix(in oklch, oklch(96% 0.015 55 / 0.7), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(94% 0.015 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(91% 0.02 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
 
   --text:          oklch(18% 0.015 55);
   --text-sub:      oklch(42% 0.025 55);
@@ -162,7 +161,7 @@
   --tag-border:    oklch(82% 0.02 55);
   --tag-hover-bg:  oklch(55% 0.22 50);
   --tag-hover-color: #fff;
-  --icon-bg:       oklch(92% 0.02 55);
+  --icon-bg:       color-mix(in oklch, oklch(92% 0.02 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
 
   /* 渐变 — 橙紫 */
   --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
@@ -1594,6 +1593,194 @@ select:not([class*="color"]):not([class*="date"]){
 .grm-item-hint{font-size:10px;color:var(--text-sub2);line-height:1.4;}
 .grm-item-textarea{min-height:64px;resize:vertical;font-size:13px;}
 .grm-item-modal .modal-footer .btn{min-height:40px;padding:8px 18px;font-size:13px;}
+
+/* ========================================================================
+   30.5 魔导书 — 主题适配风格
+   ======================================================================== */
+#grimoire_sheet.grimoire-sheet{
+  background:var(--bg-elevated);border:1px solid var(--card-border);
+  border-radius:12px;box-shadow:var(--shadow-md);
+  backdrop-filter:none;
+}
+#grimoire_sheet .grimoire-header{
+  padding:8px 12px;border-bottom:1px solid var(--card-border);
+  gap:6px;
+}
+#grimoire_sheet .grimoire-header h2{
+  font-size:14px;font-weight:600;font-family:'Noto Sans SC',sans-serif;
+  background:none;-webkit-text-fill-color:var(--text);background-clip:unset;
+  animation:none;filter:none;letter-spacing:0;
+}
+#grimoire_sheet .grimoire-header .toggle-switch{width:32px;height:18px;}
+#grimoire_sheet .grimoire-header .toggle-knob{width:14px;height:14px;}
+#grimoire_sheet .grimoire-header .btn{font-size:10px;padding:2px 8px;min-height:26px;border-radius:6px;}
+#grimoire_sheet .grimoire-sources{width:140px;background:transparent;border-right:1px solid var(--card-border);}
+#grimoire_sheet .grimoire-source-list{padding:2px 0;}
+#grimoire_sheet .source-item{
+  padding:5px 10px;font-size:11px;border-left:2px solid transparent;
+  background:transparent;border-radius:0;margin:0;color:var(--text-sub);
+  font-family:'Noto Sans SC',sans-serif;font-weight:400;
+  transition:all 0.15s ease-out;
+}
+#grimoire_sheet .source-item.active{
+  background:transparent;border-left:2px solid var(--primary);
+  color:var(--text);font-weight:500;
+}
+#grimoire_sheet .source-item:hover{background:var(--card-hover);color:var(--text);}
+#grimoire_sheet .source-item .source-count{display:none;}
+#grimoire_sheet .grimoire-detail-header{
+  padding:6px 10px;border-bottom:1px solid var(--card-border);
+  gap:4px;
+}
+#grimoire_sheet .grimoire-detail-title{font-size:12px;font-weight:500;color:var(--text);}
+#grimoire_sheet .grimoire-detail-count{font-size:10px;color:var(--text-sub2);}
+#grimoire_sheet .grimoire-detail-header .btn{
+  font-size:10px;padding:2px 8px;min-height:26px;border-radius:6px;
+  background:var(--input-bg);border:1px solid var(--card-border);color:var(--text-sub);
+}
+#grimoire_sheet .grimoire-detail-header .btn:hover{background:var(--card-hover);color:var(--text);}
+#grimoire_sheet .grm-item-card{
+  background:transparent;border:1px solid var(--card-border);
+  border-radius:6px;padding:8px 10px;margin-bottom:4px;
+  transition:all 0.15s ease-out;
+}
+#grimoire_sheet .grm-item-card:hover{border-color:var(--primary);background:color-mix(in oklch, var(--primary) 6%, transparent);}
+#grimoire_sheet .grm-item-card:active{background:var(--card-hover);}
+#grimoire_sheet .grm-item-name{font-size:12px;font-weight:500;color:var(--text);font-family:'Noto Sans SC',sans-serif;}
+#grimoire_sheet .grm-item-name-en{font-size:10px;color:var(--text-sub2);font-weight:400;}
+#grimoire_sheet .grm-item-category{display:none;}
+#grimoire_sheet .grm-item-tags{display:none;}
+#grimoire_sheet .grm-item-img{width:32px;height:42px;border-radius:4px;border:1px solid var(--card-border);}
+#grimoire_sheet .grm-item-img-placeholder{width:32px;height:42px;border-radius:4px;border:1px dashed var(--card-border);}
+#grimoire_sheet .grm-item-btn{font-size:9px;padding:2px 6px;min-height:22px;border-radius:4px;}
+#grimoire_sheet .grm-item-actions{gap:2px;}
+#grimoire_sheet .grm-star-btn{font-size:11px;width:20px;height:20px;}
+#grimoire_sheet .grm-pinned-bar{
+  background:transparent;border:1px solid var(--card-border);
+  border-radius:6px;padding:4px 8px;margin:4px 8px;gap:4px;
+  max-height:28px;overflow-x:auto;flex-wrap:nowrap;
+  scrollbar-width:none;display:flex;align-items:center;
+}
+#grimoire_sheet .grm-pinned-bar::-webkit-scrollbar{display:none;}
+#grimoire_sheet .grm-pinned-tag{
+  background:var(--input-bg);border:1px solid var(--card-border);
+  border-radius:6px;padding:1px 6px;font-size:9px;color:var(--text-sub);
+  max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  flex-shrink:0;font-family:'JetBrains Mono',monospace;
+}
+#grimoire_sheet .grm-pinned-tag:hover{border-color:var(--text-sub);}
+#grimoire_sheet .grm-pinned-title{font-size:9px;color:var(--text-sub2);}
+#grimoire_sheet .grm-pinned-remove{width:10px;height:10px;font-size:6px;color:var(--text-sub2);opacity:0.6;}
+#grimoire_sheet .grm-pinned-remove:hover{opacity:1;color:var(--text);}
+#grimoire_sheet .grm-pinned-bar .btn-danger{font-size:8px;padding:1px 4px;min-height:18px;border-radius:4px;background:transparent;border:1px solid var(--card-border);color:var(--text-sub);}
+#grimoire_sheet .grm-pinned-bar .btn-danger:hover{background:var(--card-hover);color:var(--text);}
+#grimoire_sheet .grimoire-pagination{
+  padding:6px 10px;border-top:1px solid var(--card-border);
+  background:transparent;gap:4px;
+}
+#grimoire_sheet .grimoire-pagination .btn{
+  font-size:10px;padding:2px 8px;min-height:26px;border-radius:6px;
+  background:var(--input-bg);border:1px solid var(--card-border);color:var(--text-sub);
+}
+#grimoire_sheet .grimoire-pagination .btn:hover{background:var(--card-hover);color:var(--text);}
+#grimoire_sheet .grm-page-jump{width:40px;height:24px;font-size:10px;background:var(--input-bg);border:1px solid var(--card-border);color:var(--text-sub);border-radius:4px;}
+#grimoire_sheet .grm-page-jump:focus{border-color:var(--primary);}
+#grimoire_sheet #grimoire_page_info{font-size:10px;color:var(--text-sub2);}
+#grimoire_sheet .grm-item-card.grm-selected{border-color:var(--primary);background:color-mix(in oklch, var(--primary) 10%, transparent);}
+#grimoire_sheet .grm-item-checkbox{accent-color:var(--primary);}
+#grimoire_sheet .grip-bar{background:var(--card-border);width:28px;height:3px;border-radius:2px;margin:6px auto 0;}
+/* 画廊模式 — PC 端带图片的数据源以网格展示 */
+.grm-gallery-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:12px;padding:4px 0;
+}
+.grm-gallery-card{
+  background:var(--input-bg);border:1px solid var(--card-border);
+  border-radius:8px;overflow:hidden;
+  transition:border-color 0.15s;position:relative;
+}
+.grm-gallery-card:hover{border-color:var(--primary);}
+.grm-gallery-card.pinned{box-shadow:0 0 0 2px var(--accent);}
+.grm-gallery-card.starred{background:color-mix(in oklch, var(--warning) 6%, var(--input-bg));}
+.grm-gallery-img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;}
+.grm-gallery-img-wrap{position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;background:var(--input-bg);}
+.grm-gallery-img-placeholder{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:24px;color:var(--text-sub2);background:var(--input-bg);
+}
+.grm-gallery-name{
+  padding:6px 8px 2px;font-size:13px;font-weight:500;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.grm-gallery-actions{
+  display:flex;justify-content:center;gap:6px;padding:2px 8px 8px;
+}
+.grm-gallery-card .grm-item-cached-badge,
+.grm-gallery-card .grm-item-uncached-badge{position:absolute;top:4px;left:4px;}
+/* 手机端画廊 3 列 */
+@media(max-width:768px){
+  .grm-gallery-grid{grid-template-columns:repeat(3,1fr);gap:6px;padding:2px 0;}
+  .grm-gallery-card{border-radius:6px;}
+  .grm-gallery-img{aspect-ratio:2/3;}
+  .grm-gallery-name{font-size:11px;padding:4px 4px 1px;}
+  .grm-gallery-actions{gap:4px;padding:1px 4px 6px;}
+  .grm-gallery-actions .grm-item-btn{font-size:11px;width:22px;height:22px;}
+  .grm-gallery-card .grm-item-cached-badge,
+  .grm-gallery-card .grm-item-uncached-badge{font-size:7px;top:2px;left:2px;padding:0 3px;}
+}
+/* 手机端钻取：选择分类后隐藏左侧列表 */
+#grimoire_sheet.drill-down .grimoire-sources{display:none;}
+#grimoire_sheet.drill-down .grimoire-detail{flex:1;width:100%;}
+#grimoire_sheet.drill-down .grip-bar{display:none;}
+/* 手机端未选择分类时隐藏详情 */
+@media(max-width:768px){
+  #grimoire_sheet:not(.drill-down) .grimoire-detail{display:none;}
+  #grimoire_sheet:not(.drill-down) .grimoire-sources{flex:1;max-height:none;}
+}
+/* 手机端魔导书 Linear 布局 — 全屏单列 */
+@media(max-width:768px){
+  #grimoire_sheet.grimoire-sheet{
+    border-radius:0;top:0;bottom:0;left:0;right:0;
+    max-height:100dvh;width:100%;
+  }
+  #grimoire_sheet .grimoire-body{flex-direction:column;flex:1;min-height:0;}
+  #grimoire_sheet .grimoire-sources{
+    width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,0.06);
+    max-height:40vh;flex-shrink:0;background:transparent;overflow-y:auto;
+  }
+  #grimoire_sheet .grimoire-source-list{
+    display:flex;flex-direction:row;overflow-x:auto;gap:2px;
+    padding:4px 6px;flex-wrap:nowrap;
+  }
+  #grimoire_sheet .source-item{
+    white-space:nowrap;flex-shrink:0;padding:4px 10px;font-size:10px;
+    border-left:none;border-radius:6px;color:var(--text-sub);
+    background:var(--input-bg);border:1px solid var(--card-border);
+  }
+  #grimoire_sheet .source-item.active{
+    border-left:none;background:color-mix(in oklch, var(--primary) 15%, transparent);
+    border-color:var(--primary);color:var(--text);
+  }
+  #grimoire_sheet .source-item:hover{background:var(--card-hover);}
+  #grimoire_sheet .grm-item-card{padding:6px 8px;}
+  #grimoire_sheet .grm-item-name{font-size:11px;}
+  #grimoire_sheet .grm-item-img{width:28px;height:36px;}
+  #grimoire_sheet .grm-item-img-placeholder{width:28px;height:36px;}
+  #grimoire_sheet .grm-pinned-bar{margin:2px 6px;padding:2px 6px;max-height:26px;}
+  #grimoire_sheet .grm-pinned-tag{font-size:8px;padding:1px 4px;max-width:60px;}
+  #grimoire_sheet .grimoire-detail-header{padding:4px 8px;}
+  #grimoire_sheet .grimoire-detail-header .btn{font-size:9px;padding:1px 6px;min-height:24px;}
+  #grimoire_sheet .grimoire-detail-header .btn span{display:none;}
+  #grimoire_sheet .grimoire-detail-header .btn svg{margin:0;}
+  #grimoire_sheet .grimoire-detail-title{font-size:11px;}
+  #grimoire_sheet .grimoire-detail-count{font-size:9px;}
+  #grimoire_sheet .grimoire-pagination{padding:4px 8px;}
+  #grimoire_sheet .grimoire-pagination .btn{font-size:9px;padding:1px 6px;min-height:24px;}
+  #grimoire_sheet .grm-page-jump{width:36px;height:22px;font-size:9px;}
+  #grimoire_sheet #grimoire_page_info{font-size:9px;}
+  #grimoire_sheet .grm-item-checkbox{width:14px;height:14px;}
+  #grimoire_sheet .grm-item-card:has(.grm-item-checkbox){padding-left:28px;}
+}
 @media(max-width:640px){
   .grm-item-modal .modal-panel{width:100vw;height:100dvh;max-width:none;max-height:none;border-radius:0;}
   .grm-item-form{gap:18px;padding:16px;}
@@ -2011,7 +2198,7 @@ select:not([class*="color"]):not([class*="date"]){
   padding:8px 10px;border-radius:var(--radius-xs);
   cursor:pointer;font-size:12px;margin-bottom:2px;
   transition:all var(--transition-fast);
-  position:relative;overflow:hidden;
+  position:relative;overflow:visible;
   border-left:3px solid transparent;
 }
 .source-item:hover{background:var(--card-hover);border-left-color:color-mix(in oklch, var(--primary) 25%, transparent);}
@@ -2178,11 +2365,17 @@ select:not([class*="color"]):not([class*="date"]){
   .source-item.active{background:color-mix(in oklch, var(--primary) 10%, transparent);border-left:3px solid var(--primary);font-weight:600;}
   .source-item .source-count{display:none;}
   
-  /* 固定标签中间省略号截断 */
-  .grm-pinned-bar{flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:4px 8px;-webkit-overflow-scrolling:touch;}
-  .grm-pinned-tag{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;padding:2px 6px;flex-shrink:0;}
-  .grm-pinned-title{font-size:10px;flex-shrink:0;}
-  .grm-pinned-remove{width:12px;height:12px;font-size:7px;flex-shrink:0;}
+  /* 固定标签 — 手机端折叠式 */
+  .grm-pinned-bar{flex-wrap:nowrap;overflow-x:auto;gap:2px;padding:3px 6px;-webkit-overflow-scrolling:touch;display:flex;align-items:center;border-radius:var(--radius-xs);margin:2px 4px;cursor:pointer;scrollbar-width:none;max-height:28px;transition:max-height 0.25s ease;}
+  .grm-pinned-bar::-webkit-scrollbar{display:none;}
+  .grm-pinned-bar.expanded{max-height:120px;flex-wrap:wrap;overflow-y:auto;padding:4px 6px;}
+  .grm-pinned-tag{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;padding:1px 4px;flex-shrink:0;border-radius:6px;line-height:1.5;}
+  .grm-pinned-title{font-size:9px;flex-shrink:0;margin-right:1px;}
+  .grm-pinned-remove{width:10px;height:10px;font-size:6px;flex-shrink:0;padding:0;}
+  .grm-pinned-bar .btn-danger{font-size:8px;padding:1px 4px;min-height:18px;border-radius:4px;margin-left:2px;}
+  .grm-pinned-summary{font-size:10px;color:var(--text-sub);white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:3px;cursor:pointer;}
+  .grm-pinned-summary .expand-icon{font-size:8px;color:var(--text-muted);transition:transform 0.2s;}
+  .grm-pinned-bar.expanded .grm-pinned-summary .expand-icon{transform:rotate(180deg);}
 
   .grimoire-detail-header{
     flex-wrap:wrap;padding:4px 10px 3px;gap:4px;
@@ -3294,6 +3487,7 @@ textarea:focus-visible,
     <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol>
     <!-- Arrow Down -->
     <symbol id="icon-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
     <!-- Undo / Recall -->
     <symbol id="icon-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
     <!-- Upload -->
@@ -3483,15 +3677,15 @@ textarea:focus-visible,
         <div class="settings-col">
           <div class="settings-row">
             <span class="settings-label">工作流目录</span>
-            <input type="text" id="cfg_workflow_dir" class="settings-input" aria-label="工作流目录路径" autocomplete="off" placeholder="请输入工作流API文件夹目录(专属于QQ命令)">
-            <button class="btn btn-xs btn-secondary" id="btn_save_wf_dir" data-action="setWorkflowDir" aria-label="保存工作流目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg></button>
-            <button class="btn btn-xs btn-secondary" data-action="openWorkflowDir" aria-label="打开工作流目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+            <input type="text" id="cfg_workflow_dir" class="settings-input" aria-label="工作流目录路径" autocomplete="off" placeholder="点击选择文件夹...">
+            <button class="btn btn-xs btn-secondary" data-action="openWorkflowDir" aria-label="打开目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+            <button class="btn btn-xs btn-primary" id="btn_save_wf_dir" onclick="pickDir('workflow')" aria-label="选择并保存工作流目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg> 选择</button>
           </div>
           <div class="settings-row">
             <span class="settings-label">输出目录</span>
-            <input type="text" id="cfg_output_dir" class="settings-input" aria-label="输出目录路径" autocomplete="off" placeholder="请输入图片保存目录(专属于QQ命令)">
-            <button class="btn btn-xs btn-secondary" id="btn_save_output_dir" data-action="saveOutputDir" aria-label="保存输出目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg></button>
-            <button class="btn btn-xs btn-secondary" data-action="openOutputDir" aria-label="打开输出目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+            <input type="text" id="cfg_output_dir" class="settings-input" aria-label="输出目录路径" autocomplete="off" placeholder="点击选择文件夹...">
+            <button class="btn btn-xs btn-secondary" data-action="openOutputDir" aria-label="打开目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+            <button class="btn btn-xs btn-primary" id="btn_save_output_dir" onclick="pickDir('output')" aria-label="选择并保存输出目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg> 选择</button>
           </div>
           <div class="settings-row">
             <span class="settings-label">ComfyUI 地址</span>
@@ -3703,6 +3897,7 @@ textarea:focus-visible,
   <div class="grip-bar"></div>
   <!-- Header -->
   <div class="grimoire-header">
+    <button class="btn btn-xs btn-secondary" id="grm_back_btn" onclick="backToGrimoireSources()" style="display:none;font-size:12px;padding:0 4px;min-height:24px;background:transparent;border:none;color:var(--text-sub)"><svg class="icon-sm" aria-hidden="true"><use href="#icon-arrow-left"/></svg></button>
     <svg class="icon" aria-hidden="true" style="color:var(--primary)"><use href="#icon-book"/></svg>
     <h2>魔导书</h2>
     <label class="toggle-label" title="开启后 /画 命令会自动追加固定的标签到提示词">
@@ -3718,10 +3913,6 @@ textarea:focus-visible,
       </select>
       <button class="btn btn-xs btn-secondary" onclick="addGrimoireSubCategory('','')" title="添加子分类" style="font-size:14px;padding:0 6px;line-height:20px">＋</button>
     </div>
-    <span class="grm-cache-status" id="grm_cache_status" style="display:none;margin:0 4px" onclick="cacheAllGrimoire()" title="点击缓存全部图片到本地">
-      <span class="dot" id="grm_cache_dot"></span>
-      <span id="grm_cache_text">📸 缓存</span>
-    </span>
     <button class="btn btn-xs btn-secondary" onclick="hideGrimoire()" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
   </div>
 
@@ -4876,6 +5067,22 @@ function closeSettingsModal() {
 // ========================================================================
 // 目录操作
 // ========================================================================
+/** 弹出系统原生的文件夹选择器，选完后自动填入输入框 + 保存到后端 */
+async function pickDir(type) {
+  const input = document.getElementById(type === 'workflow' ? 'cfg_workflow_dir' : 'cfg_output_dir');
+  const btn = document.getElementById(type === 'workflow' ? 'btn_save_wf_dir' : 'btn_save_output_dir');
+  setLoading(btn, true);
+  const result = await apiFetch('/api/pick-dir', { method:'POST' });
+  setLoading(btn, false);
+  if (result?.ok && result.path) {
+    input.value = result.path;
+    toast('📁 ' + result.path);
+    if (type === 'workflow') { await setWorkflowDir(); }
+    else { await saveOutputDir(); }
+  } else if (result?.error) {
+    toast('❌ ' + result.error);
+  }
+}
 async function openWorkflowDir() {
   const p = document.getElementById('cfg_workflow_dir').value;
   if (!p) { toast('未设置目录', 'error'); return; }
@@ -4988,10 +5195,11 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="cyberpunk-pink"][data-theme="light"] {
   --bg:            oklch(96% 0.01 300);
   --bg-elevated:   oklch(100% 0 0);
-  --card-border:   oklch(78% 0.028 300 / 0.65);
-  --input-bg:      oklch(90% 0.012 300);
-  --card-hover:    oklch(82% 0.022 300);
-  --text:          oklch(15% 0.025 300);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(78% 0.028 300 / 0.65), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(90% 0.012 300), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(82% 0.022 300), transparent calc((1 - var(--ui-opacity, 1)) * 100%));  --text:          oklch(15% 0.025 300);
   --text-sub:      oklch(40% 0.035 300);
   --text-sub2:     oklch(60% 0.03 300);
   --text-muted:    oklch(75% 0.025 300);
@@ -5005,7 +5213,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(40% 0.07 300);
   --tag-border:    oklch(80% 0.028 300);
   --tag-hover-bg:  oklch(55% 0.30 320);
-  --icon-bg:       oklch(90% 0.018 300);
+--icon-bg:       color-mix(in oklch, oklch(90% 0.018 300), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(58% 0.30 320), oklch(52% 0.32 270));
   --gradient-accent:  linear-gradient(135deg, oklch(52% 0.32 270), oklch(58% 0.30 320));
   --gradient-text:    linear-gradient(135deg, oklch(58% 0.30 320), oklch(52% 0.32 270));
@@ -5036,11 +5244,12 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="clean-white"][data-theme="light"] {
   --bg:            oklch(98% 0.003 80);
   --bg-elevated:   oklch(99% 0.002 80);
-  --card:          #fff;
-  --card-border:   oklch(88% 0.006 80 / 0.5);
-  --bg-overlay:    oklch(97% 0.003 80 / 0.7);
-  --input-bg:      oklch(95% 0.005 80);
-  --card-hover:    oklch(93% 0.006 80);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(88% 0.006 80 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --bg-overlay:    color-mix(in oklch, oklch(97% 0.003 80 / 0.7), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(95% 0.005 80), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(93% 0.006 80), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --text:          oklch(18% 0.008 80);
   --text-sub:      oklch(42% 0.015 80);
   --text-sub2:     oklch(60% 0.012 80);
@@ -5063,7 +5272,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(38% 0.04 80);
   --tag-border:    oklch(82% 0.01 80);
   --tag-hover-bg:  oklch(50% 0.22 280);
-  --icon-bg:       oklch(93% 0.008 80);
+--icon-bg:       color-mix(in oklch, oklch(93% 0.008 80), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
   --gradient-accent:  linear-gradient(135deg, oklch(50% 0.18 220), oklch(55% 0.22 280));
   --gradient-text:    linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
@@ -5099,10 +5308,11 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="warm-cream"][data-theme="light"] {
   --bg:            oklch(96% 0.008 55);
   --bg-elevated:   oklch(98% 0.006 55);
-  --card-border:   oklch(86% 0.012 55 / 0.5);
-  --input-bg:      oklch(94% 0.01 55);
-  --card-hover:    oklch(91% 0.015 55);
-  --text:          oklch(18% 0.015 55);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(86% 0.012 55 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(94% 0.01 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(91% 0.015 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));  --text:          oklch(18% 0.015 55);
   --text-sub:      oklch(42% 0.025 55);
   --text-sub2:     oklch(60% 0.02 55);
   --text-muted:    oklch(75% 0.015 55);
@@ -5117,7 +5327,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(40% 0.04 55);
   --tag-border:    oklch(82% 0.02 55);
   --tag-hover-bg:  oklch(55% 0.22 50);
-  --icon-bg:       oklch(92% 0.02 55);
+--icon-bg:       color-mix(in oklch, oklch(92% 0.02 55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
   --gradient-accent:  linear-gradient(135deg, oklch(52% 0.22 300), oklch(58% 0.22 50));
   --gradient-text:    linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
@@ -5157,10 +5367,11 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="magazine"][data-theme="light"] {
   --bg:            oklch(97% 0 0);
   --bg-elevated:   oklch(99% 0 0);
-  --card:          #fff;
-  --card-border:   oklch(92% 0 0 / 0.4);
-  --input-bg:      oklch(94% 0 0);
-  --card-hover:    oklch(90% 0 0);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(92% 0 0 / 0.4), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(94% 0 0), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(90% 0 0), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --text:          oklch(12% 0 0);
   --text-sub:      oklch(38% 0 0);
   --text-sub2:     oklch(55% 0 0);
@@ -5180,7 +5391,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(30% 0 0);
   --tag-border:    oklch(82% 0 0);
   --tag-hover-bg:  oklch(25% 0 0);
-  --icon-bg:       oklch(92% 0 0);
+--icon-bg:       color-mix(in oklch, oklch(92% 0 0), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
   --gradient-accent:  linear-gradient(135deg, oklch(45% 0 0), oklch(35% 0 0));
   --gradient-text:    linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
@@ -5221,10 +5432,11 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="morandi"][data-theme="light"] {
   --bg:            oklch(95% 0.015 90);
   --bg-elevated:   oklch(97% 0.01 90);
-  --card-border:   oklch(85% 0.02 90 / 0.5);
-  --input-bg:      oklch(93% 0.015 90);
-  --card-hover:    oklch(90% 0.02 90);
-  --text:          oklch(18% 0.01 90);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(85% 0.02 90 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(93% 0.015 90), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(90% 0.02 90), transparent calc((1 - var(--ui-opacity, 1)) * 100%));  --text:          oklch(18% 0.01 90);
   --text-sub:      oklch(42% 0.015 90);
   --text-sub2:     oklch(60% 0.015 90);
   --text-muted:    oklch(75% 0.01 90);
@@ -5243,7 +5455,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(40% 0.02 90);
   --tag-border:    oklch(82% 0.015 90);
   --tag-hover-bg:  oklch(45% 0.10 30);
-  --icon-bg:       oklch(92% 0.015 90);
+--icon-bg:       color-mix(in oklch, oklch(92% 0.015 90), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
   --gradient-accent:  linear-gradient(135deg, oklch(45% 0.10 200), oklch(48% 0.10 30));
   --gradient-text:    linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
@@ -5274,10 +5486,11 @@ function getColorSchemeCSS(name) {
 [data-color-scheme="sunset"][data-theme="light"] {
   --bg:            oklch(95% 0.015 70);
   --bg-elevated:   oklch(97% 0.01 70);
-  --card-border:   oklch(85% 0.02 70 / 0.5);
-  --input-bg:      oklch(93% 0.015 70);
-  --card-hover:    oklch(90% 0.02 70);
-  --text:          oklch(18% 0.015 70);
+  --card:          color-mix(in oklch, #fff, transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-bg:       var(--card);
+  --card-border:   color-mix(in oklch, oklch(85% 0.02 70 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(93% 0.015 70), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(90% 0.02 70), transparent calc((1 - var(--ui-opacity, 1)) * 100%));  --text:          oklch(18% 0.015 70);
   --text-sub:      oklch(42% 0.02 70);
   --text-sub2:     oklch(60% 0.018 70);
   --text-muted:    oklch(75% 0.015 70);
@@ -5292,7 +5505,7 @@ function getColorSchemeCSS(name) {
   --tag-color:     oklch(40% 0.03 70);
   --tag-border:    oklch(82% 0.02 70);
   --tag-hover-bg:  oklch(55% 0.22 30);
-  --icon-bg:       oklch(92% 0.02 70);
+--icon-bg:       color-mix(in oklch, oklch(92% 0.02 70), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 30), oklch(52% 0.20 300));
   --gradient-accent:  linear-gradient(135deg, oklch(52% 0.20 300), oklch(58% 0.22 30));
   --gradient-text:    linear-gradient(135deg, oklch(58% 0.22 30), oklch(52% 0.20 300));
@@ -8522,10 +8735,19 @@ function hideGrimoire() {
   const backdrop = document.getElementById('grimoire_backdrop');
   if (!sheet || !backdrop) return;
   sheet.classList.remove('show');
+  sheet.classList.remove('drill-down');
   backdrop.classList.remove('show');
   document.body.style.overflow = '';
   // 关闭时退出编辑模式
   _grimoireEditMode = false;
+}
+
+/** 手机端钻取返回分类列表 */
+function backToGrimoireSources() {
+  const sheet = document.getElementById('grimoire_sheet');
+  if (!sheet) return;
+  sheet.classList.remove('drill-down');
+  document.getElementById('grm_back_btn').style.display = 'none';
 }
 
 async function loadGrimoireData() {
@@ -8682,6 +8904,7 @@ function renderGrimoireSources() {
   
   let html = '<div class="grm-toolbar">' +
     `<button class="btn btn-xs btn-secondary" id="grm_toggle_all_btn" onclick="toggleAllGrimoireGroups()" title="展开/收起全部"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder-open"/></svg> <span id="grm_toggle_all_text">展开全部</span></button>` +
+    `<button class="btn btn-xs btn-secondary" id="grm_toggle_rand_btn" onclick="toggleAllRandom()" title="全选/取消随机池" style="margin-left:4px"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_toggle_rand_text">全选随机</span></button>` +
     '</div>';
   html += '<div class="source-group-list" ondragover="event.preventDefault()">';
   dirOrder.forEach(dir => {
@@ -8693,7 +8916,7 @@ function renderGrimoireSources() {
         `<button class="group-action-btn del" onclick="event.stopPropagation();deleteGrimoireCategory('${esc(dir)}','${esc(displayDir)}')" title="删除分类">🗑️</button>`
       : '';
     const addSubBtn = '';
-    const isCollapsed = _grimoireCollapsedDirs ? _grimoireCollapsedDirs[dir] !== false : true;
+    const isCollapsed = _grimoireCollapsedDirs ? _grimoireCollapsedDirs[dir] === true : false;
     const arrowClass = isCollapsed ? 'collapsed' : '';
     
     html += `<div class="source-group" draggable="true" data-dir="${esc(dir)}" ondragstart="onDirDragStart(event)" ondragover="onDirDragOver(event)" ondrop="onDirDrop(event)" ondragend="onDirDragEnd(event)">`;
@@ -8743,6 +8966,7 @@ function renderGrimoireSources() {
   });
   html += '</div>';
   list.innerHTML = html;
+  updateRandomToggleBtn();
 }
 
 // ── 魔导书子分类拖拽排序 ──
@@ -8899,8 +9123,13 @@ async function selectGrimoireSource(path) {
   if (title) title.textContent = source ? (source.name || path) : path;
   
   await Promise.all([fetchGrimoireData(), loadGrimoireCategories()]);
-  // 更新缓存状态（用归一化后的路径）
-  updateGrimoireCacheStatus(_grimoireCurrentSource);
+  // 手机端钻取：选择分类后隐藏左侧列表，显示详情
+  if (window.innerWidth <= 768) {
+    const sheet = document.getElementById('grimoire_sheet');
+    if (sheet) sheet.classList.add('drill-down');
+    const backBtn = document.getElementById('grm_back_btn');
+    if (backBtn) backBtn.style.display = 'inline-flex';
+  }
 }
 
 /** 折叠/展开分类组 */
@@ -9079,6 +9308,71 @@ async function cacheAllGrimoire() {
       // 轮询出错不打断
     }
   }, 2000);
+}
+
+/** 刷新所有子分类的缓存状态到设置面板 */
+async function refreshCacheStatus() {
+  const list = document.getElementById('cache_status_list');
+  if (!list || !_grimoireSources) return;
+  list.innerHTML = '<span style="color:var(--text-sub2)">正在查询...</span>';
+  let html = '';
+  let totalPending = 0;
+  for (const src of _grimoireSources) {
+    const path = src.path.replace(/\\/g, '/');
+    const status = await apiFetch(`/api/grimoire/cache-status?source=${encodeURIComponent(path)}`, {}, true);
+    if (status && status.ok) {
+      const name = src.name || path.split('/').pop();
+      const pct = status.total > 0 ? Math.round(status.cached / status.total * 100) : 0;
+      const pending = status.pending || 0;
+      totalPending += pending;
+      if (status.total > 0) {
+        html += `<div style="display:flex;justify-content:space-between;padding:2px 4px;border-bottom:1px solid var(--card-border);line-height:1.8">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(name)}</span>
+          <span style="flex-shrink:0;margin-left:8px;${pending > 0 ? 'color:var(--warning)' : 'color:var(--success)'}">${status.cached}/${status.total} (${pct}%)</span>
+        </div>`;
+      }
+    }
+  }
+  if (!html) {
+    list.innerHTML = '<span style="color:var(--text-sub2)">没有找到有图片的子分类</span>';
+    return;
+  }
+  html = `<div style="display:flex;justify-content:space-between;padding:2px 4px;font-weight:600;border-bottom:1px solid var(--card-border)">
+    <span>总计</span>
+    <span style="${totalPending > 0 ? 'color:var(--warning)' : 'color:var(--success)'}">待下载 ${totalPending} 张</span>
+  </div>` + html;
+  list.innerHTML = html;
+  if (totalPending > 0) {
+    toast(`📸 共 ${totalPending} 张图片待下载`);
+  } else {
+    toast('✅ 所有图片已缓存');
+  }
+}
+
+/** 缓存所有缺失的图片 */
+async function cacheAllMissing() {
+  if (!_grimoireSources) return;
+  const toCache = [];
+  for (const src of _grimoireSources) {
+    const path = src.path.replace(/\\/g, '/');
+    const status = await apiFetch(`/api/grimoire/cache-status?source=${encodeURIComponent(path)}`, {}, true);
+    if (status && status.ok && status.pending > 0) {
+      toCache.push({ path, name: src.name, pending: status.pending });
+    }
+  }
+  if (toCache.length === 0) {
+    toast('✅ 所有图片已缓存');
+    return;
+  }
+  const totalPending = toCache.reduce((s, c) => s + c.pending, 0);
+  if (!confirm(`即将下载 ${toCache.length} 个子分类共 ${totalPending} 张图片，继续吗？`)) return;
+  for (const item of toCache) {
+    await apiFetch('/api/grimoire/cache-all', {
+      method: 'POST',
+      body: JSON.stringify({ source: item.path })
+    }, true);
+  }
+  toast(`✅ 已启动 ${toCache.length} 个分类的缓存任务`);
 }
 
 /** 魔导书图片灯箱：点击缩略图放大查看 */
@@ -9315,6 +9609,11 @@ function toggleGrimoireEditMode() {
 }
 
 function renderGrimoireData(total, page) {
+  // 画廊模式：带图片的数据源以网格展示
+  if (_grimoireCurrentData.some(item => item.image_url)) {
+    renderGrimoireGallery(total, page);
+    return;
+  }
   const table = document.getElementById('grimoire_data_table');
   const count = document.getElementById('grimoire_detail_count');
   const pagination = document.getElementById('grimoire_pagination');
@@ -9423,14 +9722,10 @@ function renderGrimoireData(total, page) {
     let hasImgClass = '';
     let cachedBadge = '';
     if (item.image_url) {
-      const cacheSrc = item.cached ? `/cache/${item.cache_key}` : item.image_url;
       const fullSrc = item.image_url;
-      imgHtml = `<img class="grm-item-img" src="${cacheSrc}" alt="${esc(item.name || '')}" loading="lazy" onclick="showGrimoireLightbox('${esc(fullSrc)}', '${esc(item.name || '')}')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" onload="this.style.opacity='1'">` +
-        (item.cached ? '' : `<div class="grm-item-img-placeholder" style="display:none">🎨</div>`);
+      imgHtml = `<img class="grm-item-img" src="${fullSrc}" alt="${esc(item.name || '')}" loading="lazy" onclick="showGrimoireLightbox('${esc(fullSrc)}', '${esc(item.name || '')}')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" onload="this.style.opacity='1'">` +
+        `<div class="grm-item-img-placeholder" style="display:none">🎨</div>`;
       hasImgClass = ' has-img';
-      cachedBadge = item.cached
-        ? `<span class="grm-item-cached-badge">✓</span>`
-        : `<span class="grm-item-uncached-badge">⋯</span>`;
     }
     html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}">` +
       checkbox +
@@ -9465,6 +9760,63 @@ function renderGrimoireData(total, page) {
       jumpInput.max = totalPages;
       jumpInput.value = page;
     }
+  }
+}
+
+/** 画廊模式：带图片的数据源以网格展示 */
+function renderGrimoireGallery(total, page) {
+  const table = document.getElementById('grimoire_data_table');
+  const count = document.getElementById('grimoire_detail_count');
+  const pagination = document.getElementById('grimoire_pagination');
+  if (count) count.textContent = total ? `共 ${total} 条` : '';
+  if (!_grimoireCurrentData.length) {
+    table.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-sub2);font-size:13px">暂无数据</div>';
+    if (pagination) pagination.style.display = 'none';
+    return;
+  }
+  // 收藏+固定排序
+  const stars = _grimoireStars && _grimoireStars[_grimoireCurrentSource];
+  const pinData = _grimoirePins && _grimoirePins[_grimoireCurrentSource];
+  const pinNames = new Set();
+  if (pinData) {
+    (Array.isArray(pinData) ? pinData : [pinData]).forEach(p => { if (p.name) pinNames.add(p.name); });
+  }
+  const sorted = [..._grimoireCurrentData].sort((a, b) => {
+    const aStar = stars && stars.has(a.name) ? 2 : 0;
+    const bStar = stars && stars.has(b.name) ? 2 : 0;
+    const aPin = pinNames.has(a.name) ? 1 : 0;
+    const bPin = pinNames.has(b.name) ? 1 : 0;
+    return (bStar + bPin) - (aStar + aPin);
+  });
+  let html = '<div class="grm-gallery-grid">';
+  sorted.forEach((item) => {
+    const origIdx = _grimoireCurrentData.indexOf(item);
+    const isPinned = pinNames.has(item.name);
+    const isStarred = stars && stars.has(item.name);
+    const pinBtn = `<button class="grm-item-btn pin${isPinned ? ' active' : ''}" onclick="toggleGrimoirePin(${origIdx})" title="${isPinned ? '取消固定' : '固定标签'}"><svg class="icon-sm" aria-hidden="true"><use href="#icon-pin"/></svg></button>`;
+    const copyBtn = `<button class="grm-item-btn copy-btn" onclick="copyGrimoireTags(${origIdx})" title="复制标签"><svg class="icon-sm" aria-hidden="true"><use href="#icon-clipboard"/></svg></button>`;
+    const starBtn = `<button class="grm-item-btn star${isStarred ? ' active' : ''}" onclick="toggleGrimoireStar(${origIdx})" title="${isStarred ? '取消收藏' : '收藏标签'}"><svg class="icon-sm" aria-hidden="true"><use href="#icon-star"/></svg></button>`;
+    const imgSrc = item.image_url || '';
+    html += `<div class="grm-gallery-card${isPinned ? ' pinned' : ''}${isStarred ? ' starred' : ''}">` +
+      `<div class="grm-gallery-img-wrap">` +
+      (imgSrc ? `<img class="grm-gallery-img" src="${imgSrc}" alt="${esc(item.name || '')}" loading="lazy" onclick="showGrimoireLightbox('${esc(imgSrc)}', '${esc(item.name||'')}')" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : '') +
+      `<div class="grm-gallery-img-placeholder" style="${imgSrc ? 'display:none' : 'display:flex'}">🎨</div>` +
+      `</div>` +
+      `<div class="grm-gallery-name">${esc(item.name_cn || item.name || '')}</div>` +
+      `<div class="grm-gallery-actions">${pinBtn}${copyBtn}${starBtn}</div>` +
+      `</div>`;
+  });
+  html += '</div>';
+  table.innerHTML = html;
+  // 分页
+  const totalPages = Math.ceil(total / _grimoirePageSize) || 1;
+  if (pagination) {
+    pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+    document.getElementById('grimoire_page_info').textContent = `第 ${page}/${totalPages} 页`;
+    document.getElementById('grimoire_page_jump').value = page;
+    document.getElementById('grimoire_page_jump').max = totalPages;
+    document.getElementById('btn_grimoire_prev').disabled = page <= 1;
+    document.getElementById('btn_grimoire_next').disabled = page >= totalPages;
   }
 }
 
@@ -9763,10 +10115,11 @@ function updatePinnedBar() {
   if (pinEntries.length > 0) {
     html += '<span class="grm-pinned-title"><svg class="icon-xs" aria-hidden="true"><use href="#icon-pin"/></svg></span>';
     for (const [src, info] of pinEntries) {
-      const label = src.replace('.json','').split(/[/\\]/).pop();
       const items = Array.isArray(info) ? info : [info];
+      const label = src.replace('.json','').split(/[/\\]/).pop();
       for (const item of items) {
-        html += `<span class="grm-pinned-tag">${esc(label)}: ${esc(item.name || '')} <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}','${esc(item.name||'')}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
+        const tagName = window.innerWidth <= 768 ? esc(item.name || '') : `${esc(label)}: ${esc(item.name || '')}`;
+        html += `<span class="grm-pinned-tag">${tagName} <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}','${esc(item.name||'')}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
       }
     }
   }
@@ -9775,7 +10128,7 @@ function updatePinnedBar() {
     html += `<span class="grm-pinned-tag">${poolCount} 个随机池 <button class="grm-pinned-remove" onclick="clearAllPins()" title="清空随机池"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
   }
   if (pinEntries.length > 0 || poolCount > 0) {
-    html += `<button class="btn btn-xs btn-danger" onclick="clearAllPins()" style="margin-left:auto;font-size:10px">清空</button>`;
+    html += `<button class="btn btn-xs btn-danger" onclick="clearAllPins()" style="margin-left:auto;font-size:10px;flex-shrink:0">清空</button>`;
   }
   html += '</div>';
   
@@ -9845,6 +10198,85 @@ async function toggleRandPool(source) {
   } else {
     toast('❌ 操作失败: ' + (result?.error || ''), 'error');
   }
+}
+
+/** 将所有子分类加入随机池 */
+async function selectAllRandom() {
+  if (!_grimoireSources || _grimoireSources.length === 0) {
+    toast('没有可选的子分类', 'error');
+    return;
+  }
+  const allPaths = _grimoireSources.map(s => s.path.replace(/\\/g, '/'));
+  const alreadyIn = new Set(_grimoireRandPool || []);
+  const toAdd = allPaths.filter(p => !alreadyIn.has(p));
+  if (toAdd.length === 0) {
+    toast('所有子分类已在随机池中');
+    return;
+  }
+  let added = 0, failed = 0;
+  for (const source of toAdd) {
+    const result = await apiFetch('/api/grimoire/rand-pool', {
+      method: 'POST',
+      body: JSON.stringify({ source, action: 'add' })
+    }, true);
+    if (result && result.ok) {
+      _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
+      added++;
+    } else {
+      failed++;
+    }
+  }
+  renderGrimoireSources();
+  updatePinnedBar();
+  updateRandomToggleBtn();
+  toast(`✅ 已将 ${added} 个子分类加入随机池${failed > 0 ? `，${failed} 个失败` : ''}`);
+}
+
+/** 全选/取消随机池切换 */
+async function toggleAllRandom() {
+  if (!_grimoireSources || _grimoireSources.length === 0) {
+    toast('没有可选的子分类', 'error');
+    return;
+  }
+  const allPaths = _grimoireSources.map(s => s.path.replace(/\\/g, '/'));
+  const pool = _grimoireRandPool || [];
+  const allInPool = allPaths.every(p => pool.includes(p));
+  if (allInPool) {
+    // 全部移除
+    let removed = 0, failed = 0;
+    for (const source of allPaths) {
+      const result = await apiFetch('/api/grimoire/rand-pool', {
+        method: 'POST',
+        body: JSON.stringify({ source, action: 'remove' })
+      }, true);
+      if (result && result.ok) {
+        _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
+        removed++;
+      } else {
+        failed++;
+      }
+    }
+    renderGrimoireSources();
+    updatePinnedBar();
+    updateRandomToggleBtn();
+    toast(`已从随机池移除 ${removed} 个子分类${failed > 0 ? `，${failed} 个失败` : ''}`);
+  } else {
+    // 全部添加
+    selectAllRandom();
+  }
+}
+
+/** 更新随机池切换按钮的文字 */
+function updateRandomToggleBtn() {
+  const btn = document.getElementById('grm_toggle_rand_btn');
+  const text = document.getElementById('grm_toggle_rand_text');
+  if (!btn || !text || !_grimoireSources) return;
+  const allPaths = _grimoireSources.map(s => s.path.replace(/\\/g, '/'));
+  const pool = _grimoireRandPool || [];
+  const allInPool = allPaths.every(p => pool.includes(p));
+  text.textContent = allInPool ? '取消随机' : '全选随机';
+  btn.classList.toggle('btn-primary', allInPool);
+  btn.classList.toggle('btn-secondary', !allInPool);
 }
 
 /** 删除整个数据源 */

@@ -1092,6 +1092,7 @@ class ComfyUILocalPlugin(Star):
         app.router.add_get('/api/lora-preview', self._webui_lora_preview)
         app.router.add_get('/api/progress', self._webui_get_progress)
         app.router.add_post('/api/open-dir', self._webui_open_dir)
+        app.router.add_post('/api/pick-dir', self._webui_pick_dir)
         app.router.add_post('/api/workflow-dir', self._webui_set_workflow_dir)
         app.router.add_get('/api/workflow-params', self._webui_get_workflow_params)
         app.router.add_get('/api/workflow-params-config', self._webui_get_workflow_params_config)
@@ -1269,6 +1270,25 @@ class ComfyUILocalPlugin(Star):
             return web.json_response({"ok": True})
         except Exception as e:
             logger.warning(f"[ComfyUI] 打开目录失败 {path}: {e}")
+            return web.json_response({"ok": False, "error": str(e)})
+
+    async def _webui_pick_dir(self, r):
+        """弹出系统原生文件夹选择器，返回选中路径"""
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+            path = filedialog.askdirectory(title='选择文件夹')
+            root.destroy()
+            if path:
+                path = path.replace('/', '\\')
+                return web.json_response({"ok": True, "path": path})
+            return web.json_response({"ok": False, "error": "未选择"})
+        except Exception as e:
+            # tkinter 不可用时的回退
+            logger.warning(f"[ComfyUI] pick-dir tkinter 失败: {e}")
             return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_set_workflow_dir(self, r):
@@ -4415,6 +4435,17 @@ class ComfyUILocalPlugin(Star):
 
         if not isinstance(items, list):
             return web.json_response({"ok": False, "error": "数据格式错误"})
+        # 为 anima 数据源动态生成 image_url（只有有 p 字段的条目才生成）
+        for it in items:
+            if not it.get("image_url") and it.get("p"):
+                p = it.get("p", 1)
+                img_id = it.get("id", "")
+                if img_id:
+                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+            if not it.get("image_url") and it.get("name") and it.get("copyright"):
+                raw_name = f"{it['name']}, {it['copyright']}"
+                import urllib.parse
+                it["image_url"] = f"https://blobs.animadex.net/Outputs/thumbs/{urllib.parse.quote(raw_name)}.webp"
         # 记录原始文件下标，供前端编辑/删除使用（只读源标记 readonly）
         is_readonly = not fpath.exists()
         items = [dict(it, index=i, readonly=is_readonly) for i, it in enumerate(items)]
@@ -5371,7 +5402,7 @@ class ComfyUILocalPlugin(Star):
                 continue
             filtered_pins.append(part)
         if filtered_pins:
-            result = f"{prompt}, {', '.join(filtered_pins)}"
+            result = f"{', '.join(filtered_pins)}, {prompt}"
             logger.info(f"[固定标签] 已合并 {len(filtered_pins)} 个标签到 prompt")
             return result
         return prompt
@@ -5997,7 +6028,19 @@ class ComfyUILocalPlugin(Star):
         if not items:
             return web.json_response({"ok": False, "error": "数据源为空或不存在"})
 
-        total = len(items)
+        # 为 anima 数据源动态生成 image_url（只有有 p 字段的条目才生成）
+        for it in items:
+            if not it.get("image_url") and it.get("p"):
+                p = it.get("p", 1)
+                img_id = it.get("id", "")
+                if img_id:
+                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+            if not it.get("image_url") and it.get("name") and it.get("copyright"):
+                raw_name = f"{it['name']}, {it['copyright']}"
+                import urllib.parse
+                it["image_url"] = f"https://blobs.animadex.net/Outputs/thumbs/{urllib.parse.quote(raw_name)}.webp"
+
+        total = sum(1 for it in items if it.get("image_url"))
         # 读一次缓存目录，用集合查，避免 4 万次文件系统查询
         cached_keys = set(f.name for f in self._grimoire_cache_dir.iterdir()) if self._grimoire_cache_dir.exists() else set()
         cached = 0
@@ -6077,6 +6120,18 @@ class ComfyUILocalPlugin(Star):
         if not items and _is_anima_source(str(fpath.relative_to(data_dir))):
             source_name = fpath.relative_to(data_dir).stem
             items = load_anima_tools_source(source_name)
+
+        # 为 anima 数据源动态生成 image_url（只有有 p 字段的条目才生成）
+        for it in items:
+            if not it.get("image_url") and it.get("p"):
+                p = it.get("p", 1)
+                img_id = it.get("id", "")
+                if img_id:
+                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+            if not it.get("image_url") and it.get("name") and it.get("copyright"):
+                raw_name = f"{it['name']}, {it['copyright']}"
+                import urllib.parse
+                it["image_url"] = f"https://blobs.animadex.net/Outputs/thumbs/{urllib.parse.quote(raw_name)}.webp"
 
         try:
             # 收集未缓存的图片（读一次缓存目录，用集合查）
