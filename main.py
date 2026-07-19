@@ -470,6 +470,9 @@ class ComfyUILocalPlugin(Star):
         self._config_lock = asyncio.Lock()   # 保护 workflow_config 的并发写入
         self._ctx_lock = asyncio.Lock()      # 保护 _context_workflows 的并发写入
         self.workflow_config = {}
+        # Lora 元数据缓存：从 ComfyUI LoRA Manager 获取（含触发词、预览图、标签等）
+        self._lora_metadata_cache = {}      # key: lora 全路径(含子目录), value: {trigger_words, preview_url, model_name, tags, file_path}
+        self._lora_metadata_fetched = False
 
         # 迁移旧版配置 → data/user/config.json
         old_config = _plugin_root / "plugin_config.json"
@@ -557,6 +560,14 @@ class ComfyUILocalPlugin(Star):
         self.anima_data = AnimaDataManager(str(data_dir), str(self._user_data_dir))
         self.anima_data.load_all()
         self._register_tools()
+        # 启动时自动修复 lora 路径（解决用户保存的 lora_name 与实际路径不一致的问题）
+        # AstrBot 的 __init__ 在事件循环中执行，使用 get_running_loop
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._auto_fix_lora_paths_on_startup())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            loop.create_task(self._auto_fix_lora_paths_on_startup())
         # 创建后台任务。AstrBot 的 __init__ 在事件循环中执行，使用 get_running_loop
         try:
             loop = asyncio.get_running_loop()
@@ -1065,6 +1076,7 @@ class ComfyUILocalPlugin(Star):
             "webui_lan": self.webui_lan,
             "webui_ipv6": self.webui_ipv6,
             "show_prompt_on_image": self.show_prompt_on_image,
+            "color_scheme": self._load_local_config().get("color_scheme", "cyberpunk-orange"),
         }))
         app.router.add_post('/api/config', self._webui_save_config)
         app.router.add_get('/api/groups', self._webui_get_groups)
@@ -1075,6 +1087,9 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/workflows/toggle-hidden', self._webui_toggle_hidden)
         app.router.add_get('/api/comfy-models', self._webui_get_models)
         app.router.add_get('/api/loras', self._webui_get_loras)
+        app.router.add_get('/api/lora-metadata', self._webui_get_lora_metadata)
+        app.router.add_post('/api/lora-metadata/refresh', self._webui_refresh_lora_metadata)
+        app.router.add_get('/api/lora-preview', self._webui_lora_preview)
         app.router.add_get('/api/progress', self._webui_get_progress)
         app.router.add_post('/api/open-dir', self._webui_open_dir)
         app.router.add_post('/api/workflow-dir', self._webui_set_workflow_dir)
@@ -1224,6 +1239,8 @@ class ComfyUILocalPlugin(Star):
             self.show_prompt_on_image = bool(val)
             self.config["show_prompt_on_image"] = self.show_prompt_on_image
             updates["show_prompt_on_image"] = self.show_prompt_on_image
+        if "color_scheme" in d:
+            updates["color_scheme"] = d["color_scheme"]
         if updates:
             self._save_local_config(updates)
         return web.json_response({"ok": True})
@@ -1734,6 +1751,252 @@ class ComfyUILocalPlugin(Star):
         except Exception as e:
             logger.warning(f"[ComfyUI] 获取 Lora 列表失败: {e}")
             return web.json_response([])
+
+    async def _fetch_lora_metadata(self):
+        """从 ComfyUI LoRA Manager API 获取所有 Lora 的元数据（触发词、预览图、标签等）。
+        缓存到 self._lora_metadata_cache，按 lora 全路径(含子目录)索引。"""
+        if self._lora_metadata_fetched:
+            return
+        try:
+            all_items = []
+            page = 1
+            async with aiohttp.ClientSession() as s:
+                while True:
+                    url = f"http://{self.comfyui_url}/api/lm/loras/list?page={page}&page_size=200"
+                    async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                        if r.status != 200:
+                            break
+                        data = await r.json()
+                        items = data.get('items', [])
+                        if not items:
+                            break
+                        all_items.extend(items)
+                        total_pages = data.get('total_pages', 1)
+                        if page >= total_pages:
+                            break
+                        page += 1
+            self._lora_metadata_cache.clear()
+            for item in all_items:
+                fp = item.get('file_path', '')
+                fn = item.get('file_name', '')
+                # 用 ComfyUI 风格路径（子目录/文件名.safetensors）做 key
+                if fp:
+                    # 从完整路径中提取 ComfyUI 子目录+文件名
+                    # 例如 E:/AIwork/.../loras/ZImage/ZIT/name.safetensors → ZImage/ZIT/name.safetensors
+                    normalized = fp.replace('\\', '/')
+                    if '/loras/' in normalized.lower():
+                        rel = normalized.split('/loras/', 1)[1] if '/loras/' in normalized else normalized.split('/loras/',1)[1]
+                    else:
+                        rel = fn + '.safetensors' if fn else os.path.basename(fp)
+                    self._lora_metadata_cache[rel] = {
+                        'file_name': fn,
+                        'model_name': item.get('model_name', ''),
+                        'trigger_words': item.get('civitai', {}).get('trainedWords', []) or [],
+                        'preview_url': item.get('preview_url', ''),
+                        'tags': item.get('tags', []) or [],
+                        'file_path': fp,
+                        'folder': item.get('folder', ''),
+                    }
+                elif fn:
+                    # 无 file_path 时用 file_name 做 key（兼容）
+                    key = fn + '.safetensors'
+                    self._lora_metadata_cache[key] = {
+                        'file_name': fn,
+                        'model_name': item.get('model_name', ''),
+                        'trigger_words': item.get('civitai', {}).get('trainedWords', []) or [],
+                        'preview_url': item.get('preview_url', ''),
+                        'tags': item.get('tags', []) or [],
+                        'file_path': '',
+                        'folder': item.get('folder', ''),
+                    }
+            # 额外用纯文件名（无扩展名、无路径）做索引，便于前端匹配
+            by_basename = {}
+            for key, meta in self._lora_metadata_cache.items():
+                bn = meta['file_name']
+                if bn and bn not in by_basename:
+                    by_basename[bn] = meta
+            self._lora_metadata_cache.update({f"__bn__{k}": v for k, v in by_basename.items()})
+            # 同时缓存多分隔符变体（cache key 是 /，但 ComfyUI lora_name 用 \）
+            for key in list(self._lora_metadata_cache.keys()):
+                if key.startswith('__bn__') or '/' not in key:
+                    continue
+                alt_key = key.replace('/', '\\')
+                if alt_key not in self._lora_metadata_cache:
+                    self._lora_metadata_cache[alt_key] = self._lora_metadata_cache[key]
+            self._lora_metadata_fetched = True
+            logger.info(f"[ComfyUI] Lora 元数据已加载: {len(all_items)} 个 Lora")
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 获取 Lora 元数据失败（LoRA Manager 可能未安装）: {e}")
+
+    def _match_lora_meta(self, lora_name):
+        """根据 ComfyUI 的 lora_name（如 'ZImage/ZIT/xxx.safetensors'）匹配元数据缓存。
+        支持错误路径（如 'Anima风格功能WAK-000046.safetensors' 缺分隔符）兜底。"""
+        if not lora_name:
+            return None
+        # 精确匹配
+        if lora_name in self._lora_metadata_cache:
+            return self._lora_metadata_cache[lora_name]
+        # 标准化路径分隔符
+        norm = lora_name.replace('\\', '/')
+        if norm in self._lora_metadata_cache:
+            return self._lora_metadata_cache[norm]
+        # 用 basename 匹配
+        bn = os.path.basename(norm)
+        name_no_ext = os.path.splitext(bn)[0]
+        bn_key = f'__bn__{name_no_ext}'
+        if bn_key in self._lora_metadata_cache:
+            return self._lora_metadata_cache[bn_key]
+        # 模糊匹配：遍历缓存看 key 末尾是否匹配
+        for key, meta in self._lora_metadata_cache.items():
+            if key.startswith('__bn__'):
+                continue
+            if key.endswith(bn) or key.endswith(norm):
+                return meta
+        # 兜底：如果整串没有分隔符（如 'Anima风格功能WAK-000046.safetensors'），
+        # 尝试从 bn 中提取 .safetensors 之前的最后一段做匹配
+        if '/' not in lora_name and '\\' not in lora_name:
+            # 拿去掉扩展名后的最后 30 字符尝试在 __bn__ 索引里搜
+            for key, meta in self._lora_metadata_cache.items():
+                if not key.startswith('__bn__'):
+                    continue
+                bn_name = key[6:]  # 去掉 __bn__ 前缀
+                if lora_name.endswith(bn_name + '.safetensors') or lora_name.endswith(bn_name):
+                    return meta
+                # 也试试 key 本身（路径版）以 bn_name 结尾
+            for key, meta in self._lora_metadata_cache.items():
+                if key.startswith('__bn__'):
+                    continue
+                if key.endswith('.safetensors'):
+                    file_only = os.path.basename(key)
+                    if lora_name.endswith(file_only):
+                        return meta
+        return None
+
+    async def _webui_get_lora_metadata(self, request):
+        """返回 Lora 元数据缓存（触发词、预览图、标签等）。
+        前端通过此 API 获取已选 Lora 的额外信息。"""
+        await self._fetch_lora_metadata()
+        # 过滤掉内部索引 key（__bn__ 前缀）
+        # 保留所有 key（包括 __bn__ 前缀的 basename 索引 + 多分隔符变体），让前端做多策略匹配
+        return web.json_response(self._lora_metadata_cache)
+
+    async def _webui_refresh_lora_metadata(self, request):
+        """强制清掉缓存并重新拉取 Lora 元数据（用于「刷新元数据」按钮）。"""
+        self._lora_metadata_cache.clear()
+        self._lora_metadata_fetched = False
+        await self._fetch_lora_metadata()
+        return web.json_response({
+            "ok": True,
+            "count": len(self._lora_metadata_cache),
+            "trigger_count": sum(1 for v in self._lora_metadata_cache.values() if isinstance(v, dict) and v.get('trigger_words'))
+        })
+
+    async def _auto_fix_lora_paths_on_startup(self):
+        """插件启动时异步修复用户保存的 lora_name（解决路径不一致问题）。
+        对比 ComfyUI 实际 lora 列表，basename 匹配时自动更新到正确路径。"""
+        try:
+            await asyncio.sleep(2)  # 等其他启动任务先跑
+            await self._fetch_lora_metadata()
+            valid_loras = set()
+            try:
+                async with aiohttp.ClientSession() as s:
+                    async with s.get(f"http://{self.comfyui_url}/object_info/LoraLoader", timeout=aiohttp.ClientTimeout(total=5)) as r:
+                        if r.status == 200:
+                            data = await r.json()
+                            valid_loras = set(data.get('LoraLoader', {}).get('input', {}).get('required', {}).get('lora_name', [None])[0] or [])
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 拉取 lora 列表失败，跳过自动修复: {e}")
+                return
+            if not valid_loras:
+                return
+            config_path = self._user_data_dir / "config.json"
+            if not config_path.exists():
+                return
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 读取 config 失败: {e}")
+                return
+            wf_configs = cfg.get('__workflow_node_configs__', {}) or {}
+            fixed_count = 0
+            for wf_name, wf_cfg in list(wf_configs.items()):
+                if not isinstance(wf_cfg, dict):
+                    continue
+                lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+                for nid, loras in list(lora_nodes.items()):
+                    if not isinstance(loras, list):
+                        continue
+                    for li, lora in enumerate(loras):
+                        if not isinstance(lora, dict):
+                            continue
+                        ln = lora.get('lora_name', '')
+                        if not ln or ln in valid_loras:
+                            continue
+                        meta = self._match_lora_meta(ln)
+                        if not meta or not meta.get('file_path'):
+                            continue
+                        correct_path = self._extract_comfyui_path(meta['file_path'])
+                        if not correct_path or correct_path == ln or correct_path == ln.replace('\\', '/'):
+                            continue
+                        if correct_path not in valid_loras:
+                            alt = correct_path.replace('\\', '/')
+                            if alt in valid_loras:
+                                correct_path = alt
+                            else:
+                                continue
+                        logger.info(f"[ComfyUI] 自动修复 lora 路径: {wf_name} #{nid} #{li}: {ln!r} -> {correct_path!r}")
+                        lora['lora_name'] = correct_path
+                        fixed_count += 1
+            if fixed_count > 0:
+                try:
+                    with open(config_path, 'w', encoding='utf-8') as f:
+                        json.dump(cfg, f, ensure_ascii=False, indent=2)
+                    logger.info(f"[ComfyUI] 启动时自动修复了 {fixed_count} 个 lora 路径")
+                except Exception as e:
+                    logger.warning(f"[ComfyUI] 保存修复后的 config 失败: {e}")
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 启动时自动修复 lora 路径失败: {e}")
+
+    def _extract_comfyui_path(self, file_path):
+        """从 LoRA Manager 完整路径提取 ComfyUI 风格路径。
+        例: E:/.../loras/Anima/风格功能/xxx.safetensors -> Anima\\\\风格功能\\\\xxx.safetensors"""
+        if not file_path:
+            return None
+        normalized = file_path.replace('\\', '/')
+        idx = normalized.lower().find('/loras/')
+        if idx >= 0:
+            return normalized[idx + 7:].replace('/', '\\')
+        return None
+
+    async def _webui_lora_preview(self, request):
+        """代理 ComfyUI LoRA Manager 的预览图。
+        参数: path (ComfyUI 文件路径) 或 fn (lora 文件名)"""
+        img_path = request.query.get('path', '')
+        if not img_path:
+            fn = request.query.get('fn', '')
+            if fn:
+                meta = self._match_lora_meta(fn)
+                if meta and meta.get('preview_url'):
+                    img_path = meta['preview_url']
+        if not img_path:
+            return web.Response(status=404, text='No preview available')
+        try:
+            # 如果是相对 URL（/api/lm/previews?...），拼上 ComfyUI 地址
+            if img_path.startswith('/'):
+                full_url = f"http://{self.comfyui_url}{img_path}"
+            else:
+                full_url = img_path
+            async with aiohttp.ClientSession() as s:
+                async with s.get(full_url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    if r.status == 200:
+                        body = await r.read()
+                        ct = r.headers.get('Content-Type', 'image/jpeg')
+                        return web.Response(body=body, content_type=ct)
+            return web.Response(status=404, text='Preview not found')
+        except Exception as e:
+            logger.warning(f"[ComfyUI] Lora 预览图获取失败: {e}")
+            return web.Response(status=500, text=str(e))
 
     async def _webui_get_workflow_params(self, request):
         if not self.workflow_path: self._refresh_workflow_list()
@@ -2310,6 +2573,50 @@ class ComfyUILocalPlugin(Star):
                         workflow[nid]['inputs'][key] = f"{existing}, {prompt}"
                     else:
                         workflow[nid]['inputs'][key] = prompt
+                    return True
+        return False
+
+    def _get_selected_lora_trigger_words(self) -> str:
+        """从当前工作流的 __lora_nodes__ 配置中收集用户选中的触发词。
+        返回逗号分隔的触发词字符串，无选中时返回空字符串。"""
+        wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+        wf_cfg = wf_configs.get(self.current_workflow_name, {})
+        lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+        words = []
+        for nid, loras in lora_nodes.items():
+            if not isinstance(loras, list):
+                continue
+            for lora in loras:
+                if not lora.get('on', True):
+                    continue
+                selected = lora.get('trigger_words_selected', [])
+                if selected:
+                    words.extend(selected)
+        # 去重并保持顺序
+        seen = set()
+        unique = []
+        for w in words:
+            if w not in seen:
+                seen.add(w)
+                unique.append(w)
+        return ', '.join(unique)
+
+    def _inject_lora_trigger_words(self, workflow, target_node=None):
+        """将用户选中的 Lora 触发词注入到提示词节点末尾。"""
+        trigger_str = self._get_selected_lora_trigger_words()
+        if not trigger_str:
+            return False
+        nid = target_node or self._find_positive_prompt_node(workflow)
+        if nid and nid in workflow:
+            inputs = workflow[nid].get('inputs', {})
+            for key, val in inputs.items():
+                if isinstance(val, str):
+                    existing = val.strip()
+                    if existing:
+                        workflow[nid]['inputs'][key] = f"{existing}, {trigger_str}"
+                    else:
+                        workflow[nid]['inputs'][key] = trigger_str
+                    logger.info(f"[ComfyUI] Lora 触发词已注入: {trigger_str}")
                     return True
         return False
 
@@ -3004,6 +3311,8 @@ class ComfyUILocalPlugin(Star):
                                 break
                 else:
                     logger.warning(f"[ComfyUI] 正面提示词注入失败！未找到提示词节点或节点无可写文本字段")
+                # 注入用户选中的 Lora 触发词到提示词末尾
+                self._inject_lora_trigger_words(wf, target_node)
             # 写入负面提示词（从 __saved_texts__ 或根级别读取）
             # 注意：直接设置（set）而非追加（append），因为 __saved_texts__ 的值本身就是完整内容。
             # 追加模式下会与 _apply_workflow_config 写入的值重复。

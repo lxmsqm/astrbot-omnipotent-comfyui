@@ -22,68 +22,71 @@
 :root {
   --ui-opacity: 1;
 
-  /* 背景 & 表面 — 深邃黑基底 */
-  --bg:            oklch(6% 0.015 285);
-  --bg-elevated:   oklch(12% 0.025 285);
-  --card:          color-mix(in oklch, oklch(14% 0.035 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  /* 背景 & 表面 — 深紫黑基底 */
+  --bg:            oklch(5% 0.025 290);
+  --bg-elevated:   oklch(11% 0.035 290);
+  --card:          color-mix(in oklch, oklch(13% 0.045 290), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --card-bg:       var(--card);
-  --card-border:   color-mix(in oklch, oklch(28% 0.06 285 / 0.5), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --bg-overlay:    color-mix(in oklch, oklch(5% 0.02 285 / 0.85), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --input-bg:      color-mix(in oklch, oklch(16% 0.03 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --card-hover:    color-mix(in oklch, oklch(20% 0.04 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-border:   color-mix(in oklch, oklch(26% 0.07 290 / 0.55), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --bg-overlay:    color-mix(in oklch, oklch(4% 0.03 290 / 0.85), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --input-bg:      color-mix(in oklch, oklch(15% 0.04 290), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --card-hover:    color-mix(in oklch, oklch(19% 0.05 290), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
 
-  /* 文字层级 — 更高对比度 */
-  --text:          oklch(95% 0.015 285);
-  --text-sub:      oklch(70% 0.03 285);
-  --text-sub2:     oklch(52% 0.03 285);
-  --text-muted:    oklch(35% 0.03 285);
+  /* 文字层级 */
+  --text:          oklch(96% 0.012 290);
+  --text-sub:      oklch(72% 0.028 290);
+  --text-sub2:     oklch(54% 0.028 290);
+  --text-muted:    oklch(36% 0.028 290);
 
-  /* 主色 — 更高饱和度 */
-  --primary:       oklch(65% 0.28 315);
-  --primary-hover: oklch(56% 0.28 315);
-  --primary-glow:  0 0 24px oklch(65% 0.28 315 / 0.35);
-  --accent:        oklch(60% 0.30 265);
-  --accent-hover:  oklch(52% 0.30 265);
-  --accent-glow:   0 0 24px oklch(60% 0.30 265 / 0.35);
+  /* 主色 — 霓虹橙 */
+  --primary:       oklch(65% 0.25 50);
+  --primary-hover: oklch(55% 0.25 50);
+  --primary-glow:  0 0 28px oklch(65% 0.25 50 / 0.4);
+  /* 强调色 — 赛博紫 */
+  --accent:        oklch(60% 0.25 300);
+  --accent-hover:  oklch(50% 0.25 300);
+  --accent-glow:   0 0 28px oklch(60% 0.25 300 / 0.4);
 
-  /* 功能色 — 更亮 */
-  --success:       oklch(65% 0.20 155);
-  --success-glow:  0 0 16px oklch(65% 0.20 155 / 0.4);
-  --warning:       oklch(75% 0.20 85);
-  --danger:        oklch(62% 0.25 20);
-  --danger-glow:   0 0 16px oklch(62% 0.25 20 / 0.4);
-  --info:          oklch(60% 0.18 250);
+  /* 功能色 */
+  --success:       oklch(68% 0.22 155);
+  --success-glow:  0 0 20px oklch(68% 0.22 155 / 0.45);
+  --warning:       oklch(78% 0.22 85);
+  --danger:        oklch(65% 0.27 20);
+  --danger-glow:   0 0 20px oklch(65% 0.27 20 / 0.45);
+  --info:          oklch(62% 0.20 250);
 
-  /* 渐变 — 更大反差 */
-  --gradient-primary: linear-gradient(135deg, oklch(68% 0.28 315), oklch(60% 0.30 265));
-  --gradient-accent:  linear-gradient(135deg, oklch(60% 0.30 265), oklch(68% 0.28 315));
-  --gradient-text:    linear-gradient(135deg, oklch(68% 0.28 315), oklch(60% 0.30 265), oklch(50% 0.25 265));
-  --gradient-warm:    linear-gradient(135deg, oklch(65% 0.20 30), oklch(68% 0.28 315));
-  --gradient-cool:    linear-gradient(135deg, oklch(60% 0.30 265), oklch(60% 0.18 250));
-  --gradient-glow:    linear-gradient(135deg, oklch(68% 0.28 315 / 0.5), oklch(60% 0.30 265 / 0.5));
+  /* 渐变 — 橙紫撞色 */
+  --gradient-primary: linear-gradient(135deg, oklch(68% 0.25 50), oklch(60% 0.25 300));
+  --gradient-accent:  linear-gradient(135deg, oklch(60% 0.25 300), oklch(68% 0.25 50));
+  --gradient-text:    linear-gradient(135deg, oklch(68% 0.25 50), oklch(60% 0.25 300), oklch(50% 0.22 300));
+  --gradient-warm:    linear-gradient(135deg, oklch(65% 0.22 30), oklch(68% 0.25 50));
+  --gradient-cool:    linear-gradient(135deg, oklch(60% 0.25 300), oklch(62% 0.20 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(68% 0.25 50 / 0.55), oklch(60% 0.25 300 / 0.55));
+  --gradient-rainbow: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6, #ff6b6b);
 
   /* 角色标签色 */
-  --role-prompt:   oklch(65% 0.20 155);
-  --role-negative: oklch(62% 0.25 20);
-  --role-load:     oklch(60% 0.18 250);
-  --role-res:      oklch(75% 0.20 85);
+  --role-prompt:   oklch(68% 0.22 155);
+  --role-negative: oklch(65% 0.27 20);
+  --role-load:     oklch(62% 0.20 250);
+  --role-res:      oklch(78% 0.22 85);
 
   /* 标签色 */
-  --tag-bg:        oklch(22% 0.04 310);
-  --tag-color:     oklch(75% 0.06 310);
-  --tag-border:    oklch(30% 0.05 310);
-  --tag-hover-bg:  oklch(58% 0.22 310);
+  --tag-bg:        oklch(20% 0.05 310);
+  --tag-color:     oklch(78% 0.07 310);
+  --tag-border:    oklch(28% 0.06 310);
+  --tag-hover-bg:  oklch(60% 0.24 310);
   --tag-hover-color: #fff;
 
   /* 阴影 & 发光 */
-  --shadow:        oklch(0% 0 0 / 0.6);
-  --shadow-sm:     0 2px 8px oklch(0% 0 0 / 0.3), 0 1px 3px oklch(0% 0 0 / 0.2);
-  --shadow-md:     0 6px 24px oklch(0% 0 0 / 0.35), 0 3px 8px oklch(0% 0 0 / 0.25);
-  --shadow-lg:     0 12px 48px oklch(0% 0 0 / 0.4), 0 4px 16px oklch(0% 0 0 / 0.3);
-  --shadow-xl:     0 24px 80px oklch(0% 0 0 / 0.5), 0 8px 32px oklch(0% 0 0 / 0.35);
-  --shadow-glow:   0 0 0 4px oklch(64% 0.24 310 / 0.2);
-  --shadow-focus:  0 0 0 3px oklch(64% 0.24 310 / 0.35);
-  --shadow-inner:  inset 0 1px 2px oklch(100% 0 0 / 0.04);
+  --shadow:        oklch(0% 0 0 / 0.5);
+  --shadow-sm:     0 1px 4px oklch(0% 0 0 / 0.15), 0 2px 10px oklch(0% 0 0 / 0.25);
+  --shadow-md:     0 4px 16px oklch(0% 0 0 / 0.25), 0 8px 32px oklch(0% 0 0 / 0.3);
+  --shadow-lg:     0 8px 32px oklch(0% 0 0 / 0.3), 0 16px 60px oklch(0% 0 0 / 0.35);
+  --shadow-xl:     0 16px 56px oklch(0% 0 0 / 0.35), 0 32px 96px oklch(0% 0 0 / 0.4);
+  --shadow-glow:   0 0 0 4px oklch(65% 0.25 50 / 0.25);
+  --shadow-focus:  0 0 0 3px oklch(65% 0.25 50 / 0.4);
+  --shadow-inner:  inset 0 1px 1px oklch(100% 0 0 / 0.05);
+  --shadow-colored: 0 4px 20px oklch(65% 0.25 50 / 0.2), 0 8px 40px oklch(65% 0.25 50 / 0.1);
 
   /* 圆角 */
   --radius:        16px;
@@ -91,6 +94,8 @@
   --radius-xs:     6px;
   --radius-md:     14px;
   --radius-lg:     20px;
+  --radius-xl:     24px;
+  --radius-full:   9999px;
 
   /* 布局 */
   --sidebar-w:    240px;
@@ -100,46 +105,72 @@
   --disabled-opacity: 0.35;
 
   /* 动效 */
-  --transition-fast:   0.18s cubic-bezier(0.22,1,0.36,1);
-  --transition-normal: 0.28s cubic-bezier(0.22,1,0.36,1);
-  --transition-slow:   0.42s cubic-bezier(0.16,1,0.3,1);
+  --transition-fast:   0.15s cubic-bezier(0.22,1,0.36,1);
+  --transition-normal: 0.25s cubic-bezier(0.22,1,0.36,1);
+  --transition-slow:   0.4s cubic-bezier(0.16,1,0.3,1);
   --transition-spring: 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  --transition-bounce: 0.5s cubic-bezier(0.34,1.56,0.64,1);
 
   /* 图标 */
-  --icon-bg:      color-mix(in oklch, oklch(24% 0.04 285), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --icon-bg:      color-mix(in oklch, oklch(22% 0.05 290), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
   --icon-color:   var(--primary);
   --theme-icon:   var(--text);
 }
 
-/* Light Mode */
+/* Light Mode — 赛博朋克橙紫 */
 [data-theme="light"], :root:not([data-theme="dark"]) {
-  --bg:            oklch(96% 0.008 310);
-  --bg-elevated:   oklch(100% 0 0);
-  --card:          color-mix(in oklch, oklch(100% 0 0 / 0.88), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --bg:            oklch(96% 0.015 55);
+  --bg-elevated:   oklch(98% 0.01 55);
+  --card:          #fff;
   --card-bg:       var(--card);
-  --card-border:   color-mix(in oklch, oklch(80% 0.025 310 / 0.6), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --bg-overlay:    color-mix(in oklch, oklch(95% 0.008 310 / 0.7), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --input-bg:      color-mix(in oklch, oklch(90% 0.01 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --card-hover:    color-mix(in oklch, oklch(82% 0.02 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
-  --text:          oklch(15% 0.02 310);
-  --text-sub:      oklch(40% 0.03 310);
-  --text-sub2:     oklch(60% 0.025 310);
-  --text-muted:    oklch(75% 0.02 310);
-  --primary:       oklch(52% 0.28 315);
-  --primary-hover: oklch(44% 0.28 315);
-  --accent:        oklch(48% 0.30 265);
-  --accent-hover:  oklch(40% 0.30 265);
-  --shadow:        oklch(30% 0.035 310 / 0.12);
-  --shadow-sm:     0 1px 3px oklch(30% 0.035 310 / 0.06);
-  --shadow-md:     0 4px 16px oklch(30% 0.035 310 / 0.08);
-  --shadow-lg:     0 10px 40px oklch(30% 0.035 310 / 0.1);
-  --shadow-xl:     0 20px 60px oklch(30% 0.035 310 / 0.12);
-  --tag-bg:        oklch(95% 0.035 310);
-  --tag-color:     oklch(38% 0.06 310);
-  --tag-border:    oklch(80% 0.025 310);
-  --tag-hover-bg:  oklch(52% 0.28 315);
+  --card-border:   oklch(86% 0.02 55 / 0.5);
+  --bg-overlay:    oklch(96% 0.015 55 / 0.7);
+  --input-bg:      oklch(94% 0.015 55);
+  --card-hover:    oklch(91% 0.02 55);
+
+  --text:          oklch(18% 0.015 55);
+  --text-sub:      oklch(42% 0.025 55);
+  --text-sub2:     oklch(60% 0.02 55);
+  --text-muted:    oklch(75% 0.015 55);
+
+  --primary:       oklch(55% 0.22 50);
+  --primary-hover: oklch(46% 0.22 50);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(50% 0.22 300);
+  --accent-hover:  oklch(42% 0.22 300);
+  --accent-glow:   0 0 0 0 transparent;
+
+  --success:       oklch(50% 0.18 150);
+  --success-glow:  0 0 0 0 transparent;
+  --warning:       oklch(60% 0.18 85);
+  --danger:        oklch(52% 0.22 20);
+  --danger-glow:   0 0 0 0 transparent;
+  --info:          oklch(50% 0.15 250);
+
+  --shadow:        oklch(30% 0.02 55 / 0.08);
+  --shadow-sm:     0 1px 3px oklch(30% 0.02 55 / 0.05), 0 1px 2px oklch(30% 0.02 55 / 0.04);
+  --shadow-md:     0 2px 8px oklch(30% 0.02 55 / 0.06), 0 4px 16px oklch(30% 0.02 55 / 0.05);
+  --shadow-lg:     0 4px 16px oklch(30% 0.02 55 / 0.07), 0 8px 32px oklch(30% 0.02 55 / 0.06);
+  --shadow-xl:     0 8px 32px oklch(30% 0.02 55 / 0.08), 0 16px 48px oklch(30% 0.02 55 / 0.07);
+  --shadow-glow:   0 0 0 3px oklch(55% 0.22 50 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(55% 0.22 50 / 0.25);
+  --shadow-colored: 0 0 0 0 transparent;
+  --shadow-inner:  inset 0 1px 1px oklch(0% 0 0 / 0.03);
+
+  --tag-bg:        oklch(93% 0.02 55);
+  --tag-color:     oklch(40% 0.04 55);
+  --tag-border:    oklch(82% 0.02 55);
+  --tag-hover-bg:  oklch(55% 0.22 50);
   --tag-hover-color: #fff;
-  --icon-bg:       color-mix(in oklch, oklch(90% 0.015 310), transparent calc((1 - var(--ui-opacity, 1)) * 100%));
+  --icon-bg:       oklch(92% 0.02 55);
+
+  /* 渐变 — 橙紫 */
+  --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
+  --gradient-accent:  linear-gradient(135deg, oklch(52% 0.22 300), oklch(58% 0.22 50));
+  --gradient-text:    linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(58% 0.22 50));
+  --gradient-cool:    linear-gradient(135deg, oklch(52% 0.22 300), oklch(50% 0.15 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(58% 0.22 50 / 0.5), oklch(52% 0.22 300 / 0.5));
 }
 
 /* ========================================================================
@@ -160,7 +191,7 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
 }
-::selection{background:oklch(58% 0.22 310 / 0.35);color:var(--text)}
+::selection{background:oklch(60% 0.22 300 / 0.35);color:var(--text)}
 
 /* 背景层 */
 body::before{
@@ -214,7 +245,7 @@ button::-moz-focus-inner{border:0}
 .unified-header{
   background:var(--card);border-radius:var(--radius);
   border:1px solid var(--card-border);
-  box-shadow:var(--shadow-sm),0 0 40px oklch(64% 0.24 310 / 0.04);
+  box-shadow:var(--shadow-sm),0 0 40px oklch(65% 0.25 50 / 0.04);
   backdrop-filter:blur(20px) saturate(1.3);
   -webkit-backdrop-filter:blur(20px) saturate(1.3);
   overflow:hidden;position:sticky;top:8px;z-index:50;
@@ -225,11 +256,11 @@ button::-moz-focus-inner{border:0}
   content:'';position:absolute;inset:-1px;
   border-radius:calc(var(--radius) + 1px);
   background:linear-gradient(135deg, 
-    oklch(62% 0.22 310 / 0.3), 
-    oklch(58% 0.25 265 / 0.2),
-    oklch(62% 0.22 310 / 0.3),
+    oklch(65% 0.22 50 / 0.3), 
+    oklch(60% 0.25 300 / 0.2),
+    oklch(65% 0.22 50 / 0.3),
     oklch(72% 0.18 85 / 0.15),
-    oklch(62% 0.22 310 / 0.3)
+    oklch(65% 0.22 50 / 0.3)
   );
   background-size:300% 300%;
   z-index:-1;
@@ -242,11 +273,13 @@ button::-moz-focus-inner{border:0}
   padding:1px;
 }
 @keyframes headerBorderGlow{
-  0%,100%{background-position:0% 50%}
-  50%{background-position:100% 50%}
+  0%,100%{background-position:0% 50%;opacity:0.6}
+  25%{opacity:1}
+  50%{background-position:100% 50%;opacity:0.8}
+  75%{opacity:1}
 }
 [data-theme="dark"] .unified-header{
-  box-shadow:var(--shadow-sm),0 0 60px oklch(64% 0.24 310 / 0.06), inset 0 1px 0 oklch(100% 0 0 / 0.04);
+  box-shadow:var(--shadow-sm),0 0 60px oklch(65% 0.25 50 / 0.06), inset 0 1px 0 oklch(100% 0 0 / 0.04);
 }
 .header-top{
   display:flex;justify-content:space-between;align-items:center;
@@ -278,8 +311,8 @@ button::-moz-focus-inner{border:0}
   animation:logoPulse 3s ease-in-out infinite;
 }
 @keyframes logoPulse{
-  0%,100%{opacity:0.4;filter:blur(8px)}
-  50%{opacity:0.7;filter:blur(12px)}
+  0%,100%{opacity:0.4;filter:blur(8px);transform:scale(1)}
+  50%{opacity:0.8;filter:blur(14px);transform:scale(1.1)}
 }
 /* F. 霓虹灯标题 */
 .unified-header h1{
@@ -289,12 +322,12 @@ button::-moz-focus-inner{border:0}
   background-size:200% auto;
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
-  animation:neonFlow 4s ease-in-out infinite;
-  filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.3));
+  animation:neonFlow 5s ease-in-out infinite;
+  filter:drop-shadow(0 0 8px oklch(65% 0.22 50 / 0.3));
 }
 @keyframes neonFlow {
-  0%,100% { background-position: 0% center; filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.3)); }
-  50%     { background-position: 100% center; filter:drop-shadow(0 0 16px oklch(62% 0.22 310 / 0.6)); }
+  0%,100% { background-position: 0% center; filter:drop-shadow(0 0 8px oklch(65% 0.22 50 / 0.3)); }
+  50%     { background-position: 100% center; filter:drop-shadow(0 0 20px oklch(65% 0.22 50 / 0.7)); }
 }
 .header-right{display:flex;align-items:center;gap:6px;}
 
@@ -306,7 +339,7 @@ button::-moz-focus-inner{border:0}
   width:36px;height:36px;border-radius:50%;border:1px solid var(--card-border);
   background:var(--input-bg);cursor:pointer;font-size:15px;
   display:flex;align-items:center;justify-content:center;
-  transition:all var(--transition-fast);
+  transition:all var(--transition-normal);
   flex-shrink:0;color:var(--theme-icon);
   backdrop-filter:blur(8px);
   position:relative;overflow:hidden;
@@ -314,14 +347,14 @@ button::-moz-focus-inner{border:0}
 .theme-btn::after{
   content:'';position:absolute;inset:0;border-radius:inherit;
   background:var(--gradient-primary);opacity:0;
-  transition:opacity var(--transition-fast);
+  transition:opacity var(--transition-normal);
 }
 .theme-btn:hover{
   transform:translateY(-2px);
   box-shadow:var(--shadow-md),var(--primary-glow);
   border-color:var(--primary);
 }
-.theme-btn:hover::after{opacity:0.08;}.theme-btn.active{
+.theme-btn:hover::after{opacity:0.1;}.theme-btn.active{
   border-color:var(--primary);
   background:color-mix(in oklch, var(--primary) 15%, transparent);
   box-shadow:var(--shadow-glow);
@@ -393,9 +426,9 @@ button::-moz-focus-inner{border:0}
   transition:transform var(--transition-normal),opacity var(--transition-normal);
   background:var(--card);border:1px solid var(--card-border);
   border-radius:var(--radius);padding:12px;
-  backdrop-filter:blur(24px) saturate(1.4);
-  -webkit-backdrop-filter:blur(24px) saturate(1.4);
-  box-shadow:var(--shadow-sm), 0 8px 32px oklch(0% 0 0 / 0.12);
+  backdrop-filter:blur(28px) saturate(1.5);
+  -webkit-backdrop-filter:blur(28px) saturate(1.5);
+  box-shadow:var(--shadow-md), 0 8px 32px oklch(0% 0 0 / 0.15);
   overflow:clip;isolation:isolate;
 }
 .sidebar-backdrop{
@@ -412,16 +445,16 @@ button::-moz-focus-inner{border:0}
 .card{
   background:var(--card);border:1px solid var(--card-border);
   border-radius:var(--radius);padding:16px;
-  backdrop-filter:blur(24px) saturate(1.4);
-  -webkit-backdrop-filter:blur(24px) saturate(1.4);
-  transition:box-shadow var(--transition-fast),border-color var(--transition-fast),transform var(--transition-fast),background var(--transition-fast);
+  backdrop-filter:blur(28px) saturate(1.5);
+  -webkit-backdrop-filter:blur(28px) saturate(1.5);
+  transition:box-shadow var(--transition-normal),border-color var(--transition-normal),transform var(--transition-normal),background var(--transition-fast);
   box-shadow:var(--shadow-sm), 0 8px 32px oklch(0% 0 0 / 0.12);
   position:relative;overflow:clip;isolation:isolate;
 }
 .card::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2.5px;
   background:var(--gradient-primary);
-  opacity:0.6;transition:opacity var(--transition-fast);
+  opacity:0.55;transition:opacity var(--transition-normal);
   z-index:2;pointer-events:none;
   border-radius:var(--radius) var(--radius) 0 0;
 }
@@ -429,9 +462,9 @@ button::-moz-focus-inner{border:0}
   opacity:1;
 }
 .card:hover{
-  box-shadow:var(--shadow-md), 0 0 30px oklch(68% 0.28 315 / 0.08), 0 12px 40px oklch(0% 0 0 / 0.15);
+  box-shadow:var(--shadow-lg), 0 0 40px oklch(65% 0.25 50 / 0.12), 0 12px 48px oklch(0% 0 0 / 0.18);
   border-color:color-mix(in oklch,var(--primary) 50%,var(--card-border));
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
 .card-header{
@@ -528,13 +561,13 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   border-left-width:3px;
   font-weight:600;
   box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent),
-              3px 0 12px oklch(65% 0.28 315 / 0.15),
-              -1px 0 8px oklch(65% 0.28 315 / 0.08);
+              3px 0 12px oklch(65% 0.25 50 / 0.15),
+              -1px 0 8px oklch(65% 0.25 50 / 0.08);
   animation:wfActivePulse 2.5s ease-in-out infinite;
 }
 @keyframes wfActivePulse{
-  0%,100%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent),3px 0 12px oklch(65% 0.28 315 / 0.15),-1px 0 8px oklch(65% 0.28 315 / 0.08)}
-  50%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 20%,transparent),3px 0 20px oklch(65% 0.28 315 / 0.25),-1px 0 12px oklch(65% 0.28 315 / 0.15)}
+  0%,100%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 15%,transparent),3px 0 12px oklch(65% 0.25 50 / 0.15),-1px 0 8px oklch(65% 0.25 50 / 0.08)}
+  50%{box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--primary) 20%,transparent),3px 0 20px oklch(65% 0.25 50 / 0.25),-1px 0 12px oklch(65% 0.25 50 / 0.15)}
 }
 .wf-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .wf-badge{
@@ -577,10 +610,10 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   color:var(--text);font-size:14px;
   font-family:'Noto Sans SC',sans-serif;
   outline:none;resize:vertical;
-  transition:border-color var(--transition-fast),box-shadow var(--transition-fast);
+  transition:border-color var(--transition-normal),box-shadow var(--transition-normal);
 }
 .prep-section textarea:focus, #prompt_textarea:focus, #neg_textarea:focus{
-  border-color:var(--primary);box-shadow:var(--shadow-focus);
+  border-color:var(--primary);box-shadow:var(--shadow-focus),0 0 16px oklch(65% 0.25 50 / 0.15);
 }
 .prompt-toolbar{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .prompt-node-id{
@@ -603,8 +636,8 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   padding:8px 14px;border-radius:18px;border:1px solid var(--card-border);
   background:transparent;color:var(--text);font-size:12px;font-weight:500;
   cursor:pointer;min-height:38px;
-  transition:all var(--transition-fast);user-select:none;
-}.ratio-btn:hover{border-color:var(--primary);box-shadow:var(--primary-glow)}
+  transition:all var(--transition-normal);user-select:none;
+}.ratio-btn:hover{border-color:var(--primary);box-shadow:var(--primary-glow);transform:translateY(-1px);}
 .ratio-btn.active{
   background:color-mix(in oklch, var(--primary) 18%, transparent);
   border-color:var(--primary);color:var(--primary);
@@ -639,7 +672,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 
 /* Lora 管理面板 */
 .lora-list{display:flex;flex-direction:column;gap:6px;padding:4px 0}
-.lora-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg);cursor:context-menu;transition:all .2s}
+.lora-item{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg);cursor:context-menu;transition:all .2s;position:relative}
 .lora-item:hover{border-color:var(--primary)}
 .lora-item.lora-disabled{opacity:.5;border-color:var(--text-muted)}
 .lora-item .lora-status{flex-shrink:0;width:16px;text-align:center;font-size:13px;color:var(--success,#89B);cursor:help}
@@ -647,17 +680,33 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .lora-item .lora-select{flex:1;min-width:0;padding:3px 6px;border:1px solid var(--card-border);border-radius:4px;background:var(--bg-elevated);color:var(--text);font-size:11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
 .lora-item .lora-select:hover{border-color:var(--primary)}
 .lora-item{position:relative}
-.lora-dropdown-panel{position:fixed;z-index:99999;background:#1a1a2e!important;border:1px solid var(--card-border);border-radius:var(--radius-sm);box-shadow:0 8px 32px rgba(0,0,0,.5);max-height:260px;display:flex;flex-direction:column;opacity:1!important}
+/* Lora 顶行：状态图标 + 缩略图 + 名称 + 权重 */
+.lora-top-row{display:flex;align-items:center;gap:6px;width:100%}
+.lora-thumb{width:40px;height:54px;object-fit:cover;border-radius:3px;border:1px solid var(--card-border);flex-shrink:0;background:var(--bg-elevated)}
+.lora-thumb-placeholder{width:40px;height:54px;border-radius:3px;border:1px dashed var(--card-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;opacity:.3;background:var(--bg-elevated)}
+.lora-thumb-placeholder::after{content:'🖼'}
+/* Lora 触发词行 */
+.lora-tw-row{display:flex;flex-wrap:wrap;gap:4px;padding-left:22px}
+.lora-tw-tag{display:inline-flex;align-items:center;gap:3px;padding:1px 9px;font-size:10px;border:1px solid color-mix(in oklch, var(--text) 15%, transparent);border-radius:10px;color:var(--text-sub2);cursor:pointer;transition:all .2s ease;user-select:none;line-height:1.6;background:transparent}
+.lora-tw-tag:hover{border-color:var(--primary);color:var(--text);transform:translateY(-1px)}
+/* 莫奈色 - 选中态：粉/蓝/紫/绿/黄/桃 渐变胶囊 */
+.lora-tw-tag.tw-active{color:#fff;border:1px solid transparent;font-weight:600;background:linear-gradient(135deg, oklch(82% 0.12 350) 0%, oklch(80% 0.10 290) 25%, oklch(82% 0.10 240) 50%, oklch(82% 0.12 170) 75%, oklch(85% 0.10 90) 100%);box-shadow:0 2px 8px oklch(70% 0.15 290 / 0.25)}
+.lora-dropdown-panel{position:fixed;z-index:99999;background:var(--bg-elevated);border:1px solid var(--card-border);border-radius:var(--radius-sm);box-shadow:0 8px 32px rgba(0,0,0,.5);max-height:260px;display:flex;flex-direction:column}
 .lora-dropdown-panel .ldp-search{padding:4px 6px;border-bottom:1px solid var(--card-border)}
 .lora-dropdown-panel .ldp-search input{width:100%;padding:4px 6px;border:1px solid var(--card-border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:11px;outline:none;box-sizing:border-box}
 .lora-dropdown-panel .ldp-search input:focus{border-color:var(--primary)}
 .lora-dropdown-panel .ldp-body{flex:1;overflow-y:auto;padding:2px 0}
-.lora-dropdown-panel .ldp-cat{font-size:10px;font-weight:700;color:var(--text-sub2);padding:4px 8px 2px;text-transform:uppercase;letter-spacing:.5px}
-.lora-dropdown-panel .ldp-subcat{padding:3px 8px 1px 18px;font-size:10px;color:var(--text-muted)}
-.lora-dropdown-panel .ldp-item{padding:4px 8px 4px 22px;font-size:11px;color:var(--text);cursor:pointer;transition:background .1s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lora-dropdown-panel .ldp-cat{font-size:10px;font-weight:700;color:var(--text-sub2);padding:5px 10px 2px;text-transform:uppercase;letter-spacing:.5px}
+.lora-dropdown-panel .ldp-subcat{padding:3px 10px 1px 20px;font-size:10px;color:var(--text-muted)}
+.lora-dropdown-panel .ldp-item{padding:5px 8px;font-size:11px;color:var(--text);cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:8px;overflow:hidden}
 .lora-dropdown-panel .ldp-item:hover{background:var(--card-hover);color:var(--primary)}
-.lora-dropdown-panel .ldp-item.selected{background:var(--primary);color:#fff;font-weight:600}
+/* 莫奈色 - 选中项 */
+.lora-dropdown-panel .ldp-item.selected{color:#fff;font-weight:600;background:linear-gradient(135deg, oklch(82% 0.12 350) 0%, oklch(80% 0.10 290) 25%, oklch(82% 0.10 240) 50%, oklch(82% 0.12 170) 75%, oklch(85% 0.10 90) 100%);box-shadow:inset 0 0 0 1px oklch(70% 0.15 290 / 0.3)}
+.lora-dropdown-panel .ldp-thumb{width:36px;height:48px;object-fit:cover;border-radius:2px;border:1px solid var(--card-border);flex-shrink:0;background:var(--bg-elevated)}
+.lora-dropdown-panel .ldp-thumb-placeholder{width:36px;height:48px;border-radius:2px;border:1px dashed var(--card-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:.25;background:var(--bg-elevated);flex-shrink:0}
+.lora-dropdown-panel .ldp-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .lora-dropdown-panel .ldp-empty{padding:16px;text-align:center;color:var(--text-sub2);font-size:11px}
+.lora-item .lora-strength-wrap{display:inline-flex;align-items:center;gap:3px;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize}
 .lora-item .lora-strength{flex:1;height:4px;max-width:80px;-webkit-appearance:none;appearance:none;background:var(--card-border);border-radius:2px;outline:none;cursor:pointer}
 .lora-item .lora-strength::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer;box-shadow:0 0 6px var(--primary-glow)}
 .lora-item .lora-strength::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer}
@@ -678,13 +727,20 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .lora-context-sep{height:1px;background:var(--card-border);margin:3px 8px}
 @media(max-width:480px){
   .lora-item{flex-wrap:wrap;gap:3px;padding:4px 6px}
+  .lora-top-row{flex-wrap:wrap;gap:3px}
   .lora-item .lora-status{font-size:11px;width:12px}
   .lora-item .lora-select{flex:1 1 100%;order:1;min-width:0;font-size:10px;padding:2px 4px}
-  .lora-item .lora-strength-wrap{width:100%;order:2;gap:3px}
+  .lora-item .lora-strength-wrap{width:100%;order:2;gap:3px;touch-action:none;user-select:none}
   .lora-item .lora-strength{max-width:100%;flex:1}
   .lora-item .lora-strength-val{font-size:10px;min-width:20px}
-  .lora-dropdown-panel{max-height:200px;min-width:150px;font-size:10px}
+  .lora-thumb{width:32px;height:42px}
+  .lora-thumb-placeholder{width:32px;height:42px}
+  .lora-tw-row{padding-left:16px;gap:3px}
+  .lora-tw-tag{font-size:9px;padding:1px 5px}
+  .lora-dropdown-panel{max-height:260px;min-width:280px;font-size:10px}
   .lora-dropdown-panel .ldp-search input{font-size:10px;padding:3px 5px}
+  .lora-dropdown-panel .ldp-thumb{width:28px;height:38px}
+  .lora-dropdown-panel .ldp-thumb-placeholder{width:28px;height:38px;font-size:11px}
   .lora-dropdown-panel .ldp-item{padding:3px 6px 3px 18px;font-size:10px}
   .lora-dropdown-panel .ldp-cat{font-size:9px;padding:3px 6px 1px}
   .lora-dropdown-panel .ldp-subcat{font-size:9px;padding:2px 6px 0 14px}
@@ -694,14 +750,16 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .node-card{
   border:1px solid var(--card-border);border-radius:var(--radius-sm);
   padding:12px 14px;cursor:pointer;min-height:90px;
-  transition:all var(--transition-fast);
+  transition:all var(--transition-normal);
   position:relative;background:var(--input-bg);
   box-shadow:var(--shadow-sm);overflow:hidden;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
 }
 .node-card::before{
   content:'';position:absolute;top:0;left:0;right:0;height:1.5px;
   background:var(--gradient-primary);opacity:0;
-  transition:opacity var(--transition-fast);
+  transition:opacity var(--transition-normal);
 }
 .node-card:hover{
   border-color:color-mix(in oklch,var(--primary) 50%,var(--card-border));
@@ -747,7 +805,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 /* Lora 节点 — 紫色高亮（自动检测，无需指定） */
 .node-card.lora-active{
   border-color:var(--primary);border-width:2px;
-  box-shadow:0 0 24px oklch(65% 0.28 315 / 0.35),var(--shadow-md);
+  box-shadow:0 0 24px oklch(65% 0.25 50 / 0.35),var(--shadow-md);
   z-index:2;position:relative;
   border-left:4px solid var(--primary);
 }
@@ -763,14 +821,18 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .node-role-label.role-load{background:color-mix(in oklch, var(--info) 25%, transparent);color:var(--role-load);border:1px solid var(--info);}
 .node-role-label.role-res{background:color-mix(in oklch, var(--warning) 25%, transparent);color:var(--role-res);border:1px solid var(--warning);}
 .node-role-label.role-exp{background:color-mix(in oklch, var(--accent) 25%, transparent);color:var(--accent);border:1px solid var(--accent);}
+.node-role-label.role-accent{background:color-mix(in oklch, var(--accent) 25%, transparent);color:var(--accent);border:1px solid var(--accent);}
+.node-role-label.role-lora{background:color-mix(in oklch, var(--primary) 25%, transparent);color:var(--primary);border:1px solid var(--primary);}
 .node-role-label.role-disabled{background:color-mix(in oklch, var(--danger, #e74c3c) 25%, transparent);color:var(--danger, #e74c3c);border:1px solid var(--danger, #e74c3c);}
 
 .node-card .node-icon{font-size:14px;margin-right:4px;vertical-align:middle}
 .node-card .node-id{
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-sub);
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);
+  font-weight:500;padding:1px 5px;background:color-mix(in oklch, var(--primary) 12%, transparent);
+  border-radius:4px;border:1px solid color-mix(in oklch, var(--primary) 25%, transparent);
 }
 .node-card .node-title{
-  font-size:12px;font-weight:500;margin:3px 0;
+  font-size:12px;font-weight:600;margin:3px 0;color:var(--text);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .node-card .node-type{
@@ -778,32 +840,35 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .node-card .node-text-preview{
-  font-size:10px;color:var(--text-sub2);
+  font-size:10.5px;color:var(--text-sub);
   margin-top:3px;padding:3px 6px;
-  background:rgba(128,128,128,0.08);
-  border-radius:6px;
+  background:color-mix(in oklch, var(--text) 6%, transparent);
+  border-left:2px solid color-mix(in oklch, var(--primary) 50%, transparent);
+  border-radius:4px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-style:italic;max-width:100%;
+  max-width:100%;
 }
 .node-tags{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;}
 .node-tag-btn{
   font-size:10px;padding:4px 8px;border-radius:6px;
   border:1px solid var(--card-border);
-  background:color-mix(in oklch, var(--text-sub) 8%, transparent);
+  background:color-mix(in oklch, var(--text) 12%, transparent);
+  color:var(--text-sub);
   cursor:pointer;min-width:30px;min-height:30px;
   display:inline-flex;align-items:center;justify-content:center;
   transition:all var(--transition-fast);
 }
-.node-tag-btn:hover{background:color-mix(in oklch, var(--text) 15%, transparent);border-color:var(--text-sub);}
+.node-tag-btn:hover{background:color-mix(in oklch, var(--text) 22%, transparent);border-color:var(--text-sub);color:var(--text);}
 .node-tag-btn:active:not(:disabled){background:var(--card-hover);}
+.node-tag-btn svg{width:14px;height:14px;fill:currentColor;stroke:currentColor;}
 .node-tag-btn.active-success{background:color-mix(in oklch, var(--success) 25%, transparent);border-color:var(--success);color:var(--role-prompt);font-weight:600;}
 .node-tag-btn.active-danger{background:color-mix(in oklch, var(--danger) 25%, transparent);border-color:var(--danger);color:var(--role-negative);font-weight:600;}
 .node-tag-btn.active-info{background:color-mix(in oklch, var(--info) 25%, transparent);border-color:var(--info);color:var(--role-load);font-weight:600;}
 .node-tag-btn.active-warning{background:color-mix(in oklch, var(--warning) 25%, transparent);border-color:var(--warning);color:var(--role-res);font-weight:600;}
 .node-tag-btn.active-accent{background:color-mix(in oklch, var(--accent) 25%, transparent);border-color:var(--accent);color:var(--accent);font-weight:600;}
 .node-tag-btn:disabled{
-  opacity:0.45;cursor:not-allowed;transform:none!important;
-  filter:grayscale(0.6);pointer-events:none;user-select:none;
+  opacity:0.4;cursor:not-allowed;transform:none!important;
+  filter:grayscale(0.7);pointer-events:none;user-select:none;
 }
 .node-tag-btn svg{width:14px;height:14px;}
 .btn-badge{font-size:8px;font-weight:700;line-height:1;margin-left:1px;opacity:0.85;}
@@ -944,32 +1009,12 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 /* 魔导书已合并到 Speed Dial，隐藏旧按钮 */
 #grimoire_btn_prompt{display:none!important;}
 
-/* 已指定节点标签 */
-.assigned-tag{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:4px 10px;border-radius:14px;font-size:11px;
-  border:1px solid transparent;font-weight:500;
-}
-.assigned-tag.tag-prompt{background:color-mix(in oklch, var(--success) 18%, transparent);border-color:var(--success);color:var(--role-prompt);}
-.assigned-tag.tag-negative{background:color-mix(in oklch, var(--danger) 18%, transparent);border-color:var(--danger);color:var(--role-negative);}
-.assigned-tag.tag-res{background:color-mix(in oklch, var(--warning) 18%, transparent);border-color:var(--warning);color:var(--role-res);}
-.assigned-tag.tag-load{background:color-mix(in oklch, var(--info) 18%, transparent);border-color:var(--info);color:var(--role-load);}
-.assigned-tag.tag-disabled{background:color-mix(in oklch, var(--danger) 18%, transparent);border-color:var(--danger);color:var(--role-negative);}
-.assigned-tag .tag-remove{
-  background:none;border:none;cursor:pointer;font-size:12px;
-  padding:0;width:20px;height:20px;line-height:20px;
-  display:inline-flex;align-items:center;justify-content:center;
-  border-radius:50%;transition:background var(--transition-fast);
-}
-.assigned-tag .tag-remove:active{background:rgba(0,0,0,0.15);}
-.assigned-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-
 /* ========================================================================
    18. Modals
    ======================================================================== */
 .modal{
   display:none;position:fixed;inset:0;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(58% 0.22 310 / 0.03));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(60% 0.22 300 / 0.03));
   z-index:200;
   justify-content:center;align-items:center;
   backdrop-filter:blur(8px);
@@ -984,10 +1029,10 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   border-radius:var(--radius);padding:20px;
   max-width:500px;width:92%;max-height:80vh;max-height:80dvh;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  backdrop-filter:blur(24px) saturate(1.4);
-  -webkit-backdrop-filter:blur(24px) saturate(1.4);
-  box-shadow:var(--shadow-xl),0 0 0 1px oklch(64% 0.24 310 / 0.05);
-  animation:modalIn 0.3s cubic-bezier(0.16,1,0.3,1);
+  backdrop-filter:blur(32px) saturate(1.5);
+  -webkit-backdrop-filter:blur(32px) saturate(1.5);
+  box-shadow:var(--shadow-xl),0 0 0 1px oklch(65% 0.25 50 / 0.06);
+  animation:modalIn 0.35s cubic-bezier(0.16,1,0.3,1);
 }
 @keyframes modalIn{
   from{opacity:0;transform:scale(0.92) translateY(20px)}
@@ -1005,7 +1050,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 /* 幽灵弹窗背景 */
 .modal-overlay{
   display:none;position:fixed;inset:0;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(58% 0.22 310 / 0.03));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(60% 0.22 300 / 0.03));
   z-index:200;backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
   pointer-events:none;
@@ -1031,26 +1076,34 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .btn{
   padding:10px 24px;border:none;border-radius:var(--radius-sm);
   cursor:pointer;font-size:14px;font-weight:600;
-  display:inline-flex;align-items:center;gap:6px;
+  display:inline-flex;align-items:center;gap:8px;
   min-height:44px;font-family:'Noto Sans SC',sans-serif;
-  transition:all var(--transition-fast);user-select:none;
+  transition:all var(--transition-normal);user-select:none;
   white-space:nowrap;position:relative;overflow:hidden;
   justify-content:center;letter-spacing:0.3px;
+  text-decoration:none;
 }
+.btn::after{
+  content:'';position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(135deg, rgba(255,255,255,0.12), transparent 50%);
+  opacity:0;transition:opacity var(--transition-fast);
+  pointer-events:none;
+}
+.btn:hover::after{opacity:1;}
 
 .btn-sm{padding:8px 18px;font-size:13px;min-height:36px;border-radius:var(--radius-xs);}
 .btn-xs{padding:5px 14px;font-size:11px;font-weight:500;min-height:30px;border-radius:8px;}
 
-.btn-primary{background:var(--gradient-primary);color:#fff;box-shadow:0 4px 16px oklch(62% 0.22 310 / 0.3);}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px oklch(62% 0.22 310 / 0.4);}
+.btn-primary{background:var(--gradient-primary);color:#fff;box-shadow:0 4px 16px oklch(65% 0.22 50 / 0.3);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px oklch(65% 0.22 50 / 0.45),var(--shadow-colored);}
 .btn-primary:active{transform:translateY(0) scale(0.97);}
 
 .btn-secondary{background:var(--input-bg);color:var(--text);border:1px solid var(--card-border);}
-.btn-secondary:hover{background:var(--card-hover);border-color:var(--primary);color:var(--primary);transform:translateY(-1px);}
+.btn-secondary:hover{background:var(--card-hover);border-color:var(--primary);color:var(--primary);transform:translateY(-1px);box-shadow:var(--shadow-glow);}
 .btn-secondary:active{transform:translateY(0) scale(0.97);}
 
 .btn-danger{background:var(--danger);color:#fff;box-shadow:0 4px 12px oklch(58% 0.22 25 / 0.3);}
-.btn-danger:hover{transform:translateY(-2px);box-shadow:0 6px 20px oklch(58% 0.22 25 / 0.4);}
+.btn-danger:hover{transform:translateY(-2px);box-shadow:0 6px 20px oklch(58% 0.22 25 / 0.45);}
 .btn-danger:active{transform:translateY(0) scale(0.97);}
 /* 通用按钮点击反馈 — 无布局抖动的 lightness 微调 */
 .btn:active{filter:brightness(0.92);}
@@ -1105,11 +1158,12 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   padding:8px 16px;border-radius:18px;border:1px solid var(--card-border);
   background:transparent;color:var(--text);font-size:12px;font-weight:500;
   cursor:pointer;min-height:36px;
-  transition:all var(--transition-fast);user-select:none;
-}.res-preset-btn:hover{border-color:var(--primary);}
+  transition:all var(--transition-normal);user-select:none;
+}.res-preset-btn:hover{border-color:var(--primary);transform:translateY(-1px);}
 .res-preset-btn.active{
   background:color-mix(in oklch, var(--primary) 18%, transparent);
   border-color:var(--primary);color:var(--primary);
+  box-shadow:var(--shadow-glow);
 }
 .res-info{font-size:12px;color:var(--text-sub);margin-bottom:8px;}
 .vram-warn{
@@ -1244,7 +1298,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
    25. Workflow Manager Modal
    ======================================================================== */
 .wf-edit-modal{
-  position:fixed;inset:0;background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(58% 0.22 310 / 0.03));
+  position:fixed;inset:0;background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(60% 0.22 300 / 0.03));
   z-index:200;display:none;align-items:center;justify-content:center;
   backdrop-filter:blur(8px);pointer-events:none;overscroll-behavior:contain;
 }
@@ -1253,7 +1307,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   background:var(--card);border-radius:var(--radius);padding:20px;
   max-width:720px;width:92%;max-height:80vh;max-height:80dvh;
   overflow-y:auto;border:1px solid var(--card-border);
-  box-shadow:var(--shadow-xl),0 0 0 1px oklch(64% 0.24 310 / 0.05);
+  box-shadow:var(--shadow-xl),0 0 0 1px oklch(65% 0.25 50 / 0.05);
   animation:modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
 }
 .wf-edit-dialog h3{font-size:15px;margin:0 0 12px;color:var(--text)}
@@ -1363,9 +1417,13 @@ select:not([class*="color"]):not([class*="date"]){
   border-radius:3px;
   border:1px solid transparent;
   background-clip:content-box;
+  transition:background var(--transition-fast);
 }
 ::-webkit-scrollbar-thumb:hover{
   background:linear-gradient(180deg, var(--primary-hover), var(--accent-hover));
+}
+::-webkit-scrollbar-thumb:active{
+  background:var(--primary);
 }
 /* Firefox */
 *{scrollbar-width:thin;scrollbar-color:var(--primary) transparent}
@@ -1403,7 +1461,7 @@ select:not([class*="color"]):not([class*="date"]){
 .bottom-nav .bn-item.active{color:var(--primary)}
 .bottom-nav .bn-item.active .bn-icon{
   transform:scale(1.1);
-  filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.5));
+  filter:drop-shadow(0 0 8px oklch(65% 0.22 50 / 0.5));
 }
 .bottom-nav .bn-item:active{background:var(--card-hover)}
 .bottom-nav .bn-item.active-dot::after{
@@ -1421,9 +1479,9 @@ select:not([class*="color"]):not([class*="date"]){
    29. Animations & Utility
    ======================================================================== */
 .section-fade{animation:fadeSlideIn 0.35s cubic-bezier(0.16,1,0.3,1)}
-@keyframes fadeSlideIn{from{opacity:0;transform:translateY(10px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.node-card,.wf-item{animation:fadeIn 0.25s cubic-bezier(0.16,1,0.3,1);}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.node-card,.wf-item{animation:fadeIn 0.3s cubic-bezier(0.16,1,0.3,1);}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .empty-state{
   padding:36px 20px;text-align:center;color:var(--text-sub2);
   display:flex;flex-direction:column;align-items:center;gap:10px;font-size:13px;
@@ -1431,12 +1489,14 @@ select:not([class*="color"]):not([class*="date"]){
 }
 .empty-state-icon{
   font-size:44px;opacity:0.3;margin-bottom:4px;
-  filter:drop-shadow(0 0 12px oklch(62% 0.22 310 / 0.15));
-  animation:emptyFloat 3s ease-in-out infinite;
+  filter:drop-shadow(0 0 12px oklch(65% 0.22 50 / 0.15));
+  animation:emptyFloat 4s ease-in-out infinite;
 }
 @keyframes emptyFloat{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-6px)}
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-4px) rotate(-2deg)}
+  50%{transform:translateY(-8px) rotate(0deg)}
+  75%{transform:translateY(-4px) rotate(2deg)}
 }
 .empty-state-title{font-size:14px;font-weight:600;color:var(--text-sub);letter-spacing:0.3px;}
 .empty-state-desc{font-size:11px;color:var(--text-sub);opacity:0.7;line-height:1.6;max-width:280px}
@@ -1500,17 +1560,17 @@ select:not([class*="color"]):not([class*="date"]){
 .toggle-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-sub);cursor:pointer}
 .toggle-switch{
   width:40px;height:22px;border-radius:11px;background:var(--card-border);
-  position:relative;cursor:pointer;transition:background var(--transition-fast);
+  position:relative;cursor:pointer;transition:background var(--transition-normal);
   flex-shrink:0;
 }
-.toggle-switch.on{background:var(--gradient-primary);box-shadow:0 0 8px oklch(62% 0.22 310 / 0.3);}
+.toggle-switch.on{background:var(--gradient-primary);box-shadow:0 0 8px oklch(65% 0.22 50 / 0.3);}
 .toggle-knob{
   width:18px;height:18px;border-radius:50%;background:#fff;
   position:absolute;top:2px;left:2px;
-  transition:transform var(--transition-spring);
+  transition:transform var(--transition-spring),box-shadow var(--transition-fast);
   box-shadow:0 1px 3px rgba(0,0,0,0.2);
 }
-.toggle-switch.on .toggle-knob{transform:translateX(18px);}
+.toggle-switch.on .toggle-knob{transform:translateX(18px);box-shadow:0 1px 4px oklch(65% 0.22 50 / 0.3);}
 
 /* Bind Section */
 .bind-section{margin-top:8px;}
@@ -1550,12 +1610,12 @@ select:not([class*="color"]):not([class*="date"]){
   position:fixed;bottom:0;left:0;right:0;
   background:var(--card);border:1px solid var(--card-border);
   border-radius:var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow:var(--shadow-xl),0 0 0 1px oklch(64% 0.24 310 / 0.05);
+  box-shadow:var(--shadow-xl),0 0 0 1px oklch(65% 0.25 50 / 0.06);
   z-index:200;
   display:none;flex-direction:column;
   max-height:90vh;max-height:90dvh;
-  backdrop-filter:blur(24px) saturate(1.4);
-  animation:grimoireSheetUp 0.35s cubic-bezier(0.16,1,0.3,1);
+  backdrop-filter:blur(28px) saturate(1.5);
+  animation:grimoireSheetUp 0.4s cubic-bezier(0.16,1,0.3,1);
   overscroll-behavior:contain;
 }
 .grimoire-sheet.show{display:flex;}
@@ -1590,7 +1650,7 @@ select:not([class*="color"]):not([class*="date"]){
 /* 魔导书遮罩 */
 .grimoire-backdrop{
   display:none;position:fixed;inset:0;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(58% 0.22 310 / 0.03));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.55), oklch(60% 0.22 300 / 0.03));
   z-index:199;backdrop-filter:blur(4px);
   opacity:0;transition:opacity var(--transition-normal);
   pointer-events:none;
@@ -1654,7 +1714,8 @@ select:not([class*="color"]):not([class*="date"]){
   outline:none;width:160px;transition:border-color var(--transition-fast);
 }
 .grimoire-detail-search:focus{border-color:var(--primary);}
-.grimoire-data-table{flex:1;overflow-y:auto;padding:4px 8px;}
+.grimoire-data-table{flex:1 1 0;min-height:0;min-width:0;overflow-y:auto;overflow-x:clip;padding:4px 8px;display:block}
+.grimoire-data-table > *:not(.grm-batch-bar){width:100%!important;box-sizing:border-box!important;flex-shrink:0;align-self:stretch!important}
 .grimoire-pagination{
   padding:8px 14px;border-top:1px solid var(--card-border);
   display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;
@@ -1672,12 +1733,20 @@ select:not([class*="color"]):not([class*="date"]){
 
 /* 魔导书条目卡片（移动端） */
 .grm-item-card{
-  display:flex;align-items:center;gap:10px;
-  padding:12px 14px;border-radius:var(--radius-sm);
-  background:var(--input-bg);margin-bottom:6px;
+  display:grid!important;grid-template-columns:minmax(80px,1fr) auto!important;column-gap:10px!important;
+  padding:12px 14px!important;border-radius:var(--radius-sm)!important;
+  background:var(--input-bg)!important;margin-bottom:6px!important;
   transition:all var(--transition-fast);
-  position:relative;overflow:hidden;
+  position:relative!important;overflow:hidden!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;
+  color:var(--text)!important;contain:none!important;
+  align-items:center!important;contain:layout style paint;
 }
+.grm-item-card *{color:inherit;min-width:0}
+.grm-item-info{display:block!important;min-width:0!important;padding:2px 0!important;overflow:hidden!important;color:var(--text)!important;visibility:visible!important;opacity:1!important}
+.grm-item-name{display:block!important;visibility:visible!important;opacity:1!important;font-size:13px!important;font-weight:500!important;color:var(--text)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;line-height:1.3!important}
+.grm-item-tags{display:block!important;visibility:visible!important;opacity:1!important;font-size:10px!important;color:var(--text-sub2)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;margin-top:2px!important;line-height:1.3!important}
+.grm-item-actions{display:flex!important;gap:4px!important;align-items:center!important;visibility:visible!important;white-space:nowrap!important;justify-content:flex-end!important}
 .grm-item-card:active{background:var(--card-hover);}
 .grm-item-card:hover{background:var(--card-hover);}
 .grm-item-card.grm-selected{background:color-mix(in oklch, var(--primary) 10%, var(--card));border-color:var(--primary);}
@@ -1704,7 +1773,7 @@ select:not([class*="color"]):not([class*="date"]){
 
 /* 已固定标签栏 */
 .grm-pinned-bar{
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;min-width:0;
   padding:6px 10px;margin-top:4px;margin-bottom:2px;
   background:color-mix(in oklch, var(--accent) 8%, var(--card));
   border:1px solid color-mix(in oklch, var(--accent) 15%, var(--card-border));
@@ -1810,12 +1879,12 @@ select:not([class*="color"]):not([class*="date"]){
 .grm-item-btn.pin:hover{background:color-mix(in oklch, var(--accent) 18%, transparent);color:var(--accent);}
 .grm-item-btn.pin.active{opacity:1;color:var(--accent);
   background:color-mix(in oklch, var(--accent) 15%, transparent);
-  box-shadow:0 0 12px oklch(58% 0.25 265 / 0.2);}
+  box-shadow:0 0 12px oklch(60% 0.25 300 / 0.2);}
 .grm-item-btn.star{opacity:0.6;}
 .grm-item-btn.star:hover{background:color-mix(in oklch, var(--primary) 18%, transparent);color:var(--primary);}
-.grm-item-btn.star.active{opacity:1;color:var(--primary);filter:drop-shadow(0 0 8px oklch(62% 0.22 310 / 0.7)) drop-shadow(0 0 20px oklch(62% 0.22 310 / 0.3));}
-.grm-item-card.starred{box-shadow:inset 0 0 0 2px oklch(62% 0.22 310 / 0.5),var(--shadow-sm),0 0 20px oklch(62% 0.22 310 / 0.1);}
-.grm-item-card.pinned{box-shadow:inset 0 0 0 2px var(--accent),var(--shadow-sm),0 0 20px color-mix(in oklch, var(--accent) 30%, transparent);}
+.grm-item-btn.star.active{opacity:1;color:var(--primary);filter:drop-shadow(0 0 8px oklch(65% 0.22 50 / 0.7)) drop-shadow(0 0 20px oklch(65% 0.22 50 / 0.3));}
+.grm-item-card.starred{outline:none;border-left:3px solid oklch(65% 0.22 50 / 0.7);box-shadow:none;background:color-mix(in oklch, oklch(65% 0.22 50 / 0.5) 5%, var(--input-bg))}
+.grm-item-card.pinned{outline:none;border-left:3px solid var(--accent);box-shadow:none;background:color-mix(in oklch, var(--accent) 5%, var(--input-bg))}
 
 /* 魔导书卡片图片缩略图 — 大图版 */
 .grm-item-img{
@@ -1919,7 +1988,7 @@ select:not([class*="color"]):not([class*="date"]){
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
   animation:neonFlow 4s ease-in-out infinite;
-  filter:drop-shadow(0 0 6px oklch(62% 0.22 310 / 0.3));
+  filter:drop-shadow(0 0 6px oklch(65% 0.22 50 / 0.3));
 }
 .grm-spells-header svg{width:14px;height:14px;-webkit-text-fill-color:initial;}
 
@@ -2043,7 +2112,7 @@ select:not([class*="color"]):not([class*="date"]){
 /* ========================================================================
    31. Responsive - Tablet (≤900px)
    ======================================================================== */
-@media(max-width:900px){
+@media(max-width:480px){
   .app{padding:12px 14px;}
   :root{--sidebar-w:200px;}
   
@@ -2088,25 +2157,32 @@ select:not([class*="color"]):not([class*="date"]){
   /* 底部导航启用 */
   .bottom-nav{display:flex;}
 
-  /* 魔导书移动端布局 */
+  /* 魔导书移动端布局 — 左右分栏 */
   .grimoire-sheet{border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
   .grimoire-sheet .grip-bar{display:block;}
-  .grimoire-body{flex-direction:column;}
+  .grimoire-body{flex-direction:row;}
+  .grimoire-detail{overflow:hidden;min-width:0;flex:1;display:flex;flex-direction:column;overflow-x:clip}
 
   .grimoire-sources{
-    width:100%;border-right:none;
-    border-bottom:1px solid var(--card-border);
-    max-height:110px;flex-shrink:0;
+    width:120px;border-right:1px solid var(--card-border);
+    border-bottom:none;max-height:none;flex-shrink:0;
+    background:var(--card);
   }
-  .grimoire-sources-header{padding:4px 10px 2px;font-size:10px;}
-  .grimoire-source-list{display:flex;gap:3px;overflow-x:auto;padding:2px 6px 6px;flex-direction:row;}
+  .grimoire-sources-header{padding:4px 8px 2px;font-size:9px;display:none;}
+  .grimoire-source-list{display:flex;gap:0;overflow-y:auto;padding:4px 0;flex-direction:column;}
   .source-item{
-    white-space:nowrap;flex-shrink:0;
-    padding:4px 10px;border-radius:12px;font-size:10px;margin-bottom:0;
-    border:1px solid var(--card-border);background:var(--input-bg);
+    white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;
+    padding:6px 10px;border-radius:0;font-size:11px;margin-bottom:0;
+    border:none;background:transparent;border-left:3px solid transparent;
   }
-  .source-item.active{background:color-mix(in oklch, var(--primary) 20%, transparent);border-left:2px solid var(--primary);}
-  .source-item .source-count{display:none}
+  .source-item.active{background:color-mix(in oklch, var(--primary) 10%, transparent);border-left:3px solid var(--primary);font-weight:600;}
+  .source-item .source-count{display:none;}
+  
+  /* 固定标签中间省略号截断 */
+  .grm-pinned-bar{flex-wrap:nowrap;overflow-x:auto;gap:4px;padding:4px 8px;-webkit-overflow-scrolling:touch;}
+  .grm-pinned-tag{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;padding:2px 6px;flex-shrink:0;}
+  .grm-pinned-title{font-size:10px;flex-shrink:0;}
+  .grm-pinned-remove{width:12px;height:12px;font-size:7px;flex-shrink:0;}
 
   .grimoire-detail-header{
     flex-wrap:wrap;padding:4px 10px 3px;gap:4px;
@@ -2114,6 +2190,8 @@ select:not([class*="color"]):not([class*="date"]){
   .grimoire-detail-search{width:100%;order:3;margin-top:2px;font-size:10px;padding:3px 6px}
   .grid-sources-header .source-count{display:none;}
   .grimoire-detail-header .btn{font-size:10px;padding:3px 8px;min-height:auto}
+  .grimoire-detail-header .btn span{display:none;}
+  .grimoire-detail-header .btn svg{margin:0;}
   /* 手机端：大分类标签放前面，展开全部按钮放后面 */
   #grimoire_source_list{display:flex;flex-direction:column}
   #grimoire_source_list .grm-toolbar{order:2}
@@ -2141,6 +2219,19 @@ select:not([class*="color"]):not([class*="date"]){
   .node-card .node-title{font-size:11px;}
   .node-card .node-type{font-size:10px;}
   .node-card .node-icon{font-size:13px;}
+  
+  /* 魔导书条目卡片移动端紧凑 */
+  .grm-item-card{padding:8px 10px;gap:6px;margin-bottom:4px;width:100%!important;min-width:0!important;display:flex!important;flex-shrink:0!important;box-sizing:border-box!important}
+  .grm-item-info{min-width:0!important;flex:1 1 0!important;overflow:hidden!important}
+  .grm-item-name{font-size:12px;}
+  .grm-item-name-en{display:none;}
+  .grm-item-category{display:none;}
+  .grm-item-tags{display:none;}
+  .grm-item-img{width:60px;height:80px;border-radius:6px;}
+  .grm-item-img-placeholder{width:60px;height:80px;font-size:14px;}
+  .grm-item-btn{font-size:9px;padding:2px 6px;min-height:24px;}
+  .grm-item-actions{gap:2px;}
+  .grm-star-btn{font-size:12px;width:22px;height:22px;}
 }
 
 /* ========================================================================
@@ -2205,7 +2296,7 @@ select:not([class*="color"]):not([class*="date"]){
 /* Lightbox */
 .lightbox{
   display:none;position:fixed;inset:0;z-index:300;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.7), oklch(58% 0.22 310 / 0.02));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.7), oklch(60% 0.22 300 / 0.02));
   justify-content:center;align-items:center;
   backdrop-filter:blur(12px);
   pointer-events:none;
@@ -2235,7 +2326,7 @@ select:not([class*="color"]):not([class*="date"]){
 }
 .lightbox-toolbar{
   display:flex;align-items:center;gap:8px;margin-top:12px;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.5), oklch(58% 0.22 310 / 0.05));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.5), oklch(60% 0.22 300 / 0.05));
   backdrop-filter:blur(20px);border-radius:var(--radius-sm);
   padding:8px 14px;border:1px solid oklch(100% 0 0 / 0.1);
 }
@@ -2266,7 +2357,7 @@ select:not([class*="color"]):not([class*="date"]){
 /* --- Gallery Backdrop --- */
 .gallery-backdrop{
   display:none;position:fixed;inset:0;
-  background:color-mix(in oklch, oklch(0% 0 0 / 0.5), oklch(58% 0.22 310 / 0.02));
+  background:color-mix(in oklch, oklch(0% 0 0 / 0.5), oklch(60% 0.22 300 / 0.02));
   z-index:149;backdrop-filter:blur(6px);
   opacity:0;transition:opacity var(--transition-normal);
   pointer-events:none;
@@ -2303,7 +2394,7 @@ select:not([class*="color"]):not([class*="date"]){
 }
 .gallery-tab.active{
   background:var(--gradient-primary);color:#fff;border-color:transparent;
-  box-shadow:0 0 12px oklch(62% 0.22 310 / 0.3);
+  box-shadow:0 0 12px oklch(65% 0.22 50 / 0.3);
 }
 .gallery-tab:active{opacity:0.8;}
 .gallery-time-filters{display:flex;gap:4px;flex:1;}
@@ -2488,14 +2579,14 @@ select:not([class*="color"]):not([class*="date"]){
 /* FAB 按钮图标切换 */
 /* 呼吸灯动画 — 移动端 */
 @keyframes fabPulse{
-  0%,100%{box-shadow:0 4px 20px oklch(62% 0.22 310 / 0.4),0 0 0 0 oklch(62% 0.22 310 / 0.25);}
-  50%{box-shadow:0 4px 28px oklch(62% 0.22 310 / 0.55),0 0 0 10px oklch(62% 0.22 310 / 0);}
+  0%,100%{box-shadow:0 4px 20px oklch(65% 0.22 50 / 0.4),0 0 0 0 oklch(65% 0.22 50 / 0.25);}
+  50%{box-shadow:0 4px 28px oklch(65% 0.22 50 / 0.55),0 0 0 10px oklch(65% 0.22 50 / 0);}
 }
 /* PC 端更强烈的呼吸灯 */
 @media(min-width:900px){
   @keyframes fabPulse{
-    0%,100%{box-shadow:0 4px 20px oklch(62% 0.22 310 / 0.4),0 0 0 0 oklch(62% 0.22 310 / 0.35),0 0 40px oklch(62% 0.22 310 / 0.15);}
-    50%{box-shadow:0 4px 28px oklch(62% 0.22 310 / 0.55),0 0 0 20px oklch(62% 0.22 310 / 0),0 0 60px oklch(62% 0.22 310 / 0.25);}
+    0%,100%{box-shadow:0 4px 20px oklch(65% 0.22 50 / 0.4),0 0 0 0 oklch(65% 0.22 50 / 0.35),0 0 40px oklch(65% 0.22 50 / 0.15);}
+    50%{box-shadow:0 4px 28px oklch(65% 0.22 50 / 0.55),0 0 0 20px oklch(65% 0.22 50 / 0),0 0 60px oklch(65% 0.22 50 / 0.25);}
   }
 }
 .gallery-fab{
@@ -2504,13 +2595,13 @@ select:not([class*="color"]):not([class*="date"]){
   background:var(--gradient-primary);border:none;
   color:#fff;font-size:22px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px oklch(62% 0.22 310 / 0.4);
+  box-shadow:0 4px 20px oklch(65% 0.22 50 / 0.4);
   min-width:52px;min-height:52px;
   transition:all var(--transition-spring);
   z-index:81;
   animation:fabPulse 2.5s ease-in-out infinite;
 }
-.gallery-fab:hover{transform:scale(1.06);box-shadow:0 6px 28px oklch(62% 0.22 310 / 0.5);animation:none;}
+.gallery-fab:hover{transform:scale(1.06);box-shadow:0 6px 28px oklch(65% 0.22 50 / 0.5);animation:none;}
 .gallery-fab-badge{
   position:absolute;top:-4px;right:-4px;
   min-width:20px;height:20px;border-radius:10px;
@@ -2554,7 +2645,7 @@ select:not([class*="color"]):not([class*="date"]){
 }
 .gallery-batch-check.selected{
   background:var(--primary);border-color:var(--primary);
-  color:#fff;box-shadow:0 0 8px oklch(62% 0.22 310 / 0.4);
+  color:#fff;box-shadow:0 0 8px oklch(65% 0.22 50 / 0.4);
 }
 
 /* --- Mobile Adjustments for Gallery --- */
@@ -2839,18 +2930,18 @@ textarea:focus-visible,
   #bg_particles::after { opacity: 0.08; animation: none; }
   #bg_particles .vignette { opacity: 0.3; }
 }
-[data-theme="light"] #bg_particles::before { opacity: 0.2; }
-[data-theme="light"] #bg_particles::after { opacity: 0.2; }
+[data-theme="light"] #bg_particles::before { opacity: 0.08; }
+[data-theme="light"] #bg_particles::after { opacity: 0.08; }
 
 [data-theme="light"] #bg_particles::before,
 [data-theme="light"] #bg_particles::after {
-  opacity: 0.4 !important;
-}
-[data-theme="light"] #bg_particles .star-field span {
   opacity: 0.15 !important;
 }
+[data-theme="light"] #bg_particles .star-field span {
+  opacity: 0.06 !important;
+}
 [data-theme="light"] #bg_particles .glow-star {
-  opacity: 0.3 !important;
+  opacity: 0.1 !important;
 }
 
 /* ========================================================================
@@ -2912,7 +3003,7 @@ textarea:focus-visible,
   .node-card:hover { transform: translateY(-3px) scale(1.02); }
   .wf-item:hover { transform: translateX(2px); }
   @media(min-width:900px){
-    .gallery-fab:hover { transform: scale(1.1); box-shadow: 0 8px 32px oklch(62% 0.22 310 / 0.6); }
+    .gallery-fab:hover { transform: scale(1.1); box-shadow: 0 8px 32px oklch(65% 0.22 50 / 0.6); }
   }
 }
 /* mobile/通用active反馈 — 轻触缩放 */
@@ -2933,7 +3024,7 @@ textarea:focus-visible,
   position: absolute;
   bottom: 0; left: 10%; right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, oklch(62% 0.22 310 / 0.3), oklch(58% 0.25 265 / 0.3), transparent);
+  background: linear-gradient(90deg, transparent, oklch(65% 0.22 50 / 0.3), oklch(58% 0.25 265 / 0.3), transparent);
   pointer-events: none;
 }
 
@@ -2943,7 +3034,7 @@ textarea:focus-visible,
   position: absolute;
   bottom: -8px; left: 10%; right: 10%;
   height: 16px;
-  background: linear-gradient(180deg, oklch(62% 0.22 310 / 0.06), transparent);
+  background: linear-gradient(180deg, oklch(65% 0.22 50 / 0.06), transparent);
   pointer-events: none;
   border-radius: 50%;
   filter: blur(4px);
@@ -2964,17 +3055,17 @@ textarea:focus-visible,
 
 /* 状态标签 — 文字发光 */
 .status-label {
-  filter: drop-shadow(0 0 6px oklch(62% 0.22 310 / 0.3));
+  filter: drop-shadow(0 0 6px oklch(65% 0.22 50 / 0.3));
 }
 
 /* 底部导航 — 活动项光晕 */
 .bottom-nav .bn-item.active .bn-icon {
-  filter: drop-shadow(0 0 10px oklch(62% 0.22 310 / 0.6));
+  filter: drop-shadow(0 0 10px oklch(65% 0.22 50 / 0.6));
 }
 
 /* Toast 通知 — 滑入光晕 */
 .toast-item.show {
-  box-shadow: var(--shadow-lg), 0 0 20px oklch(62% 0.22 310 / 0.08);
+  box-shadow: var(--shadow-lg), 0 0 20px oklch(65% 0.22 50 / 0.08);
 }
 
 /* 响应式装饰调整 */
@@ -2997,7 +3088,7 @@ textarea:focus-visible,
   position: absolute;
   width: 120px; height: 120px;
   border-radius: 50%;
-  background: radial-gradient(circle, oklch(62% 0.22 310 / 0.04), transparent);
+  background: radial-gradient(circle, oklch(65% 0.22 50 / 0.04), transparent);
   pointer-events: none;
   animation: emptyGlow 4s ease-in-out infinite;
 }
@@ -3048,6 +3139,54 @@ textarea:focus-visible,
   .grm-item-card { transition: none !important; }
   /* 弹窗内容 — 去掉入场动画 */
   .modal-content { animation: none !important; }
+
+  /* ===== 重度省电：降低 GPU 渲染负载 ===== */
+  /* backdrop-filter 是 GPU 杀手 — 每个实例创建独立合成层，30 个就是 30 层 */
+  .sidebar,
+  .modal-panel,
+  .modal-overlay,
+  .grimoire-body,
+  .grimoire-sources,
+  .grimoire-detail,
+  .grm-pinned-bar,
+  .lora-dropdown-panel,
+  .ldp-item,
+  .theme-btn,
+  .card, .card-header,
+  .unified-header{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+  /* 大 blur 阴影减少到 4px（原本 12-32px），大量减少 GPU 计算 */
+  .gallery-item:hover, .grm-item-img:hover,
+  .node-card:hover, .wf-item:hover,
+  .btn:hover{transform:none!important}
+
+  /* CSS filter 全军覆没（blur 和 drop-shadow 都是 GPU 重载） */
+  .grm-spells-header, .unified-header h1{filter:none!important}
+
+  /* 复杂渐变降级 — 背景只用纯色，避免 GPU gradient 计算 */
+  body{background:oklch(8% 0.01 260)!important}
+  #bg_particles{opacity:0.05!important}
+
+  /* 释放 GPU 合成层 — will-change 会给每个元素创建独立层 */
+  .grimoire-body, .grimoire-detail, .grimoire-data-table,
+  .modal-panel, .sidebar, .grm-item-card,
+  .lora-item, .node-card, .wf-item, .gallery-item,
+  .card{will-change:auto!important;contain:layout style paint!important}
+}
+
+/* ========================================================================
+   Desktop Performance: 减少 GPU 合成层，降低显存占用
+   每个 backdrop-filter 创建一个独立 GPU 层，30 个 ≈ 0.5GB
+   ======================================================================== */
+.sidebar, .modal-panel, .grimoire-sheet, .lora-dropdown-panel,
+.modal-overlay, .grm-pinned-bar, .card-header,
+[class*="backdrop"]{will-change:auto}
+
+/* 背景粒子在 PC 端也降级 */
+#bg_particles .orb{opacity:0.6!important}
+#bg_particles::before, #bg_particles::after{animation:none!important}
+@media(min-width:769px){
+  #bg_particles .orb{opacity:0.4!important}
 }
 
 </style>
@@ -3366,6 +3505,19 @@ textarea:focus-visible,
             <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
           </div>
           <hr class="settings-hr">
+          <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+            <span class="settings-label" style="min-width:auto">主题配色</span>
+            <select id="color_scheme_select" style="flex:1;min-width:120px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
+              <option value="cyberpunk-orange">🎨 橙紫赛博朋克</option>
+              <option value="cyberpunk-pink">🌸 紫粉赛博原版</option>
+              <option value="warm-cream">🍦 暖色调奶油风</option>
+              <option value="clean-white">❄️ 清爽极简白</option>
+              <option value="magazine">📰 杂志风</option>
+              <option value="morandi">🎨 莫兰迪色系</option>
+              <option value="sunset">🌅 日暮主题</option>
+            </select>
+          </div>
+          <hr class="settings-hr">
           <button class="btn btn-xs btn-danger" data-action="resetAll"><svg class="icon" aria-hidden="true"><use href="#icon-warning"/></svg> 重置所有用户设定</button>
         </div>
       </div>
@@ -3412,14 +3564,6 @@ textarea:focus-visible,
 
       <!-- Prep Panel -->
       <div class="prep-panel" id="prep_panel">
-        <div class="prep-section" id="prep_assigned_header" style="display:none">
-          <div class="section-title section-title-row">
-            <span><svg class="icon" aria-hidden="true"><use href="#icon-target"/></svg> 已指定节点参数</span>
-            <button class="btn btn-xs btn-danger" data-action="clearAllNodeRoles" aria-label="清除所有指定"><svg class="icon" aria-hidden="true"><use href="#icon-trash"/></svg> 清除所有指定</button>
-          </div>
-          <div class="assigned-tags" id="assigned_tags"></div>
-        </div>
-        
         <div class="prep-section" id="prep_positive" style="display:none">
           <div class="section-title section-title-row">
             <span><svg class="icon-sm" aria-hidden="true"><use href="#icon-check"/></svg> 正面提示词 <span class="section-badge" id="prep_pos_node_badge">节点: 自动</span></span>
@@ -3496,6 +3640,7 @@ textarea:focus-visible,
       <div class="card">
         <div class="card-header nodes-header">
           <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 节点列表</span>
+          <button class="btn btn-xs btn-danger" id="clear_all_roles_btn" data-action="clearAllNodeRoles" aria-label="清除所有指定" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 清除所有指定</button>
         </div>
         <input type="text" id="search_nodes" placeholder="搜索节点名称或ID..." oninput="filterNodes()" aria-label="搜索节点" class="settings-input" style="margin-bottom:6px" autocomplete="off">
         <div class="node-help-bar"><span class="node-help-dot pos"></span> 正面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span> 负面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span> 图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span> 尺寸 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot exp"></span> 文本 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot lora"></span> Lora <span style="color:var(--text-muted)">·</span> <span class="node-help-dot dis"></span> 禁用</div>
@@ -4439,8 +4584,8 @@ async function saveBg() {
       method: 'POST',
       body: JSON.stringify({ bg, blur, brightness: bright })
     }, true);
-    // 用后端 URL 替代 base64，避免 localStorage 存不下大图
-    document.documentElement.style.setProperty('--custom-bg', 'url(/api/bg/image)');
+    // 先用 base64 直接设置，保证立即生效（后端 URL 用于刷新后持久化）
+    document.documentElement.style.setProperty('--custom-bg', `url(${bg})`);
     try { localStorage.setItem('custom_bg', bg); } catch(e) {}
   } else {
     document.documentElement.style.removeProperty('--custom-bg');
@@ -4675,8 +4820,9 @@ let allParamsData = null, promptNodeId = '', resNodeId = '', loadImageNodeIds = 
 let promptInputKey = '', negativeInputKey = '';
 let modelLists = {}, disabledGroups = {}, groupsSource = '', isBound = false, bindTarget = '', allWorkflows = [];
 let disabledNodes = [];
-let loraNodesConfig = {};     // 各节点的 Lora 配置 {nodeId: [{on, lora_name, strength_model, strength_clip}, ...]}
+let loraNodesConfig = {};     // 各节点的 Lora 配置 {nodeId: [{on, lora_name, strength_model, strength_clip, trigger_words_selected?}, ...]}
 let availableLoras = [];      // 从 ComfyUI 获取的可用 Lora 列表
+let loraMetadata = {};        // Lora 元数据缓存 {lora_path: {trigger_words, preview_url, model_name, tags, file_path}}
 
 // 侧栏分类折叠状态
 var _sidebarCatCollapsed = {};
@@ -4703,9 +4849,13 @@ function loadCfg() {
     $id('cfg_output_dir').value = c.output_dir || '';
     const sp = document.getElementById('cfg_show_prompt');
     if (sp) sp.checked = c.show_prompt_on_image === true;
+    // 加载主题
+    const scheme = c.color_scheme || 'cyberpunk-orange';
+    applyColorScheme(scheme);
+    const sel = document.getElementById('color_scheme_select');
+    if (sel) sel.value = scheme;
   });
 }
-loadCfg();
 
 function toggleSettings() {
   const modal = document.getElementById('settings_modal');
@@ -4764,6 +4914,408 @@ async function saveShowPrompt() {
   const val = document.getElementById('cfg_show_prompt').checked;
   await apiFetch('/api/config', { method:'POST', body:JSON.stringify({show_prompt_on_image:val}) });
 }
+
+// ========================================================================
+// 主题切换系统
+// ========================================================================
+const COLOR_SCHEMES = {
+  'cyberpunk-orange': { name: '橙紫赛博朋克', desc: '霓虹橙 × 赛博紫，撞色科技感' },
+  'cyberpunk-pink':  { name: '紫粉赛博原版', desc: '经典紫粉配色，赛博魔法风格' },
+  'warm-cream':      { name: '暖色调奶油风', desc: '珊瑚暖红 × 暖蓝，治愈温暖' },
+  'clean-white':     { name: '清爽极简白',   desc: '干净蓝紫，低干扰阅读体验' },
+  'magazine':        { name: '杂志风',       desc: '全灰阶无彩色，黑白杂志排版' },
+  'morandi':         { name: '莫兰迪色系',   desc: '低饱和高级感，柔和艺术风' },
+  'sunset':          { name: '日暮主题',     desc: '晚霞红 × 暖紫，日落暖色渐变' },
+};
+let _themeStyleEl = null;
+
+function applyColorScheme(name) {
+  if (!name || name === 'cyberpunk-orange') {
+    // 默认主题，移除注入的样式
+    if (_themeStyleEl) { _themeStyleEl.remove(); _themeStyleEl = null; }
+    document.documentElement.removeAttribute('data-color-scheme');
+    return;
+  }
+  document.documentElement.setAttribute('data-color-scheme', name);
+  // 移除旧 style
+  if (_themeStyleEl) { _themeStyleEl.remove(); _themeStyleEl = null; }
+  // 注入新 style
+  const css = getColorSchemeCSS(name);
+  if (!css) return;
+  _themeStyleEl = document.createElement('style');
+  _themeStyleEl.textContent = css;
+  _themeStyleEl.setAttribute('data-theme-css', name);
+  document.head.appendChild(_themeStyleEl);
+}
+
+async function saveColorScheme(name) {
+  try {
+    await apiFetch('/api/config', { method:'POST', body:JSON.stringify({color_scheme: name || 'cyberpunk-orange'}) });
+  } catch(e) { /* ignore */ }
+}
+
+function loadColorScheme() {
+  apiFetch('/api/config').then(c => {
+    const scheme = (c && c.color_scheme) || 'cyberpunk-orange';
+    applyColorScheme(scheme);
+    const sel = document.getElementById('color_scheme_select');
+    if (sel) sel.value = scheme;
+  }).catch(() => {});
+}
+
+function getColorSchemeCSS(name) {
+  // 各主题 CSS 变量覆盖 — 与默认 (cyberpunk-orange) 的差异部分
+  const schemes = {
+    // ==================== 紫粉赛博原版 ====================
+    'cyberpunk-pink': `
+[data-color-scheme="cyberpunk-pink"] {
+  --primary:       oklch(68% 0.30 320);
+  --primary-hover: oklch(58% 0.30 320);
+  --primary-glow:  0 0 28px oklch(68% 0.30 320 / 0.4);
+  --accent:        oklch(62% 0.32 270);
+  --accent-hover:  oklch(53% 0.32 270);
+  --accent-glow:   0 0 28px oklch(62% 0.32 270 / 0.4);
+  --gradient-primary: linear-gradient(135deg, oklch(72% 0.30 320), oklch(62% 0.32 270), oklch(55% 0.28 240));
+  --gradient-accent:  linear-gradient(135deg, oklch(62% 0.32 270), oklch(72% 0.30 320));
+  --gradient-text:    linear-gradient(135deg, oklch(72% 0.30 320), oklch(62% 0.32 270), oklch(52% 0.26 240));
+  --gradient-warm:    linear-gradient(135deg, oklch(68% 0.22 30), oklch(72% 0.30 320));
+  --gradient-cool:    linear-gradient(135deg, oklch(62% 0.32 270), oklch(62% 0.20 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(72% 0.30 320 / 0.55), oklch(62% 0.32 270 / 0.55));
+  --shadow-glow:   0 0 0 4px oklch(66% 0.26 310 / 0.25);
+  --shadow-focus:  0 0 0 3px oklch(66% 0.26 310 / 0.4);
+  --shadow-colored: 0 4px 20px oklch(68% 0.30 320 / 0.2), 0 8px 40px oklch(68% 0.30 320 / 0.1);
+}
+[data-color-scheme="cyberpunk-pink"][data-theme="light"] {
+  --bg:            oklch(96% 0.01 300);
+  --bg-elevated:   oklch(100% 0 0);
+  --card-border:   oklch(78% 0.028 300 / 0.65);
+  --input-bg:      oklch(90% 0.012 300);
+  --card-hover:    oklch(82% 0.022 300);
+  --text:          oklch(15% 0.025 300);
+  --text-sub:      oklch(40% 0.035 300);
+  --text-sub2:     oklch(60% 0.03 300);
+  --text-muted:    oklch(75% 0.025 300);
+  --primary:       oklch(55% 0.30 320);
+  --primary-hover: oklch(46% 0.30 320);
+  --accent:        oklch(50% 0.32 270);
+  --accent-hover:  oklch(42% 0.32 270);
+  --shadow:        oklch(30% 0.035 300 / 0.12);
+  --shadow-colored: 0 4px 20px oklch(55% 0.30 320 / 0.15);
+  --tag-bg:        oklch(95% 0.035 300);
+  --tag-color:     oklch(40% 0.07 300);
+  --tag-border:    oklch(80% 0.028 300);
+  --tag-hover-bg:  oklch(55% 0.30 320);
+  --icon-bg:       oklch(90% 0.018 300);
+  --gradient-primary: linear-gradient(135deg, oklch(58% 0.30 320), oklch(52% 0.32 270));
+  --gradient-accent:  linear-gradient(135deg, oklch(52% 0.32 270), oklch(58% 0.30 320));
+  --gradient-text:    linear-gradient(135deg, oklch(58% 0.30 320), oklch(52% 0.32 270));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.22 30), oklch(58% 0.30 320));
+  --gradient-cool:    linear-gradient(135deg, oklch(52% 0.32 270), oklch(50% 0.20 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(58% 0.30 320 / 0.5), oklch(52% 0.32 270 / 0.5));
+}
+`,
+    // ==================== 清爽极简白 ====================
+    'clean-white': `
+[data-color-scheme="clean-white"] {
+  --primary:       oklch(50% 0.22 280);
+  --primary-hover: oklch(42% 0.22 280);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(55% 0.18 220);
+  --accent-hover:  oklch(47% 0.18 220);
+  --accent-glow:   0 0 0 0 transparent;
+  --gradient-primary: linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
+  --gradient-accent:  linear-gradient(135deg, oklch(50% 0.18 220), oklch(55% 0.22 280));
+  --gradient-text:    linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(55% 0.22 280));
+  --gradient-cool:    linear-gradient(135deg, oklch(50% 0.18 220), oklch(50% 0.15 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(55% 0.22 280 / 0.5), oklch(50% 0.18 220 / 0.5));
+  --shadow-glow:   0 0 0 3px oklch(50% 0.22 280 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(50% 0.22 280 / 0.25);
+  --shadow-colored: 0 0 0 0 transparent;
+}
+[data-color-scheme="clean-white"][data-theme="light"] {
+  --bg:            oklch(98% 0.003 80);
+  --bg-elevated:   oklch(99% 0.002 80);
+  --card:          #fff;
+  --card-border:   oklch(88% 0.006 80 / 0.5);
+  --bg-overlay:    oklch(97% 0.003 80 / 0.7);
+  --input-bg:      oklch(95% 0.005 80);
+  --card-hover:    oklch(93% 0.006 80);
+  --text:          oklch(18% 0.008 80);
+  --text-sub:      oklch(42% 0.015 80);
+  --text-sub2:     oklch(60% 0.012 80);
+  --text-muted:    oklch(75% 0.01 80);
+  --primary:       oklch(50% 0.22 280);
+  --primary-hover: oklch(42% 0.22 280);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(55% 0.18 220);
+  --accent-hover:  oklch(47% 0.18 220);
+  --accent-glow:   0 0 0 0 transparent;
+  --success:       oklch(50% 0.18 150);
+  --warning:       oklch(60% 0.18 85);
+  --danger:        oklch(52% 0.22 20);
+  --info:          oklch(50% 0.15 250);
+  --shadow:        oklch(0% 0 0 / 0.06);
+  --shadow-glow:   0 0 0 3px oklch(50% 0.22 280 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(50% 0.22 280 / 0.25);
+  --shadow-colored: 0 0 0 0 transparent;
+  --tag-bg:        oklch(94% 0.008 80);
+  --tag-color:     oklch(38% 0.04 80);
+  --tag-border:    oklch(82% 0.01 80);
+  --tag-hover-bg:  oklch(50% 0.22 280);
+  --icon-bg:       oklch(93% 0.008 80);
+  --gradient-primary: linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
+  --gradient-accent:  linear-gradient(135deg, oklch(50% 0.18 220), oklch(55% 0.22 280));
+  --gradient-text:    linear-gradient(135deg, oklch(55% 0.22 280), oklch(50% 0.18 220));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(55% 0.22 280));
+  --gradient-cool:    linear-gradient(135deg, oklch(50% 0.18 220), oklch(50% 0.15 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(55% 0.22 280 / 0.5), oklch(50% 0.18 220 / 0.5));
+}
+[data-color-scheme="clean-white"] .unified-header::before,
+[data-color-scheme="clean-white"] .card::before,
+[data-color-scheme="clean-white"] .logo::after { display: none; }
+[data-color-scheme="clean-white"] .unified-header h1 { background: none; -webkit-text-fill-color: var(--text); background-clip: unset; animation: none; filter: none; }
+[data-color-scheme="clean-white"] #bg_particles { display: none; }
+`,
+    // ==================== 暖色调奶油风 ====================
+    'warm-cream': `
+[data-color-scheme="warm-cream"] {
+  --primary:       oklch(52% 0.18 30);
+  --primary-hover: oklch(44% 0.18 30);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(52% 0.15 210);
+  --accent-hover:  oklch(44% 0.15 210);
+  --accent-glow:   0 0 0 0 transparent;
+  --gradient-primary: linear-gradient(135deg, oklch(55% 0.18 30), oklch(50% 0.16 210));
+  --gradient-accent:  linear-gradient(135deg, oklch(50% 0.16 210), oklch(55% 0.18 30));
+  --gradient-text:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(50% 0.16 210));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(52% 0.18 30));
+  --gradient-cool:    linear-gradient(135deg, oklch(50% 0.16 210), oklch(50% 0.14 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(55% 0.18 30 / 0.5), oklch(50% 0.16 210 / 0.5));
+  --shadow-glow:   0 0 0 3px oklch(52% 0.18 30 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(52% 0.18 30 / 0.25);
+  --shadow-colored: 0 0 0 0 transparent;
+}
+[data-color-scheme="warm-cream"][data-theme="light"] {
+  --bg:            oklch(96% 0.008 55);
+  --bg-elevated:   oklch(98% 0.006 55);
+  --card-border:   oklch(86% 0.012 55 / 0.5);
+  --input-bg:      oklch(94% 0.01 55);
+  --card-hover:    oklch(91% 0.015 55);
+  --text:          oklch(18% 0.015 55);
+  --text-sub:      oklch(42% 0.025 55);
+  --text-sub2:     oklch(60% 0.02 55);
+  --text-muted:    oklch(75% 0.015 55);
+  --primary:       oklch(55% 0.22 50);
+  --primary-hover: oklch(46% 0.22 50);
+  --accent:        oklch(50% 0.22 300);
+  --accent-hover:  oklch(42% 0.22 300);
+  --shadow:        oklch(30% 0.02 55 / 0.08);
+  --shadow-glow:   0 0 0 3px oklch(55% 0.22 50 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(55% 0.22 50 / 0.25);
+  --tag-bg:        oklch(93% 0.02 55);
+  --tag-color:     oklch(40% 0.04 55);
+  --tag-border:    oklch(82% 0.02 55);
+  --tag-hover-bg:  oklch(55% 0.22 50);
+  --icon-bg:       oklch(92% 0.02 55);
+  --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
+  --gradient-accent:  linear-gradient(135deg, oklch(52% 0.22 300), oklch(58% 0.22 50));
+  --gradient-text:    linear-gradient(135deg, oklch(58% 0.22 50), oklch(52% 0.22 300));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(58% 0.22 50));
+  --gradient-cool:    linear-gradient(135deg, oklch(52% 0.22 300), oklch(50% 0.15 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(58% 0.22 50 / 0.5), oklch(52% 0.22 300 / 0.5));
+}
+`,
+    // ==================== 杂志风 ====================
+    'magazine': `
+[data-color-scheme="magazine"] {
+  --primary:       oklch(25% 0 0);
+  --primary-hover: oklch(15% 0 0);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(40% 0 0);
+  --accent-hover:  oklch(30% 0 0);
+  --accent-glow:   0 0 0 0 transparent;
+  --success:       oklch(35% 0 0);
+  --warning:       oklch(45% 0 0);
+  --danger:        oklch(30% 0 0);
+  --danger-glow:   0 0 0 0 transparent;
+  --info:          oklch(38% 0 0);
+  --gradient-primary: linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
+  --gradient-accent:  linear-gradient(135deg, oklch(45% 0 0), oklch(35% 0 0));
+  --gradient-text:    linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
+  --gradient-warm:    linear-gradient(135deg, oklch(40% 0 0), oklch(35% 0 0));
+  --gradient-cool:    linear-gradient(135deg, oklch(45% 0 0), oklch(40% 0 0));
+  --gradient-glow:    linear-gradient(135deg, oklch(35% 0 0 / 0.5), oklch(45% 0 0 / 0.5));
+  --shadow-glow:   0 0 0 3px oklch(25% 0 0 / 0.12);
+  --shadow-focus:  0 0 0 3px oklch(25% 0 0 / 0.2);
+  --shadow-colored: 0 0 0 0 transparent;
+  --tag-bg:        oklch(20% 0.05 310);
+  --tag-color:     oklch(78% 0.07 310);
+  --tag-border:    oklch(28% 0.06 310);
+  --tag-hover-bg:  oklch(60% 0.24 310);
+}
+[data-color-scheme="magazine"][data-theme="light"] {
+  --bg:            oklch(97% 0 0);
+  --bg-elevated:   oklch(99% 0 0);
+  --card:          #fff;
+  --card-border:   oklch(92% 0 0 / 0.4);
+  --input-bg:      oklch(94% 0 0);
+  --card-hover:    oklch(90% 0 0);
+  --text:          oklch(12% 0 0);
+  --text-sub:      oklch(38% 0 0);
+  --text-sub2:     oklch(55% 0 0);
+  --text-muted:    oklch(72% 0 0);
+  --primary:       oklch(25% 0 0);
+  --primary-hover: oklch(15% 0 0);
+  --accent:        oklch(40% 0 0);
+  --accent-hover:  oklch(30% 0 0);
+  --success:       oklch(35% 0 0);
+  --warning:       oklch(45% 0 0);
+  --danger:        oklch(30% 0 0);
+  --info:          oklch(38% 0 0);
+  --shadow:        oklch(0% 0 0 / 0.06);
+  --shadow-glow:   0 0 0 3px oklch(25% 0 0 / 0.12);
+  --shadow-focus:  0 0 0 3px oklch(25% 0 0 / 0.2);
+  --tag-bg:        oklch(92% 0 0);
+  --tag-color:     oklch(30% 0 0);
+  --tag-border:    oklch(82% 0 0);
+  --tag-hover-bg:  oklch(25% 0 0);
+  --icon-bg:       oklch(92% 0 0);
+  --gradient-primary: linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
+  --gradient-accent:  linear-gradient(135deg, oklch(45% 0 0), oklch(35% 0 0));
+  --gradient-text:    linear-gradient(135deg, oklch(35% 0 0), oklch(45% 0 0));
+  --gradient-warm:    linear-gradient(135deg, oklch(40% 0 0), oklch(35% 0 0));
+  --gradient-cool:    linear-gradient(135deg, oklch(45% 0 0), oklch(40% 0 0));
+  --gradient-glow:    linear-gradient(135deg, oklch(35% 0 0 / 0.5), oklch(45% 0 0 / 0.5));
+}
+[data-color-scheme="magazine"] .unified-header::before,
+[data-color-scheme="magazine"] .card::before,
+[data-color-scheme="magazine"] .logo::after { display: none; }
+[data-color-scheme="magazine"] .unified-header h1 { background: none; -webkit-text-fill-color: var(--text); background-clip: unset; animation: none; filter: none; }
+[data-color-scheme="magazine"] #bg_particles { display: none; }
+`,
+    // ==================== 莫兰迪色系 ====================
+    'morandi': `
+[data-color-scheme="morandi"] {
+  --primary:       oklch(45% 0.10 30);
+  --primary-hover: oklch(38% 0.10 30);
+  --primary-glow:  0 0 0 0 transparent;
+  --accent:        oklch(45% 0.10 200);
+  --accent-hover:  oklch(38% 0.10 200);
+  --accent-glow:   0 0 0 0 transparent;
+  --success:       oklch(45% 0.10 150);
+  --warning:       oklch(55% 0.10 85);
+  --danger:        oklch(45% 0.12 20);
+  --danger-glow:   0 0 0 0 transparent;
+  --info:          oklch(45% 0.10 250);
+  --gradient-primary: linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
+  --gradient-accent:  linear-gradient(135deg, oklch(45% 0.10 200), oklch(48% 0.10 30));
+  --gradient-text:    linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
+  --gradient-warm:    linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 30));
+  --gradient-cool:    linear-gradient(135deg, oklch(45% 0.10 200), oklch(45% 0.10 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(48% 0.10 30 / 0.5), oklch(45% 0.10 200 / 0.5));
+  --shadow-glow:   0 0 0 3px oklch(45% 0.10 30 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(45% 0.10 30 / 0.25);
+  --shadow-colored: 0 0 0 0 transparent;
+}
+[data-color-scheme="morandi"][data-theme="light"] {
+  --bg:            oklch(95% 0.015 90);
+  --bg-elevated:   oklch(97% 0.01 90);
+  --card-border:   oklch(85% 0.02 90 / 0.5);
+  --input-bg:      oklch(93% 0.015 90);
+  --card-hover:    oklch(90% 0.02 90);
+  --text:          oklch(18% 0.01 90);
+  --text-sub:      oklch(42% 0.015 90);
+  --text-sub2:     oklch(60% 0.015 90);
+  --text-muted:    oklch(75% 0.01 90);
+  --primary:       oklch(45% 0.10 30);
+  --primary-hover: oklch(38% 0.10 30);
+  --accent:        oklch(45% 0.10 200);
+  --accent-hover:  oklch(38% 0.10 200);
+  --success:       oklch(45% 0.10 150);
+  --warning:       oklch(55% 0.10 85);
+  --danger:        oklch(45% 0.12 20);
+  --info:          oklch(45% 0.10 250);
+  --shadow:        oklch(30% 0.02 90 / 0.08);
+  --shadow-glow:   0 0 0 3px oklch(45% 0.10 30 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(45% 0.10 30 / 0.25);
+  --tag-bg:        oklch(93% 0.015 90);
+  --tag-color:     oklch(40% 0.02 90);
+  --tag-border:    oklch(82% 0.015 90);
+  --tag-hover-bg:  oklch(45% 0.10 30);
+  --icon-bg:       oklch(92% 0.015 90);
+  --gradient-primary: linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
+  --gradient-accent:  linear-gradient(135deg, oklch(45% 0.10 200), oklch(48% 0.10 30));
+  --gradient-text:    linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 200));
+  --gradient-warm:    linear-gradient(135deg, oklch(48% 0.10 30), oklch(45% 0.10 30));
+  --gradient-cool:    linear-gradient(135deg, oklch(45% 0.10 200), oklch(45% 0.10 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(48% 0.10 30 / 0.5), oklch(45% 0.10 200 / 0.5));
+}
+`,
+    // ==================== 日暮主题 ====================
+    'sunset': `
+[data-color-scheme="sunset"] {
+  --primary:       oklch(60% 0.22 30);
+  --primary-hover: oklch(50% 0.22 30);
+  --primary-glow:  0 0 28px oklch(60% 0.22 30 / 0.4);
+  --accent:        oklch(55% 0.22 300);
+  --accent-hover:  oklch(45% 0.22 300);
+  --accent-glow:   0 0 28px oklch(55% 0.22 300 / 0.4);
+  --gradient-primary: linear-gradient(135deg, oklch(63% 0.22 30), oklch(55% 0.22 300));
+  --gradient-accent:  linear-gradient(135deg, oklch(55% 0.22 300), oklch(63% 0.22 30));
+  --gradient-text:    linear-gradient(135deg, oklch(63% 0.22 30), oklch(55% 0.22 300));
+  --gradient-warm:    linear-gradient(135deg, oklch(60% 0.20 30), oklch(63% 0.22 30));
+  --gradient-cool:    linear-gradient(135deg, oklch(55% 0.22 300), oklch(55% 0.18 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(63% 0.22 30 / 0.55), oklch(55% 0.22 300 / 0.55));
+  --shadow-glow:   0 0 0 4px oklch(60% 0.22 30 / 0.25);
+  --shadow-focus:  0 0 0 3px oklch(60% 0.22 30 / 0.4);
+  --shadow-colored: 0 4px 20px oklch(60% 0.22 30 / 0.2), 0 8px 40px oklch(60% 0.22 30 / 0.1);
+}
+[data-color-scheme="sunset"][data-theme="light"] {
+  --bg:            oklch(95% 0.015 70);
+  --bg-elevated:   oklch(97% 0.01 70);
+  --card-border:   oklch(85% 0.02 70 / 0.5);
+  --input-bg:      oklch(93% 0.015 70);
+  --card-hover:    oklch(90% 0.02 70);
+  --text:          oklch(18% 0.015 70);
+  --text-sub:      oklch(42% 0.02 70);
+  --text-sub2:     oklch(60% 0.018 70);
+  --text-muted:    oklch(75% 0.015 70);
+  --primary:       oklch(55% 0.22 30);
+  --primary-hover: oklch(46% 0.22 30);
+  --accent:        oklch(50% 0.20 300);
+  --accent-hover:  oklch(42% 0.20 300);
+  --shadow:        oklch(30% 0.02 70 / 0.08);
+  --shadow-glow:   0 0 0 3px oklch(55% 0.22 30 / 0.15);
+  --shadow-focus:  0 0 0 3px oklch(55% 0.22 30 / 0.25);
+  --tag-bg:        oklch(93% 0.02 70);
+  --tag-color:     oklch(40% 0.03 70);
+  --tag-border:    oklch(82% 0.02 70);
+  --tag-hover-bg:  oklch(55% 0.22 30);
+  --icon-bg:       oklch(92% 0.02 70);
+  --gradient-primary: linear-gradient(135deg, oklch(58% 0.22 30), oklch(52% 0.20 300));
+  --gradient-accent:  linear-gradient(135deg, oklch(52% 0.20 300), oklch(58% 0.22 30));
+  --gradient-text:    linear-gradient(135deg, oklch(58% 0.22 30), oklch(52% 0.20 300));
+  --gradient-warm:    linear-gradient(135deg, oklch(55% 0.18 30), oklch(58% 0.22 30));
+  --gradient-cool:    linear-gradient(135deg, oklch(52% 0.20 300), oklch(50% 0.15 250));
+  --gradient-glow:    linear-gradient(135deg, oklch(58% 0.22 30 / 0.5), oklch(52% 0.20 300 / 0.5));
+}
+`,
+  };
+  return schemes[name] || '';
+}
+
+// 主题切换事件
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'color_scheme_select') {
+    const val = e.target.value;
+    applyColorScheme(val);
+    saveColorScheme(val);
+  }
+});
+
+// 加载主题配置（必须在主题函数定义之后）
+loadCfg();
 
 // ========================================================================
 // ComfyUI 连接
@@ -5163,7 +5715,6 @@ function updateNodeDisplay() {
   const hasImg = loadImageNodeIds.some(id => !!id);
   const hasDisabled = disabledNodes.length > 0;
   const hasAny = hasPos || hasNeg || hasRes || hasImg || hasExp || hasDisabled;
-  document.getElementById('prep_assigned_header').style.display = hasAny ? 'block' : 'none';
   document.getElementById('prep_positive').style.display = hasPos ? 'block' : 'none';
   document.getElementById('prep_negative').style.display = hasNeg ? 'block' : 'none';
   document.getElementById('prep_resolution').style.display = hasRes ? 'block' : 'none';
@@ -5194,17 +5745,10 @@ function updateNodeDisplay() {
     }
     uploadContainer.innerHTML = uploadHtml;
   }
-  // 渲染已指定标签
-  let tagsHtml = '';
-  if (hasPos) tagsHtml += '<span class="assigned-tag tag-prompt"><svg class="icon-xs" aria-hidden="true"><use href="#icon-check"/></svg> 正面提示词 <button class="tag-remove" data-action="clearNodeRole" data-role="\'prompt\'" aria-label="移除正面提示词指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasNeg) tagsHtml += '<span class="assigned-tag tag-negative"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 负面提示词 <button class="tag-remove" data-action="clearNodeRole" data-role="\'negative\'" aria-label="移除负面提示词指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasRes) tagsHtml += '<span class="assigned-tag tag-res"><svg class="icon-xs" aria-hidden="true"><use href="#icon-ruler"/></svg> 分辨率 <button class="tag-remove" data-action="clearNodeRole" data-role="\'resolution\'" aria-label="移除分辨率指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasImg) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <button class="tag-remove" data-action="clearNodeRole" data-role="\'load_image\'" aria-label="移除上传图片指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasExp) tagsHtml += '<span class="assigned-tag tag-load"><svg class="icon-xs" aria-hidden="true"><use href="#icon-document"/></svg> 扩写后文本 <button class="tag-remove" data-action="clearNodeRole" data-role="\'expanded_text\'" aria-label="移除扩写后文本指定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  if (hasDisabled) tagsHtml += '<span class="assigned-tag tag-disabled"><svg class="icon-xs" aria-hidden="true"><use href="#icon-prohibited"/></svg> 已禁用 ' + disabledNodes.length + '节点 <button class="tag-remove" data-action="clearNodeRole" data-role="\'disabled\'" aria-label="清除所有禁用"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>';
-  document.getElementById('assigned_tags').innerHTML = tagsHtml || '<span style="font-size:11px;color:var(--text-sub)">尚未指定任何节点</span>';
+  // 更新清除所有指定按钮的显示
+  const clearBtn = document.getElementById('clear_all_roles_btn');
+  if (clearBtn) clearBtn.style.display = hasAny ? 'inline-flex' : 'none';
 }
-
 function setPromptNode(n) {
   if (promptNodeId === n) { promptNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
   // 校验：检查目标节点是否有文本参数
@@ -5431,6 +5975,81 @@ function renderNodes() {
 // ========================================================================
 async function loadLoras() {
   availableLoras = await apiFetch('/api/loras', {}, true) || [];
+  // 等待元数据加载完成，避免首次选择 Lora 时 metadata 还是空的
+  await loadLoraMetadata();
+}
+
+async function loadLoraMetadata() {
+  try {
+    loraMetadata = await apiFetch('/api/lora-metadata', {}, true) || {};
+  } catch(e) {
+    console.warn('Lora 元数据加载失败:', e);
+    loraMetadata = {};
+  }
+}
+
+/**
+ * 根据 lora_name 匹配元数据
+ * @param {string} loraName - ComfyUI 风格的路径如 "ZImage/ZIT/xxx.safetensors"
+ * @returns {object|null} {trigger_words, preview_url, model_name, tags, file_path}
+ */
+function matchLoraMeta(loraName) {
+  if (!loraName || !loraMetadata) return null;
+  // 精确匹配
+  if (loraMetadata[loraName]) return loraMetadata[loraName];
+  // 标准化路径分隔符
+  const norm = loraName.replace(/\\/g, '/');
+  if (loraMetadata[norm]) return loraMetadata[norm];
+  // 互转的分隔符版本
+  const altSep = norm.replace(/\//g, '\\');
+  if (loraMetadata[altSep]) return loraMetadata[altSep];
+  // 按 basename 匹配
+  const bn = norm.split('/').pop();
+  const nameNoExt = bn.replace(/\.(safetensors|ckpt|pt|pth)$/i, '');
+  const bnKey = '__bn__' + nameNoExt;
+  if (loraMetadata[bnKey]) return loraMetadata[bnKey];
+  // 模糊匹配：遍历缓存看末尾是否匹配
+  for (const [key, meta] of Object.entries(loraMetadata)) {
+    if (key.startsWith('__bn__')) continue;
+    if (key.endsWith(bn)) return meta;
+  }
+  // 兜底：整串无分隔符（如 'Anima风格功能WAK-000046.safetensors'），
+  // 尝试在 __bn__ 索引里找以 bn_name + .safetensors 结尾的项
+  if (!loraName.includes('/') && !loraName.includes('\\')) {
+    for (const [key, meta] of Object.entries(loraMetadata)) {
+      if (!key.startsWith('__bn__')) continue;
+      const bnName = key.substring(6);
+      if (loraName.endsWith(bnName + '.safetensors') || loraName.endsWith(bnName)) {
+        return meta;
+      }
+    }
+    // 也试试 path 版 key 以文件名结尾的
+    const lowerName = loraName.toLowerCase();
+    for (const [key, meta] of Object.entries(loraMetadata)) {
+      if (key.startsWith('__bn__')) continue;
+      if (key.toLowerCase().endsWith(lowerName) || key.toLowerCase().endsWith(lowerName.replace('.safetensors', ''))) {
+        return meta;
+      }
+    }
+  }
+  console.warn(`[Lora] 未匹配到元数据: ${loraName} (bn=${nameNoExt}, cache keys: ${Object.keys(loraMetadata).length})`);
+  return null;
+}
+
+/**
+ * 从 LoRA Manager 的完整 file_path 提取 ComfyUI 风格的 lora_name
+ * 例: E:/AIwork/.../loras/Anima/风格功能/wanx-000015.safetensors
+ *   → Anima\风格功能\wanx-000015.safetensors
+ */
+function extractComfyUIPath(filePath) {
+  if (!filePath) return null;
+  const normalized = filePath.replace(/\\/g, '/');
+  const lower = normalized.toLowerCase();
+  const idx = lower.indexOf('/loras/');
+  if (idx >= 0) {
+    return normalized.substring(idx + 7).replace(/\//g, '\\');
+  }
+  return null;
 }
 
 // ========================================================================
@@ -5465,9 +6084,17 @@ function onLoraTouchMove() {
 // ========================================================================
 function toggleLoraDropdown(event, trigger, nodeId, idx) {
   event.stopPropagation();
-  // 如果已有面板则关闭
-  const existing = trigger.parentElement.querySelector('.lora-dropdown-panel');
-  if (existing) { existing.remove(); return; }
+  // 如果已有面板，先关掉所有（避免多个下拉共存）
+  const allPanels = document.querySelectorAll('.lora-dropdown-panel');
+  // 检查点的是不是当前 trigger 关联的面板（通过 trigger 上的状态位判断）
+  if (trigger._ldpAttached) {
+    allPanels.forEach(p => p.remove());
+    trigger._ldpAttached = false;
+    return;
+  }
+  // 关闭所有其他面板
+  allPanels.forEach(p => p.remove());
+  document.querySelectorAll('.lora-select').forEach(el => el._ldpAttached = false);
 
   const curVal = (loraNodesConfig[nodeId]?.[idx]?.lora_name) || '';
 
@@ -5494,10 +6121,28 @@ function toggleLoraDropdown(event, trigger, nodeId, idx) {
   const tRect = trigger.getBoundingClientRect();
   panel.style.left = tRect.left + 'px';
   panel.style.top = (tRect.bottom + 2) + 'px';
-  panel.style.width = Math.max(200, tRect.width) + 'px';
-  // 移出到 body 确保 z-index 生效
+  panel.style.width = Math.max(340, tRect.width) + 'px';  // 加宽容纳预览图
+  panel.style.maxHeight = '380px';  // 加高
+  trigger._ldpAttached = true;
   document.body.appendChild(panel);
   setTimeout(() => panel.querySelector('.ldp-search input')?.focus(), 50);
+}
+
+function buildLdpItemHtml(lr, curVal, nodeId, idx) {
+  const sel = lr.full === curVal ? ' selected' : '';
+  const meta = matchLoraMeta(lr.full);
+  const previewUrl = (meta && meta.preview_url)
+    ? `/api/lora-preview?fn=${encodeURIComponent(lr.full)}`
+    : '';
+  const thumb = previewUrl
+    ? `<img class="ldp-thumb" src="${previewUrl}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">`
+    : '';
+  const placeholder = previewUrl
+    ? '<span class="ldp-thumb-placeholder" style="display:none"></span>'
+    : '<span class="ldp-thumb-placeholder"></span>';
+  return `<div class="ldp-item${sel}" onclick="selectLdpItem('${nodeId}', ${idx}, '${lr.full.replace(/'/g, "\\'")}')">
+    ${thumb}${placeholder}<span class="ldp-name" title="${lr.full.replace(/"/g,'&quot;')}">${lr.name}</span>
+  </div>`;
 }
 
 function buildLdpTree(tree, curVal, nodeId, idx) {
@@ -5514,8 +6159,7 @@ function buildLdpTree(tree, curVal, nodeId, idx) {
       const items = subs[sub].sort((a, b) => a.name.localeCompare(b.name, 'zh'));
       if (sub) html += `<div class="ldp-subcat">${sub}</div>`;
       items.forEach(lr => {
-        const sel = lr.full === curVal ? ' selected' : '';
-        html += `<div class="ldp-item${sel}" onclick="selectLdpItem('${nodeId}', ${idx}, '${lr.full.replace(/'/g, "\\'")}')">${lr.name}</div>`;
+        html += buildLdpItemHtml(lr, curVal, nodeId, idx);
       });
     });
   });
@@ -5543,23 +6187,83 @@ function filterLdp(input, nodeId, idx) {
 }
 
 function selectLdpItem(nodeId, idx, val) {
+  // 如果 Lora 变了，清空旧触发词选择
+  const oldName = loraNodesConfig[nodeId]?.[idx]?.lora_name;
+  if (oldName !== val && loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId][idx].trigger_words_selected = [];
+  }
   updateLoraForNode(nodeId, idx, 'lora_name', val);
-  // 更新触发器和所有同类面板
-  const triggers = document.querySelectorAll(`.lora-select`);
-  triggers.forEach(t => {
-    if (t.closest('.lora-item') && t.closest('.lora-item').querySelector('.lora-dropdown-panel')) {
-      t.textContent = val.replace(/^.*[\\\/]/, '');
-      t.closest('.lora-item').querySelector('.lora-dropdown-panel')?.remove();
-    }
-  });
+  // 关闭所有下拉面板 + 清标记
+  document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
+  document.querySelectorAll('.lora-select').forEach(el => { el._ldpAttached = false; el.textContent = val.replace(/^.*[\\\/]/, ''); });
+  // 重新渲染弹窗以显示新 Lora 的触发词
+  showNodeDetail(nodeId);
 }
 
 // 点击外部关闭所有 Lora 面板
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.lora-dropdown-panel') && !e.target.closest('.lora-select')) {
     document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
+    document.querySelectorAll('.lora-select').forEach(el => el._ldpAttached = false);
   }
 });
+
+// ========================================================================
+// Lora 触发词管理
+// ========================================================================
+function toggleLoraTriggerWord(nodeId, idx, word, checked) {
+  if (!loraNodesConfig[nodeId] || !loraNodesConfig[nodeId][idx]) return;
+  const lora = loraNodesConfig[nodeId][idx];
+  if (!lora.trigger_words_selected) lora.trigger_words_selected = [];
+  if (checked) {
+    if (!lora.trigger_words_selected.includes(word)) {
+      lora.trigger_words_selected.push(word);
+    }
+  } else {
+    lora.trigger_words_selected = lora.trigger_words_selected.filter(w => w !== word);
+  }
+  // 更新 UI 标签样式（不重建整个面板）
+  const panel = document.getElementById('lora_list_' + nodeId);
+  if (panel) {
+    const item = panel.querySelector(`[data-idx="${idx}"]`);
+    if (item) {
+      const tags = item.querySelectorAll('.lora-tw-tag');
+      tags.forEach(tag => {
+        const cb = tag.querySelector('input[type="checkbox"]');
+        if (cb && cb.getAttribute('onchange').includes(`'${word.replace(/'/g,"\\'")}'`)) {
+          if (checked) {
+            tag.classList.add('tw-active');
+            cb.checked = true;
+          } else {
+            tag.classList.remove('tw-active');
+            cb.checked = false;
+          }
+        }
+      });
+    }
+  }
+  // 即时保存到后端
+  const saveData = { __lora_nodes__: { ...loraNodesConfig }, __prompt_node__: promptNodeId, __negative_node__: negativeNodeId, __resolution_node__: resNodeId, __expanded_text_node__: expandedTextNodeId, __load_image_nodes__: (loadImageNodeIds || []).filter(id => id).join(',') };
+  apiFetch('/api/workflow-params', { method: 'POST', body: JSON.stringify(saveData) }, true).catch(() => {});
+}
+
+async function refreshLoraMeta() {
+  try {
+    // 强制后端清掉缓存并重新拉取（包括多分隔符变体和 __bn__ 索引）
+    const res = await apiFetch('/api/lora-metadata/refresh', { method: 'POST' }, true);
+    // 重新加载前端缓存
+    loraMetadata = await apiFetch('/api/lora-metadata', {}, true) || {};
+    // 重新渲染当前节点详情
+    const body = document.getElementById('node_modal_body');
+    const nid = body && body.dataset.nodeId;
+    if (nid) {
+      showNodeDetail(nid);
+    }
+    toast(`Lora 元数据已刷新: 共 ${res?.count || loraMetadata ? Object.keys(loraMetadata).length : 0} 条索引，${res?.trigger_count ?? 0} 个有触发词`, 'success');
+  } catch(e) {
+    toast('刷新失败: ' + e.message, 'error');
+  }
+}
 
 function addLoraForNode(nodeId) {
   if (!availableLoras.length) {
@@ -5589,6 +6293,11 @@ let _dragFromIdx = -1;
 let _dragNodeId = '';
 
 function onLoraDragStart(event, nodeId, idx) {
+  // 阻止滑块/数值输入触发 lora 位置拖拽
+  if (event.target.closest('.lora-strength-wrap') || event.target.closest('.lora-select') || event.target.closest('.lora-tw-row')) {
+    event.preventDefault();
+    return;
+  }
   _dragFromIdx = idx;
   _dragNodeId = nodeId;
   event.dataTransfer.effectAllowed = 'move';
@@ -5749,6 +6458,22 @@ function showNodeDetail(nid) {
         const l = loras[li];
         const disabledCls = l.on ? '' : ' lora-disabled';
         const statusIcon = l.on ? '●' : '○';
+        const loraMeta = matchLoraMeta(l.lora_name || '');
+        // 自动修复 lora_name：如果 basename 匹配到但路径不对，用正确路径替换
+        if (loraMeta && l.lora_name) {
+          const correctPath = loraMeta.file_path ? extractComfyUIPath(loraMeta.file_path) : null;
+          if (correctPath && correctPath !== l.lora_name && correctPath !== l.lora_name.replace(/\\/g, '/')) {
+            console.log(`[Lora] 自动修复 lora_name: ${l.lora_name} -> ${correctPath}`);
+            l.lora_name = correctPath;
+          }
+        }
+        const previewUrl = loraMeta && loraMeta.preview_url
+          ? `/api/lora-preview?fn=${encodeURIComponent(l.lora_name || '')}`
+          : '';
+        const twAll = loraMeta ? (loraMeta.trigger_words || []) : [];
+        const twSelected = l.trigger_words_selected || [];
+        const modelLabel = loraMeta ? (loraMeta.model_name || loraMeta.file_name || '') : '';
+        const hasPreview = !!previewUrl;
         html += `<div class="lora-item${disabledCls}" data-idx="${li}"
           draggable="true"
           ondragstart="onLoraDragStart(event, '${node.id}', ${li})"
@@ -5759,25 +6484,42 @@ function showNodeDetail(nid) {
           ontouchstart="onLoraTouchStart(event, '${node.id}', ${li})"
           ontouchend="onLoraTouchEnd(event, '${node.id}', ${li})"
           ontouchmove="onLoraTouchMove()">
-          <span class="lora-status" title="${l.on ? '已启用' : '已禁用'}">${statusIcon}</span>
-          <div class="lora-select" onclick="toggleLoraDropdown(event, this, '${node.id}', ${li})">
-            ${l.lora_name ? l.lora_name.replace(/^.*[\\\/]/, '') : '— 选择 Lora —'}
-          </div>
-          <span class="lora-strength-wrap">
-            <input class="lora-strength" type="range" min="-2" max="5" step="0.05" value="${l.strength_model ?? 1.0}"
-              oninput="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.nextElementSibling.value = parseFloat(this.value).toFixed(2)"
-              title="权重 (-2~5)" aria-label="Lora 权重">
-            <input class="lora-strength-val" type="number" min="-2" max="5" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
-              onchange="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-2, Math.min(5, parseFloat(this.value) || 0))"
-              title="直接输入数值" aria-label="Lora 权重数值">
-          </span>
-        </div>`;
+          <div class="lora-top-row">
+            <span class="lora-status" title="${l.on ? '已启用' : '已禁用'}">${statusIcon}</span>
+            ${hasPreview ? `<img class="lora-thumb" src="${previewUrl}" alt="" loading="lazy" onerror="this.style.display='none'" title="${modelLabel.replace(/"/g,'&quot;')}">` : `<span class="lora-thumb-placeholder"></span>`}
+            <div class="lora-select" onclick="toggleLoraDropdown(event, this, '${node.id}', ${li})" title="${modelLabel.replace(/"/g,'&quot;')}">
+              ${l.lora_name ? l.lora_name.replace(/^.*[\\\/]/, '') : '— 选择 Lora —'}
+            </div>
+            <span class="lora-strength-wrap">
+              <input class="lora-strength" type="range" min="-2" max="5" step="0.05" value="${l.strength_model ?? 1.0}"
+                oninput="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.nextElementSibling.value = parseFloat(this.value).toFixed(2)"
+                title="权重 (-2~5)" aria-label="Lora 权重">
+              <input class="lora-strength-val" type="number" min="-2" max="5" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
+                onchange="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-2, Math.min(5, parseFloat(this.value) || 0))"
+                title="直接输入数值" aria-label="Lora 权重数值">
+            </span>
+          </div>`;
+        // 触发词行
+        if (twAll.length > 0) {
+          html += `<div class="lora-tw-row">`;
+          for (let ti = 0; ti < twAll.length; ti++) {
+            const tw = twAll[ti];
+            const checked = twSelected.includes(tw) ? ' checked' : '';
+            html += `<label class="lora-tw-tag${checked ? ' tw-active' : ''}" title="${tw.replace(/"/g,'&quot;')}">
+              <input type="checkbox"${checked} onchange="toggleLoraTriggerWord('${node.id}', ${li}, '${tw.replace(/'/g,"\\'")}', this.checked)" style="display:none">
+              ${tw}
+            </label>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
       }
     }
     html += `</div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-xs btn-primary" onclick="addLoraForNode('${node.id}')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> 添加 Lora</button>
         <button class="btn btn-xs btn-secondary" onclick="toggleAllLoras('${node.id}')" title="全部启用/禁用">⏻ 全部开关</button>
+        <button class="btn btn-xs btn-secondary" onclick="refreshLoraMeta()" title="刷新 Lora 元数据">🔄 刷新元数据</button>
       </div>
       <hr style="margin:12px 0;border-color:var(--card-border)">
     </div>`;
@@ -6909,7 +7651,7 @@ function handleImageUpload(input, idx) {
   const sections = document.querySelectorAll('.prep-section');
   sections.forEach((section) => {
     const title = section.querySelector('.section-title');
-    const body = section.querySelector('textarea, .res-presets, .upload-area, .assigned-tags');
+    const body = section.querySelector('textarea, .res-presets, .upload-area');
     if (!title || !body) return;
     const bodyParent = body.closest('.prep-section > div') || body.parentElement;
     if (!bodyParent) return;
@@ -8690,21 +9432,22 @@ function renderGrimoireData(total, page) {
         ? `<span class="grm-item-cached-badge">✓</span>`
         : `<span class="grm-item-uncached-badge">⋯</span>`;
     }
-    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}" style="position:relative">` +
+    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}">` +
       checkbox +
       imgHtml +
       cachedBadge +
-      `<div class="grm-item-info">` +
-        `<div class="grm-item-name">${esc(item.name_cn || item.name || '')}` +
+      `<div class="grm-item-info" style="display:block;min-width:0;overflow:hidden;visibility:visible;opacity:1">` +
+        `<div class="grm-item-name" style="display:block;visibility:visible;opacity:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.3">${esc(item.name_cn || item.name || '')}` +
           (item.name_cn && item.name_cn !== item.name ? `<span class="grm-item-name-en">${esc(item.name)}</span>` : '') +
         `</div>` +
         (item.category_cn || item.category ? `<div class="grm-item-category">${esc(item.category_cn || item.category)}</div>` : '') +
-        `<div class="grm-item-tags">${esc(item.tags || '')}</div>` +
+        `<div class="grm-item-tags" style="display:block;visibility:visible;opacity:1;color:var(--text-sub2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;margin-top:2px;line-height:1.3">${esc(item.tags || '')}</div>` +
       `</div>` +
-      `<div class="grm-item-actions">${pinBtn}${copyBtn}${starBtn}${actions}</div>` +
+      `<div class="grm-item-actions" style="display:flex;gap:4px;align-items:center;white-space:nowrap;justify-content:flex-end;visibility:visible">${pinBtn}${copyBtn}${starBtn}${actions}</div>` +
       `</div>`;
   });
   table.innerHTML = html;
+
   
   // Pagination
   const totalPages = Math.ceil(total / _grimoirePageSize) || 1;
