@@ -746,6 +746,18 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   .lora-context-menu{font-size:10px;min-width:100px}
   .lora-context-item{padding:5px 10px;font-size:10px}
 }
+/* Lora 主面板卡片（仅外层容器，内部复用弹窗 Lora 样式） */
+.lora-panel-node-card{border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg);margin-bottom:10px;overflow:hidden}
+.lora-panel-node-card .lora-panel-node-header{display:flex;align-items:center;gap:6px;padding:8px 10px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;user-select:none;background:var(--bg-elevated);border-bottom:1px solid var(--card-border);transition:background .15s}
+.lora-panel-node-card .lora-panel-node-header:hover{background:var(--card-hover)}
+.lora-panel-node-card .lora-panel-node-header .lora-panel-arrow{transition:transform .2s;font-size:10px;color:var(--text-sub)}
+.lora-panel-node-card .lora-panel-node-header .lora-panel-arrow.collapsed{transform:rotate(-90deg)}
+.lora-panel-node-card .lora-panel-node-body{padding:8px}
+.lora-panel-node-card .lora-panel-node-body.collapsed{display:none}
+/* 面板 Lora 的删除按钮：默认隐藏，悬停/选中时显示 */
+.lora-panel-node-card .lora-item .btn-danger{opacity:0!important;transition:opacity .15s;pointer-events:none}
+.lora-panel-node-card .lora-item:hover .btn-danger{opacity:1!important;pointer-events:auto}
+.lora-panel-node-card .lora-item .btn-danger:focus{opacity:1!important;pointer-events:auto}
 .node-card{
   border:1px solid var(--card-border);border-radius:var(--radius-sm);
   padding:12px 14px;cursor:pointer;min-height:90px;
@@ -1657,20 +1669,21 @@ select:not([class*="color"]):not([class*="date"]){
 #grimoire_sheet .grm-star-btn{font-size:11px;width:20px;height:20px;}
 #grimoire_sheet .grm-pinned-bar{
   background:transparent;border:1px solid var(--card-border);
-  border-radius:6px;padding:4px 8px;margin:4px 8px;gap:4px;
-  max-height:28px;overflow-x:auto;flex-wrap:nowrap;
-  scrollbar-width:none;display:flex;align-items:center;
+  border-radius:6px;padding:6px 12px;margin:6px 10px;gap:6px;
+  max-height:none;overflow:hidden;flex-wrap:wrap;
+  display:flex;align-items:center;
 }
 #grimoire_sheet .grm-pinned-bar::-webkit-scrollbar{display:none;}
 #grimoire_sheet .grm-pinned-tag{
   background:var(--input-bg);border:1px solid var(--card-border);
-  border-radius:6px;padding:1px 6px;font-size:9px;color:var(--text-sub);
-  max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  border-radius:6px;padding:3px 10px;font-size:12px;color:var(--text-sub);
   flex-shrink:0;font-family:'JetBrains Mono',monospace;
+  display:inline-flex;align-items:center;gap:4px;max-width:200px;
 }
+#grimoire_sheet .grm-pinned-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 #grimoire_sheet .grm-pinned-tag:hover{border-color:var(--text-sub);}
-#grimoire_sheet .grm-pinned-title{font-size:9px;color:var(--text-sub2);}
-#grimoire_sheet .grm-pinned-remove{width:10px;height:10px;font-size:6px;color:var(--text-sub2);opacity:0.6;}
+#grimoire_sheet .grm-pinned-title{font-size:12px;color:var(--text-sub2);}
+#grimoire_sheet .grm-pinned-remove{width:16px;height:16px;font-size:9px;color:var(--text-sub2);opacity:0.6;flex-shrink:0;}
 #grimoire_sheet .grm-pinned-remove:hover{opacity:1;color:var(--text);}
 #grimoire_sheet .grm-pinned-bar .btn-danger{font-size:8px;padding:1px 4px;min-height:18px;border-radius:4px;background:transparent;border:1px solid var(--card-border);color:var(--text-sub);}
 #grimoire_sheet .grm-pinned-bar .btn-danger:hover{background:var(--card-hover);color:var(--text);}
@@ -1766,8 +1779,14 @@ select:not([class*="color"]):not([class*="date"]){
   #grimoire_sheet .grm-item-name{font-size:11px;}
   #grimoire_sheet .grm-item-img{width:28px;height:36px;}
   #grimoire_sheet .grm-item-img-placeholder{width:28px;height:36px;}
-  #grimoire_sheet .grm-pinned-bar{margin:2px 6px;padding:2px 6px;max-height:26px;}
-  #grimoire_sheet .grm-pinned-tag{font-size:8px;padding:1px 4px;max-width:60px;}
+  #grimoire_sheet .grm-pinned-bar{
+    flex-wrap:wrap;gap:4px;padding:6px 10px;margin:4px 6px;
+    max-height:none;display:flex;align-items:center;border-radius:6px;
+    width:auto;border:1px solid var(--card-border);
+  }
+  #grimoire_sheet .grm-pinned-tag{font-size:11px;padding:2px 8px;max-width:140px;}
+  #grimoire_sheet .grm-pinned-title{font-size:11px;}
+  #grimoire_sheet .grm-pinned-remove{width:14px;height:14px;font-size:8px;}
   #grimoire_sheet .grimoire-detail-header{padding:4px 8px;}
   #grimoire_sheet .grimoire-detail-header .btn{font-size:9px;padding:1px 6px;min-height:24px;}
   #grimoire_sheet .grimoire-detail-header .btn span{display:none;}
@@ -1967,6 +1986,9 @@ select:not([class*="color"]):not([class*="date"]){
   border-radius:var(--radius-sm);font-size:11px;
 }
 .grm-pinned-title{font-weight:600;color:var(--accent);margin-right:4px;flex-shrink:0;}
+.grm-preset-item{padding:6px 12px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.grm-preset-item:hover{background:var(--hover-bg,rgba(128,128,128,0.1));}
+.grm-preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis;}
 .grm-pinned-tag{
   display:inline-flex;align-items:center;gap:3px;
   padding:2px 8px;border-radius:10px;
@@ -3694,6 +3716,14 @@ textarea:focus-visible,
             <button class="btn btn-xs btn-secondary" data-action="testComfyUI" aria-label="测试连接"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plug"/></svg> 测试</button>
           </div>
           <hr class="settings-hr">
+          <div class="settings-row">
+            <span class="settings-label">部署模式</span>
+            <select id="cfg_deploy_mode" class="settings-input" style="flex:0.6" onchange="saveDeployMode()">
+              <option value="windows">Windows</option>
+              <option value="linux">Linux</option>
+            </select>
+          </div>
+          <hr class="settings-hr">
           <div class="settings-row" style="justify-content:flex-start;gap:8px">
             <input type="checkbox" id="cfg_show_prompt" style="accent-color:var(--primary)" onchange="saveShowPrompt()">
             <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
@@ -3709,6 +3739,14 @@ textarea:focus-visible,
               <option value="magazine">📰 杂志风</option>
               <option value="morandi">🎨 莫兰迪色系</option>
               <option value="sunset">🌅 日暮主题</option>
+            </select>
+          </div>
+          <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+            <span class="settings-label" style="min-width:auto">随机图抽取</span>
+            <select id="random_pick_mode" style="flex:1;min-width:120px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
+              <option value="all">📋 全部标签</option>
+              <option value="starred_only">⭐ 仅收藏标签</option>
+              <option value="exclude_starred">🚫 排除收藏标签</option>
             </select>
           </div>
           <hr class="settings-hr">
@@ -3795,6 +3833,11 @@ textarea:focus-visible,
           </div>
           <div class="vram-warn" id="vram_warn_2k"><svg class="icon-sm" aria-hidden="true"><use href="#icon-warning"/></svg> 2K需要12GB+显存</div>
           <div class="vram-warn" id="vram_warn_4k"><svg class="icon-sm" aria-hidden="true"><use href="#icon-warning"/></svg> 4K需要24GB+显存</div>
+        </div>
+
+        <div class="prep-section" id="prep_loras" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 管理 <span class="section-badge" id="prep_lora_node_badge">节点: 自动</span></div>
+          <div id="lora_panel_content"></div>
         </div>
 
         <div class="prep-section" id="prep_upload_image" style="display:none">
@@ -4164,6 +4207,7 @@ textarea:focus-visible,
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="图生图">图生图</button>
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="图生视频">图生视频</button>
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="编辑">编辑</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="反推">反推</button>
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="未分类">未分类</button>
       </div>
       <div class="wf-edit-count" id="wf_edit_count"></div>
@@ -5045,6 +5089,12 @@ function loadCfg() {
     applyColorScheme(scheme);
     const sel = document.getElementById('color_scheme_select');
     if (sel) sel.value = scheme;
+    // 加载随机图抽取模式
+    const modeSel = document.getElementById('random_pick_mode');
+    if (modeSel && c && c.random_pick_mode) modeSel.value = c.random_pick_mode;
+    // 加载部署模式
+    const dmSel = document.getElementById('cfg_deploy_mode');
+    if (dmSel && c && c.deploy_mode) dmSel.value = c.deploy_mode;
   });
 }
 
@@ -5067,10 +5117,24 @@ function closeSettingsModal() {
 // ========================================================================
 // 目录操作
 // ========================================================================
+/** 部署模式切换 - 保存到后端 */
+async function saveDeployMode() {
+  const sel = document.getElementById('cfg_deploy_mode');
+  if (!sel) return;
+  const r = await apiFetch('/api/deploy-mode', { method:'POST', body:JSON.stringify({mode: sel.value}) }, true);
+  if (r && r.ok) toast('部署模式已切换: ' + (sel.value === 'linux' ? 'Linux' : 'Windows'));
+}
+
 /** 弹出系统原生的文件夹选择器，选完后自动填入输入框 + 保存到后端 */
 async function pickDir(type) {
+  const mode = document.getElementById('cfg_deploy_mode').value;
   const input = document.getElementById(type === 'workflow' ? 'cfg_workflow_dir' : 'cfg_output_dir');
   const btn = document.getElementById(type === 'workflow' ? 'btn_save_wf_dir' : 'btn_save_output_dir');
+  if (mode === 'linux') {
+    if (type === 'workflow') { await setWorkflowDir(); }
+    else { await saveOutputDir(); }
+    return;
+  }
   setLoading(btn, true);
   const result = await apiFetch('/api/pick-dir', { method:'POST' });
   setLoading(btn, false);
@@ -5167,6 +5231,8 @@ function loadColorScheme() {
     applyColorScheme(scheme);
     const sel = document.getElementById('color_scheme_select');
     if (sel) sel.value = scheme;
+    const modeSel = document.getElementById('random_pick_mode');
+    if (modeSel && c && c.random_pick_mode) modeSel.value = c.random_pick_mode;
   }).catch(() => {});
 }
 
@@ -5524,6 +5590,10 @@ document.addEventListener('change', function(e) {
     const val = e.target.value;
     applyColorScheme(val);
     saveColorScheme(val);
+  }
+  if (e.target.id === 'random_pick_mode') {
+    const val = e.target.value;
+    apiFetch('/api/config', { method:'POST', body:JSON.stringify({random_pick_mode: val}) });
   }
 });
 
@@ -5931,6 +6001,10 @@ function updateNodeDisplay() {
   document.getElementById('prep_positive').style.display = hasPos ? 'block' : 'none';
   document.getElementById('prep_negative').style.display = hasNeg ? 'block' : 'none';
   document.getElementById('prep_resolution').style.display = hasRes ? 'block' : 'none';
+  // Lora 面板：检测工作流中是否有 PowerLoraLoader 节点
+  const hasLora = _hasLoraNodes();
+  document.getElementById('prep_loras').style.display = hasLora ? 'block' : 'none';
+  if (hasLora) renderLoraPanel();
   document.getElementById('prep_upload_image').style.display = hasImg ? 'block' : 'none';
   document.getElementById('prep_expanded_text').style.display = hasExp ? 'block' : 'none';
   document.getElementById('prep_unassigned_hint').style.display = hasAny ? 'none' : 'block';
@@ -5962,6 +6036,200 @@ function updateNodeDisplay() {
   const clearBtn = document.getElementById('clear_all_roles_btn');
   if (clearBtn) clearBtn.style.display = hasAny ? 'inline-flex' : 'none';
 }
+
+/** 检测工作流中是否有 PowerLoraLoader 节点 */
+function _hasLoraNodes() {
+  if (!allParamsData || !allParamsData.nodes) return false;
+  return allParamsData.nodes.some(n => /power\s*lora/i.test(n.class_type) || /power\s*lora/i.test(n.title));
+}
+
+/** 获取 Lora 节点的显示名称 */
+function _getLoraNodeLabel(node) {
+  return node.title || node.class_type || 'Power Lora Loader';
+}
+
+/** 渲染 Lora 主面板 — 完全复用弹窗 Lora 样式 */
+function renderLoraPanel() {
+  if (!allParamsData || !allParamsData.nodes) return;
+  const container = document.getElementById('lora_panel_content');
+  if (!container) return;
+  const loraNodes = allParamsData.nodes.filter(n => /power\s*lora/i.test(n.class_type) || /power\s*lora/i.test(n.title));
+  if (!loraNodes.length) { container.innerHTML = ''; return; }
+  const badge = document.getElementById('prep_lora_node_badge');
+  if (badge) badge.textContent = `节点: ${loraNodes.map(n => '#' + n.id).join(', ')}`;
+  let html = '';
+  loraNodes.forEach((node) => {
+    const nid = node.id;
+    const loras = loraNodesConfig[nid] || [];
+    html += `<div class="lora-panel-node-card" data-lora-node="${nid}">`;
+    const collapsed = loras.length === 0 ? ' collapsed' : '';
+    html += `<div class="lora-panel-node-header" data-action="toggle-lora-collapse" data-lora-node="${nid}">
+      <span class="lora-panel-arrow${collapsed}" style="pointer-events:none">▼</span>
+      <svg class="icon-xs" aria-hidden="true" style="flex-shrink:0;pointer-events:none"><use href="#icon-lora"/></svg>
+      <span style="pointer-events:none">${_getLoraNodeLabel(node)} #${nid}</span>
+      <span style="font-size:10px;color:var(--text-sub);font-weight:400;margin-left:auto;pointer-events:none">${loras.filter(l=>l.on).length}/${loras.length} 启用</span>
+    </div>`;
+    html += `<div class="lora-panel-node-body${collapsed}">`;
+    html += `<div class="section-title" style="margin-bottom:6px"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 列表</div>`;
+    html += `<div class="lora-list" id="lora_list_panel_${nid}">`;
+    if (loras.length === 0) {
+      html += '<div class="empty-state" style="padding:8px;text-align:center;color:var(--text-sub2);font-size:11px">暂无 Lora，点击下方「添加」按钮</div>';
+    } else {
+      loras.forEach((l, li) => {
+        const disabledCls = l.on ? '' : ' lora-disabled';
+        const statusIcon = l.on ? '●' : '○';
+        const loraMeta = matchLoraMeta(l.lora_name || '');
+        const previewUrl = loraMeta && loraMeta.preview_url
+          ? `/api/lora-preview?fn=${encodeURIComponent(l.lora_name || '')}`
+          : '';
+        const twAll = loraMeta ? (loraMeta.trigger_words || []) : [];
+        const twSelected = l.trigger_words_selected || [];
+        const modelLabel = loraMeta ? (loraMeta.model_name || loraMeta.file_name || '') : '';
+        const hasPreview = !!previewUrl;
+        html += `<div class="lora-item${disabledCls}" data-idx="${li}">
+          <div class="lora-top-row">
+            <span class="lora-status" onclick="toggleLoraInPanel('${nid}', ${li})" title="${l.on ? '已启用' : '已禁用'}">${statusIcon}</span>
+            ${hasPreview ? `<img class="lora-thumb" src="${previewUrl}" alt="" loading="lazy" onerror="this.style.display='none'" title="${modelLabel.replace(/"/g,'&quot;')}">` : `<span class="lora-thumb-placeholder"></span>`}
+            <div class="lora-select" onclick="toggleLoraDropdown(event, this, '${nid}', ${li})" title="${modelLabel.replace(/"/g,'&quot;')}">
+              ${l.lora_name ? l.lora_name.replace(/^.*[\\\/]/, '') : '— 选择 Lora —'}
+            </div>
+            <span class="lora-strength-wrap">
+              <input class="lora-strength" type="range" min="-15" max="15" step="0.05" value="${l.strength_model ?? 1.0}"
+                oninput="updateLoraInPanel('${nid}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.nextElementSibling.value = parseFloat(this.value).toFixed(2)"
+                title="权重 (-15~15)" aria-label="Lora 权重">
+              <input class="lora-strength-val" type="number" min="-15" max="15" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
+                onchange="updateLoraInPanel('${nid}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-15, Math.min(15, parseFloat(this.value) || 0))"
+                title="直接输入数值" aria-label="Lora 权重数值">
+            </span>
+            <button class="btn btn-xs btn-danger" onclick="deleteLoraInPanel('${nid}', ${li})" title="移除 Lora" style="flex-shrink:0;padding:2px 6px;font-size:11px">✕</button>
+          </div>`;
+        // 触发词行
+        if (twAll.length > 0) {
+          html += `<div class="lora-tw-row">`;
+          for (let ti = 0; ti < twAll.length; ti++) {
+            const tw = twAll[ti];
+            const checked = twSelected.includes(tw) ? ' checked' : '';
+            html += `<label class="lora-tw-tag${checked ? ' tw-active' : ''}" title="${tw.replace(/"/g,'&quot;')}">
+              <input type="checkbox"${checked} onchange="toggleLoraTwInPanel('${nid}', ${li}, '${tw.replace(/'/g,"\\'")}', this.checked)" style="display:none">
+              ${tw}
+            </label>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
+      });
+    }
+    html += `</div>`;
+    html += `<div style="display:flex;gap:6px;margin-top:6px">
+      <button class="btn btn-xs btn-primary" onclick="addLoraForNode('${nid}', true);renderLoraPanel()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> 添加 Lora</button>
+      <button class="btn btn-xs btn-secondary" onclick="toggleAllLorasInPanel('${nid}')" title="全部启用/禁用">⏻ 全部开关</button>
+    </div>`;
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+  // 事件委托：处理卡片折叠/展开
+  container.onclick = function(e) {
+    const header = e.target.closest('[data-action="toggle-lora-collapse"]');
+    if (header) {
+      const body = header.nextElementSibling;
+      const arrow = header.querySelector('.lora-panel-arrow');
+      if (body) body.classList.toggle('collapsed');
+      if (arrow) arrow.classList.toggle('collapsed');
+    }
+  };
+}
+
+/** 切换 Lora 节点卡片折叠 */
+function toggleLoraNodeCollapse(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.lora-panel-arrow');
+  if (body) body.classList.toggle('collapsed');
+  if (arrow) arrow.classList.toggle('collapsed');
+}
+
+/** 面板：切换 Lora 启用/禁用 */
+function toggleLoraInPanel(nodeId, idx) {
+  if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId][idx].on = !loraNodesConfig[nodeId][idx].on;
+    renderLoraPanel();
+    _saveLoraConfig();
+  }
+}
+
+/** 面板：更新 Lora 参数 + 防抖保存 */
+function updateLoraInPanel(nodeId, idx, key, val) {
+  if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId][idx][key] = val;
+  }
+  _scheduleLoraSave();
+}
+
+/** 面板：删除 Lora */
+function deleteLoraInPanel(nodeId, idx) {
+  if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId].splice(idx, 1);
+    if (loraNodesConfig[nodeId].length === 0) delete loraNodesConfig[nodeId];
+    renderLoraPanel();
+    _saveLoraConfig();
+  }
+}
+
+/** 面板：切换触发词 */
+function toggleLoraTwInPanel(nodeId, idx, word, checked) {
+  if (!loraNodesConfig[nodeId] || !loraNodesConfig[nodeId][idx]) return;
+  const lora = loraNodesConfig[nodeId][idx];
+  if (!lora.trigger_words_selected) lora.trigger_words_selected = [];
+  if (checked) {
+    if (!lora.trigger_words_selected.includes(word)) lora.trigger_words_selected.push(word);
+  } else {
+    lora.trigger_words_selected = lora.trigger_words_selected.filter(w => w !== word);
+  }
+  _saveLoraConfig();
+}
+
+/** 面板：全部开关 */
+function toggleAllLorasInPanel(nodeId) {
+  const loras = loraNodesConfig[nodeId];
+  if (!loras || !loras.length) return;
+  const allOn = loras.every(l => l.on);
+  loras.forEach(l => { l.on = !allOn; });
+  renderLoraPanel();
+  _saveLoraConfig();
+}
+
+let _loraSaveTimer = null;
+/** 防抖保存 Lora 配置（200ms 内多次操作合并为一次） */
+function _scheduleLoraSave() {
+  if (_loraSaveTimer) clearTimeout(_loraSaveTimer);
+  _loraSaveTimer = setTimeout(() => { _loraSaveTimer = null; _saveLoraConfig(); }, 200);
+}
+
+/** 删除 Lora（主面板） */
+function deleteLoraPanelItem(nodeId, idx) {
+  if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
+    loraNodesConfig[nodeId].splice(idx, 1);
+    if (loraNodesConfig[nodeId].length === 0) delete loraNodesConfig[nodeId];
+    renderLoraPanel();
+    // 同时刷新弹窗（如果打开）
+    const modalBody = document.getElementById('node_modal_body');
+    if (modalBody && modalBody.dataset.nodeId === nodeId) showNodeDetail(nodeId);
+    _saveLoraConfig();
+  }
+}
+
+/** 保存 Lora 配置到后端 */
+function _saveLoraConfig() {
+  const saveData = {
+    __lora_nodes__: { ...loraNodesConfig },
+    __prompt_node__: promptNodeId,
+    __negative_node__: negativeNodeId,
+    __resolution_node__: resNodeId,
+    __expanded_text_node__: expandedTextNodeId,
+    __load_image_nodes__: (loadImageNodeIds || []).filter(id => id).join(',')
+  };
+  apiFetch('/api/workflow-params', { method: 'POST', body: JSON.stringify(saveData) }, true).catch(() => {});
+}
+
 function setPromptNode(n) {
   if (promptNodeId === n) { promptNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
   // 校验：检查目标节点是否有文本参数
@@ -6195,6 +6463,8 @@ async function loadLoras() {
 async function loadLoraMetadata() {
   try {
     loraMetadata = await apiFetch('/api/lora-metadata', {}, true) || {};
+    // 元数据加载完成后刷新 Lora 面板（首次渲染时可能还没加载完）
+    renderLoraPanel();
   } catch(e) {
     console.warn('Lora 元数据加载失败:', e);
     loraMetadata = {};
@@ -6478,15 +6748,17 @@ async function refreshLoraMeta() {
   }
 }
 
-function addLoraForNode(nodeId) {
+function addLoraForNode(nodeId, skipModal) {
   if (!availableLoras.length) {
     toast('⚠️ 正在加载 Lora 列表，请稍后重试', 'warning');
     return;
   }
   if (!loraNodesConfig[nodeId]) loraNodesConfig[nodeId] = [];
   loraNodesConfig[nodeId].push({ on: true, lora_name: availableLoras[0] || '', strength_model: 1.0, strength_clip: null });
-  // 重新渲染弹窗
-  showNodeDetail(nodeId);
+  if (!skipModal) {
+    // 重新渲染弹窗
+    showNodeDetail(nodeId);
+  }
 }
 
 function toggleAllLoras(nodeId) {
@@ -6704,11 +6976,11 @@ function showNodeDetail(nid) {
               ${l.lora_name ? l.lora_name.replace(/^.*[\\\/]/, '') : '— 选择 Lora —'}
             </div>
             <span class="lora-strength-wrap">
-              <input class="lora-strength" type="range" min="-2" max="5" step="0.05" value="${l.strength_model ?? 1.0}"
+              <input class="lora-strength" type="range" min="-15" max="15" step="0.05" value="${l.strength_model ?? 1.0}"
                 oninput="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.nextElementSibling.value = parseFloat(this.value).toFixed(2)"
-                title="权重 (-2~5)" aria-label="Lora 权重">
-              <input class="lora-strength-val" type="number" min="-2" max="5" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
-                onchange="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-2, Math.min(5, parseFloat(this.value) || 0))"
+                title="权重 (-15~15)" aria-label="Lora 权重">
+              <input class="lora-strength-val" type="number" min="-15" max="15" step="0.05" value="${(l.strength_model ?? 1.0).toFixed(2)}"
+                onchange="updateLoraForNode('${node.id}', ${li}, 'strength_model', parseFloat(this.value) || 0); this.previousElementSibling.value = Math.max(-15, Math.min(15, parseFloat(this.value) || 0))"
                 title="直接输入数值" aria-label="Lora 权重数值">
             </span>
           </div>`;
@@ -7450,17 +7722,33 @@ async function pollProgress() {
         : '';
 
       if (d.state === 'generating') {
-        // 不确定进度：伪元素扫光动画
-        section.classList.add('generating');
-        bar.classList.remove('active', 'indeterminate');
-        bar.style.width = '0%';
-        pctLabel.textContent = timeStr || '...';
-        label.textContent = '生成中';
-        nodeName.style.display = 'none';
-        const parts = timeStr ? ['已运行 ' + timeStr] : [];
-        if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
-        detail.textContent = parts.join(' · ');
-        stepDetail.textContent = '';
+        if (d.progress_max > 0) {
+          // 有真实进度：显示百分比进度条
+          section.classList.remove('generating');
+          bar.classList.add('active');
+          bar.classList.remove('indeterminate');
+          var pct = Math.min(100, Math.round(d.progress_value / d.progress_max * 100));
+          bar.style.width = pct + '%';
+          pctLabel.textContent = pct + '%';
+          label.textContent = '生成中';
+          nodeName.style.display = 'none';
+          const parts = timeStr ? ['已运行 ' + timeStr] : [];
+          if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
+          detail.textContent = parts.join(' · ');
+          stepDetail.textContent = '';
+        } else {
+          // 无真实进度：扫光动画
+          section.classList.add('generating');
+          bar.classList.remove('active', 'indeterminate');
+          bar.style.width = '0%';
+          pctLabel.textContent = timeStr || '...';
+          label.textContent = '生成中';
+          nodeName.style.display = 'none';
+          const parts = timeStr ? ['已运行 ' + timeStr] : [];
+          if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
+          detail.textContent = parts.join(' · ');
+          stepDetail.textContent = '';
+        }
         schedulePoll(1000);
       } else if (d.state === 'queued') {
         section.classList.remove('generating');
@@ -8726,6 +9014,7 @@ function showGrimoire() {
   document.body.style.overflow = 'hidden';
   loadGrimoireData();
   updateActiveNav('bn_grimoire');
+  loadGrimoirePresets();
 }
 
 function hideGrimoire() {
@@ -8905,6 +9194,11 @@ function renderGrimoireSources() {
   let html = '<div class="grm-toolbar">' +
     `<button class="btn btn-xs btn-secondary" id="grm_toggle_all_btn" onclick="toggleAllGrimoireGroups()" title="展开/收起全部"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder-open"/></svg> <span id="grm_toggle_all_text">展开全部</span></button>` +
     `<button class="btn btn-xs btn-secondary" id="grm_toggle_rand_btn" onclick="toggleAllRandom()" title="全选/取消随机池" style="margin-left:4px"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_toggle_rand_text">全选随机</span></button>` +
+    `<span style="margin-left:8px;display:inline-flex;gap:4px;align-items:center;position:relative">` +
+      `<button id="grm_preset_btn" onclick="showPresetDropdown()" style="font-size:10px;padding:3px 8px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit"><svg class="icon-xs" aria-hidden="true"><use href="#icon-bookmark"/></svg> <span id="grm_preset_label">预设</span></button>` +
+      `<button class="btn btn-xs btn-secondary" onclick="deleteGrimoirePreset()" title="删除当前选中的预设" style="font-size:9px;padding:0 4px;min-height:18px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--card-border);color:var(--text-sub);cursor:pointer">✕</button>` +
+      `<div id="grm_preset_menu" style="display:none;position:absolute;top:100%;left:0;min-width:140px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-xs);box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;padding:4px 0;margin-top:4px"></div>` +
+    `</span>` +
     '</div>';
   html += '<div class="source-group-list" ondragover="event.preventDefault()">';
   dirOrder.forEach(dir => {
@@ -8967,6 +9261,17 @@ function renderGrimoireSources() {
   html += '</div>';
   list.innerHTML = html;
   updateRandomToggleBtn();
+  loadGrimoirePresets();
+  // 点击外部关闭预设菜单
+  setTimeout(() => {
+    document.addEventListener('click', function _closePreset(e) {
+      if (!e.target.closest('#grm_preset_btn') && !e.target.closest('#grm_preset_menu')) {
+        const m = document.getElementById('grm_preset_menu');
+        if (m) m.style.display = 'none';
+        document.removeEventListener('click', _closePreset);
+      }
+    });
+  }, 0);
 }
 
 // ── 魔导书子分类拖拽排序 ──
@@ -10119,7 +10424,7 @@ function updatePinnedBar() {
       const label = src.replace('.json','').split(/[/\\]/).pop();
       for (const item of items) {
         const tagName = window.innerWidth <= 768 ? esc(item.name || '') : `${esc(label)}: ${esc(item.name || '')}`;
-        html += `<span class="grm-pinned-tag">${tagName} <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}','${esc(item.name||'')}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
+        html += `<span class="grm-pinned-tag"><span class="grm-pinned-name">${tagName}</span> <button class="grm-pinned-remove" onclick="unpinSource('${esc(src)}','${esc(item.name||'')}')" title="取消固定"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
       }
     }
   }
@@ -10128,11 +10433,20 @@ function updatePinnedBar() {
     html += `<span class="grm-pinned-tag">${poolCount} 个随机池 <button class="grm-pinned-remove" onclick="clearAllPins()" title="清空随机池"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></button></span>`;
   }
   if (pinEntries.length > 0 || poolCount > 0) {
-    html += `<button class="btn btn-xs btn-danger" onclick="clearAllPins()" style="margin-left:auto;font-size:10px;flex-shrink:0">清空</button>`;
+    html += `<button class="grm-item-btn btn-secondary" onclick="saveGrimoirePreset()" style="font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text-sub);cursor:pointer;flex-shrink:0;margin-right:4px" title="保存当前固定标签和随机池为预设"><svg class="icon-xs" aria-hidden="true"><use href="#icon-save"/></svg></button>`;
+    html += `<button class="btn btn-xs btn-danger" onclick="clearAllPins()" style="font-size:10px;flex-shrink:0">清空</button>`;
   }
   html += '</div>';
   
-  dataTable.parentNode.insertBefore(document.createRange().createContextualFragment(html), dataTable);
+  if (window.innerWidth <= 768) {
+    // 手机端：插入到分类列表下方（在 source-list 外面）
+    const sourceList = document.querySelector('.grimoire-source-list');
+    if (sourceList && sourceList.parentNode) {
+      sourceList.parentNode.insertBefore(document.createRange().createContextualFragment(html), sourceList.nextSibling);
+    }
+  } else {
+    dataTable.parentNode.insertBefore(document.createRange().createContextualFragment(html), dataTable);
+  }
 }
 
 /** 取消指定数据源的固定 */
@@ -10180,6 +10494,80 @@ async function clearAllPins() {
   renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
   updatePinnedBar();
   toast('✅ 已清空全部固定标签和随机池');
+}
+
+// ========= 预设相关 =========
+
+/** 加载预设列表到自定义菜单 */
+async function loadGrimoirePresets(setValue) {
+  const menu = document.getElementById('grm_preset_menu');
+  const label = document.getElementById('grm_preset_label');
+  if (!menu) return;
+  const r = await apiFetch('/api/grimoire/presets', {}, true);
+  if (!r || !r.ok || !r.presets) { menu.innerHTML = ''; return; }
+  let h = '';
+  for (const name of (r.presets || [])) {
+    h += `<div class="grm-preset-item" onclick="applyGrimoirePreset('${esc(name)}')"><span>${esc(name)}</span></div>`;
+  }
+  menu.innerHTML = h;
+  if (setValue && label) label.textContent = setValue;
+}
+
+/** 显示/隐藏预设菜单 */
+function showPresetDropdown() {
+  const menu = document.getElementById('grm_preset_menu');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+/** 保存当前状态为预设 */
+async function saveGrimoirePreset() {
+  const name = prompt('输入预设名称：');
+  if (!name) return;
+  const r = await apiFetch('/api/grimoire/presets', {
+    method: 'POST', body: JSON.stringify({ name })
+  }, true);
+  if (r && r.ok) {
+    toast(`✅ 预设「${name}」已保存`);
+    await loadGrimoirePresets(name);
+  } else {
+    toast('❌ 保存失败: ' + (r?.error || ''), 'error');
+  }
+}
+
+/** 应用预设 */
+async function applyGrimoirePreset(name) {
+  if (!name) return;
+  const r = await apiFetch('/api/grimoire/presets/apply', {
+    method: 'POST', body: JSON.stringify({ name })
+  }, true);
+  if (r && r.ok) {
+    _grimoirePins = r.pins || {};
+    _grimoireRandPool = (r.pool || []).map(p => p.replace(/\\/g, '/'));
+    renderGrimoireSources();
+    updatePinnedBar();
+    await loadGrimoirePresets(name);
+    toast(`✅ 已加载预设「${name}」`);
+  } else {
+    toast('❌ 加载失败: ' + (r?.error || ''), 'error');
+  }
+}
+
+/** 删除当前选中的预设 */
+async function deleteGrimoirePreset() {
+  const label = document.getElementById('grm_preset_label');
+  const name = label ? label.textContent : '';
+  if (!name || name === '预设') { toast('请先选择一个预设', 'error'); return; }
+  if (!confirm(`确定删除预设「${name}」？`)) return;
+  const r = await apiFetch('/api/grimoire/presets/delete', {
+    method: 'POST', body: JSON.stringify({ name })
+  }, true);
+  if (r && r.ok) {
+    toast(`已删除预设「${name}」`);
+    loadGrimoirePresets();
+  } else {
+    toast('❌ 删除失败: ' + (r?.error || ''), 'error');
+  }
 }
 
 /** 切换子分类到随机池 */
