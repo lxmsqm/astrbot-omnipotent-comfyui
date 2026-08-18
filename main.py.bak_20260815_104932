@@ -1216,7 +1216,6 @@ class ComfyUILocalPlugin(Star):
         app.router.add_get('/api/lora-metadata', self._webui_get_lora_metadata)
         app.router.add_post('/api/lora-metadata/refresh', self._webui_refresh_lora_metadata)
         app.router.add_get('/api/lora-preview', self._webui_lora_preview)
-        app.router.add_get('/api/view-input', self._webui_view_input)
         app.router.add_get('/api/progress', self._webui_get_progress)
         app.router.add_post('/api/open-dir', self._webui_open_dir)
         app.router.add_post('/api/pick-dir', self._webui_pick_dir)
@@ -1233,8 +1232,6 @@ class ComfyUILocalPlugin(Star):
         app.router.add_post('/api/wf-add', self._webui_add_workflows)
         app.router.add_post('/api/upload-image', self._webui_upload_image)
         app.router.add_post('/api/upload-media', self._webui_upload_media)
-        app.router.add_post('/api/clear-node-input', self._webui_clear_node_input)
-        app.router.add_post('/api/interrupt', self._webui_interrupt)
         app.router.add_get('/api/context-workflows', self._webui_get_context_workflows)
         app.router.add_post('/api/context-workflow', self._webui_set_context_workflow)
         # WebUI 质量与比例 API
@@ -1588,44 +1585,12 @@ class ComfyUILocalPlugin(Star):
             return web.json_response({"ok": False, "error": f"目录设置失败，请检查路径是否有效或使用英文路径: {e}"})
 
     def _workflow_preview_path(self, name):
-        """返回工作流预览图路径（不存在返回 None）。命名：<工作流名>.png / .jpg（压缩后）"""
+        """返回工作流预览图路径（不存在返回 None）。命名：<工作流名>.png"""
         if not name or '..' in name or '/' in name or '\\' in name:
             return None
         pv_dir = self._user_data_dir / "workflow_previews"
-        for ext in ('.png', '.jpg', '.jpeg', '.webp'):
-            p = pv_dir / (name + ext)
-            if p.exists():
-                return p
-        return None
-
-    def _compress_preview_bytes(self, raw, max_bytes=1 * 1024 * 1024):
-        """把预览图字节压缩到 ≤1MB（JPEG 质量递减 + 必要时缩小尺寸）。
-        返回 (bytes, ext)；压缩失败时原样返回 (raw, 'png')。"""
-        try:
-            from PIL import Image
-            import io as _io
-            img = Image.open(_io.BytesIO(raw))
-            img.load()
-            if img.mode in ('RGBA', 'P', 'LA'):
-                img = img.convert('RGB')
-            # 逐级降低 JPEG 质量
-            for q in (92, 85, 78, 70, 60, 50, 40, 30):
-                buf = _io.BytesIO()
-                img.save(buf, 'JPEG', quality=q)
-                if buf.tell() <= max_bytes:
-                    return buf.getvalue(), 'jpg'
-            # 仍超限：缩小尺寸（最长边按 0.85 递减）
-            w, h = img.size
-            for _ in range(12):
-                w = max(64, int(w * 0.85)); h = max(64, int(h * 0.85))
-                buf = _io.BytesIO()
-                img.resize((w, h), Image.LANCZOS).save(buf, 'JPEG', quality=70)
-                if buf.tell() <= max_bytes:
-                    return buf.getvalue(), 'jpg'
-            return raw, 'png'
-        except Exception as e:
-            logger.warning(f"[ComfyUI] 预览图压缩失败（原样保存）: {e}")
-            return raw, 'png'
+        p = pv_dir / (name + '.png')
+        return p if p.exists() else None
 
     async def _webui_get_workflow_preview(self, r):
         """返回工作流预览图（GET /api/workflow-preview?name=xxx）"""
@@ -1667,22 +1632,21 @@ class ComfyUILocalPlugin(Star):
             raw = base64.b64decode(b64)
         except Exception:
             return web.json_response({"ok": False, "error": "base64 解码失败"})
-        if not raw:
-            return web.json_response({"ok": False, "error": "图片数据为空"})
-        # 无限制大小上传，但最终压缩到 ≤1MB 后保存
+        if len(raw) > 5 * 1024 * 1024:
+            return web.json_response({"ok": False, "error": "图片不能超过 5MB"})
+        # 极简格式校验：PNG/JPEG 魔数
+        if not (raw.startswith(b'\x89PNG') or raw.startswith(b'\xff\xd8\xff')):
+            return web.json_response({"ok": False, "error": "仅支持 PNG/JPG 图片"})
         try:
-            final_bytes, ext = self._compress_preview_bytes(raw)
-        except Exception:
-            final_bytes, ext = raw, 'png'
-        # 清理旧预览文件（多扩展名），避免残留
-        pv_dir.mkdir(parents=True, exist_ok=True)
-        for old in pv_dir.glob(name + '.*'):
-            try: old.unlink()
-            except Exception: pass
-        target = pv_dir / (name + '.' + ext)
-        target.write_bytes(final_bytes)
-        logger.info(f"[ComfyUI] 保存工作流预览图: {name}.{ext} 原始{len(raw)}B -> 压缩{len(final_bytes)}B")
-        return web.json_response({"ok": True, "size": len(final_bytes), "ext": ext})
+            tmp = target.with_suffix('.png.tmp')
+            with open(str(tmp), 'wb') as f:
+                f.write(raw)
+            tmp.replace(target)
+            logger.info(f"[ComfyUI] 工作流预览图已保存: {name}")
+            return web.json_response({"ok": True})
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 保存工作流预览图失败: {e}")
+            return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_toggle_hidden(self, r):
         try:
@@ -1763,12 +1727,11 @@ class ComfyUILocalPlugin(Star):
                 gs = self.workflow_config.get('__groups_source__', '')
                 bt = self.workflow_config.get('__bind_target__', '')
                 if gs == name:
-                    # 删除的是组源工作流：只清源标记，保留组数据与绑定，
-                    # 绑定目标工作流仍可读取组数据（loadBoundGroups 依赖 __groups_data__）
                     self.workflow_config['__groups_source__'] = ''
                     self.workflow_config['__disabled_groups__'] = {}
+                    self.workflow_config['__groups_data__'] = []
+                    self.workflow_config['__bind_target__'] = ''
                 elif bt == name:
-                    # 删除的是绑定目标工作流：目标没了，组数据/绑定随之失效
                     self.workflow_config['__disabled_groups__'] = {}
                     self.workflow_config['__groups_data__'] = []
                     self.workflow_config['__bind_target__'] = ''
@@ -1994,43 +1957,6 @@ class ComfyUILocalPlugin(Star):
             logger.error(f"[ComfyUI] 上传媒体异常: {e}")
             return web.json_response({"ok": False, "error": str(e)})
 
-    async def _webui_clear_node_input(self, r):
-        """清空指定加载节点的输入值（图片 X 按钮）：node_id + key → 置空 + 清理 saved_texts 旧值。"""
-        try:
-            data = await r.json()
-            node_id = str(data.get('node_id', '')).strip()
-            key = str(data.get('key', '')).strip()
-            if not node_id or not key:
-                return web.json_response({"ok": False, "error": "缺少 node_id/key"})
-            if not self.workflow_path:
-                return web.json_response({"ok": False, "error": "未选中工作流"})
-            with open(self.workflow_path, 'r', encoding='utf-8') as f:
-                wf = json.load(f)
-            node = wf.get(node_id)
-            if node and isinstance(node.get('inputs'), dict) and key in node['inputs']:
-                node['inputs'][key] = ''
-                self._atomic_write_workflow_json(wf, self.workflow_path)
-                logger.info(f"[ComfyUI] 已清空节点 {node_id} 输入 {key}")
-            # 清理 saved_texts 中的旧值，防止刷新后被旧值覆盖
-            try:
-                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
-                wf_cfg = wf_configs.get(self.current_workflow_name, {})
-                saved = wf_cfg.get('__saved_texts__', {}) or {}
-                ck = f"{node_id}_{key}"
-                if ck in saved:
-                    del saved[ck]
-                    wf_cfg['__saved_texts__'] = saved
-                    wf_configs[self.current_workflow_name] = wf_cfg
-                    self.workflow_config['__workflow_node_configs__'] = wf_configs
-                    self._schedule_save_workflow_config()
-                    logger.info(f"[ComfyUI] 已清理 saved_texts: {ck}")
-            except Exception as e:
-                logger.warning(f"[ComfyUI] 清理 saved_texts 失败: {e}")
-            return web.json_response({"ok": True, "node_id": node_id, "key": key})
-        except Exception as e:
-            logger.error(f"[ComfyUI] 清空节点输入异常: {e}")
-            return web.json_response({"ok": False, "error": str(e)})
-
     async def _webui_get_groups(self, request):
         if not self.workflow_path: return web.json_response({"groups": []})
         src_path = Path(self.workflow_path)
@@ -2060,32 +1986,18 @@ class ComfyUILocalPlugin(Star):
             groups_path = src_path.with_suffix('.groups.json')
             if groups_path.exists():
                 with open(str(groups_path), 'r', encoding='utf-8') as gf: return web.json_response(json.load(gf))
-            # 文件不存在或没有组信息时，优先从 per-workflow config 回退读取
-            # （前端提取时保存到 __workflow_node_configs__[wf_name]['__groups_data__']，
-            #   原工作流/缓存被删后仍可恢复）
-            gf = self._read_groups_data_from_config()
+            # 文件不存在或没有组信息时，从 workflow_config 回退读取
+            gf = self.workflow_config.get('__groups_data__', []) or []
             if gf:
                 return web.json_response({"groups": gf})
             return web.json_response({"groups": []})
         except Exception as e:
             logger.error(f"[ComfyUI] groups error: {e}")
-            # 异常时也从 config 回退
-            gf = self._read_groups_data_from_config()
+            # 异常时也从 workflow_config 回退
+            gf = self.workflow_config.get('__groups_data__', []) or []
             if gf:
                 return web.json_response({"groups": gf})
             return web.json_response({"groups": []})
-
-    def _read_groups_data_from_config(self):
-        """从工作流配置读取组数据：优先 per-workflow（__workflow_node_configs__[当前wf]），再退根级。"""
-        try:
-            wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
-            wf_cfg = wf_configs.get(self.current_workflow_name, {}) or {}
-            per_wf = wf_cfg.get('__groups_data__', []) or []
-            if per_wf:
-                return per_wf
-        except Exception:
-            pass
-        return self.workflow_config.get('__groups_data__', []) or []
 
     async def _webui_proxy(self, r):
         """代理 ComfyUI 请求（支持 GET 和 POST）。白名单精确校验 host:port，防止 SSRF 绕过。"""
@@ -2266,11 +2178,9 @@ class ComfyUILocalPlugin(Star):
             params = []
             for key, val in node.get('inputs', {}).items():
                 if key.startswith('_'): continue
-                # 跳过连接值（[node_id, slot] 列表）——连接不应暴露为可保存参数，
-                # 否则前端保存进 __saved_texts__ 后 _apply_workflow_config 会把连接写回成字符串
-                if isinstance(val, list): continue
                 if isinstance(val, (str, int, float, bool)):
                     ptype = 'text' if isinstance(val, str) and len(val) > 50 else ('bool' if isinstance(val, bool) else ('string' if isinstance(val, str) else 'number'))
+                elif isinstance(val, list): ptype = 'select'
                 else: continue
                 params.append({"key": key, "value": val, "type": ptype})
             nodes.append({"id": nid, "title": title, "class_type": ct, "params": params})
@@ -2303,8 +2213,7 @@ class ComfyUILocalPlugin(Star):
                     'IPAdapterModelLoader', 'PhotoMakerLoader', 'InstructIRLoader',
                 ])
                 model_keywords = ['model_name', 'ckpt_name', 'unet_name', 'clip_name', 'vae_name',
-                                  'lora_name', 'control_net_name', 'style_model_name',
-                                  'model', 'mmproj', 'chat_handler']
+                                  'lora_name', 'control_net_name', 'style_model_name']
 
                 models = {}
                 for node_name in scan_types:
@@ -2595,25 +2504,6 @@ class ComfyUILocalPlugin(Star):
                     if r.status == 200:
                         body = await r.read()
                         ct = r.headers.get('Content-Type', 'image/jpeg')
-                        # 按 URL 扩展名修正 content-type：LoRA Manager 预览接口可能对
-                        # GIF/WebP 返回 image/jpeg，导致浏览器按静态图解析、动画丢失
-                        try:
-                            path_lower = full_url.lower()
-                            ext_guess = path_lower.rsplit('.', 1)[-1] if '.' in path_lower else ''
-                            if ext_guess == 'gif':
-                                ct = 'image/gif'
-                            elif ext_guess == 'webp':
-                                ct = 'image/webp'
-                            elif ext_guess == 'apng':
-                                ct = 'image/apng'
-                            elif ext_guess in ('png',):
-                                ct = 'image/png'
-                            elif ext_guess in ('jpg', 'jpeg'):
-                                ct = 'image/jpeg'
-                            elif ext_guess in ('mp4', 'webm', 'mov', 'm4v'):
-                                ct = 'video/mp4' if ext_guess in ('mp4', 'm4v', 'mov') else 'video/webm'
-                        except Exception:
-                            pass
                         # 写入缓存（限制最大 256 项，避免内存泄漏）
                         if cache_key:
                             if len(self._lora_preview_cache) >= 256:
@@ -2623,45 +2513,6 @@ class ComfyUILocalPlugin(Star):
             return web.Response(status=404, text='Preview not found')
         except Exception as e:
             logger.warning(f"[ComfyUI] Lora 预览图获取失败: {e}")
-            return web.Response(status=500, text=str(e))
-
-    async def _webui_view_input(self, request):
-        """代理 ComfyUI /view（input 目录文件预览）：前端加载已上传图片时使用。
-        参数: filename + 可选 subfolder/type。支持按扩展名修正 content-type。"""
-        filename = request.query.get('filename', '')
-        subfolder = request.query.get('subfolder', '')
-        ftype = request.query.get('type', 'input')
-        if not filename:
-            return web.Response(status=400, text='Missing filename')
-        import urllib.parse as _up
-        qs = f"filename={_up.quote(filename)}&type={ftype}"
-        if subfolder:
-            qs += f"&subfolder={_up.quote(subfolder)}"
-        full_url = f"http://{self.comfyui_url}/view?{qs}"
-        try:
-            async with aiohttp.ClientSession() as s:
-                async with s.get(full_url, timeout=aiohttp.ClientTimeout(total=15)) as r:
-                    if r.status == 200:
-                        body = await r.read()
-                        ct = r.headers.get('Content-Type', 'image/jpeg')
-                        # 按扩展名修正 content-type（GIF/WebP/MP4 等）
-                        try:
-                            path_lower = filename.lower()
-                            ext_guess = path_lower.rsplit('.', 1)[-1] if '.' in path_lower else ''
-                            if ext_guess == 'gif': ct = 'image/gif'
-                            elif ext_guess == 'webp': ct = 'image/webp'
-                            elif ext_guess == 'apng': ct = 'image/apng'
-                            elif ext_guess in ('png',): ct = 'image/png'
-                            elif ext_guess in ('jpg', 'jpeg'): ct = 'image/jpeg'
-                            elif ext_guess in ('mp4', 'webm', 'mov', 'm4v'):
-                                ct = 'video/mp4' if ext_guess in ('mp4', 'm4v', 'mov') else 'video/webm'
-                        except Exception:
-                            pass
-                        return web.Response(body=body, content_type=ct)
-                    return web.Response(status=r.status, text='view failed')
-            return web.Response(status=404, text='view not found')
-        except Exception as e:
-            logger.warning(f"[ComfyUI] /view 代理失败: {e}")
             return web.Response(status=500, text=str(e))
 
     async def _webui_get_workflow_params(self, request):
@@ -2724,7 +2575,7 @@ class ComfyUILocalPlugin(Star):
                 if rk in data:
                     logger.info(f"[ComfyUI]   save role {rk}={data[rk]!r}")
             async with self._config_lock:
-                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__load_audio_nodes__', '__load_video_nodes__', '__empty_load_nodes__', '__negative_node__', '__expanded_text_node__', '__disabled_nodes__', '__lora_nodes__']:
+                for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__negative_node__', '__expanded_text_node__', '__disabled_nodes__', '__lora_nodes__']:
                     if key_name in data:
                         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
                         wf_configs[wf_name] = wf_configs.get(wf_name, {})
@@ -2922,7 +2773,7 @@ class ComfyUILocalPlugin(Star):
                     multiple = int(multiple)
                 except (TypeError, ValueError):
                     return web.json_response({"ok": False, "error": "multiple 必须是整数"})
-            # 写回分辨率节点：ResolutionSelector 用官方长格式（"9:16 (Portrait Widescreen)"）
+            # ResolutionSelector：写官方格式
             for nid in official_ids:
                 inputs = wf[nid].get('inputs', {})
                 if aspect_ratio:
@@ -3208,8 +3059,7 @@ class ComfyUILocalPlugin(Star):
     def _find_official_resolution_nodes(self, workflow):
         """检测工作流中的分辨率节点：
         - 官方 ResolutionSelector（class_type == 'ResolutionSelector'）
-        - xbbox/XB 系列参数节点（class_type 含 'XB' 且有 aspect_ratio 输入，
-          如 XB_HailuoH3VideoParams / XB_VideoParams）——恢复 XB 分辨率预设显示
+        - xbbox 系列参数节点（class_type 含 'XB' 且有 aspect_ratio 输入，如 XB_HailuoH3VideoParams）
         返回节点ID列表；未发现返回空列表。"""
         result = []
         for nid, node in workflow.items():
@@ -3257,11 +3107,16 @@ class ComfyUILocalPlugin(Star):
     def _find_official_duration_nodes(self, workflow):
         """检测工作流中的时长节点：
         - 官方 PrimitiveFloat / Float（class_type == 'PrimitiveFloat' / 'Float'）
+        - xbbox 系列参数节点（class_type 含 'XB' 且有 duration 输入，如 XB_HailuoH3VideoParams）
         返回节点ID列表；未发现返回空列表。"""
         result = []
         for nid, node in workflow.items():
             if not isinstance(node, dict): continue
-            if node.get('class_type') in ('PrimitiveFloat', 'Float'):
+            ct = node.get('class_type', '')
+            inputs = node.get('inputs', {})
+            if ct in ('PrimitiveFloat', 'Float'):
+                result.append(nid)
+            elif 'XB' in ct and isinstance(inputs, dict) and 'duration' in inputs:
                 result.append(nid)
         return result
 
@@ -3308,6 +3163,9 @@ class ComfyUILocalPlugin(Star):
         return hashlib.md5(",".join(parts).encode()).hexdigest()
 
     def _apply_workflow_config(self, workflow):
+        bind_target = self.workflow_config.get('__bind_target__', '')
+        if bind_target and bind_target != self.current_workflow_name:
+            return
         skip_keys = {'rgthree_comparer', 'any', 'any_input'}
         # 获取当前工作流的保存文本（从 __workflow_node_configs__ 读取，每个工作流隔离）
         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
@@ -3351,16 +3209,12 @@ class ComfyUILocalPlugin(Star):
         # 未上传的加载节点处理：MiniMax H3 主节点 ref 输入全部 optional 且有空值跳过，
         # 因此不再塞占位文件——文件不存在（未上传/引用 PC 本地文件）的加载节点
         # 直接从工作流移除，并断开所有指向它的连接，主节点自动跳过该参考输入。
-        # 前端勾选「不使用」的节点（__empty_load_nodes__）即使文件存在也移除。
         try:
             media_rules = (
                 ('loadimage', 'image'),
                 ('loadaudio', 'audio'),
                 ('videoloader', 'video'),
             )
-            # 前端「不使用」勾选的节点 id 列表（生成时即使有文件也移除）
-            empty_ids = set((wf_cfg.get('__empty_load_nodes__') or '').split(','))
-            empty_ids.discard('')
             remove_ids = []
             for nid, node in list(workflow.items()):
                 if not isinstance(node, dict):
@@ -3374,10 +3228,7 @@ class ComfyUILocalPlugin(Star):
                         continue
                     cur = inputs.get(input_key)
                     has_file = cur and isinstance(cur, str) and cur.strip() and self._comfy_input_file_exists(cur)
-                    if str(nid) in empty_ids:
-                        remove_ids.append(nid)
-                        logger.info(f"[ComfyUI] 加载节点 {nid} 被标记为「不使用」，移除并断开连接")
-                    elif not has_file:
+                    if not has_file:
                         remove_ids.append(nid)
                         logger.info(f"[ComfyUI] 加载节点 {nid} 无有效文件({cur!r})，移除并断开连接")
                     break
@@ -3394,44 +3245,6 @@ class ComfyUILocalPlugin(Star):
                 for k, v in list(inputs.items()):
                     if isinstance(v, list) and len(v) >= 2 and str(v[0]) in remove_ids:
                         del inputs[k]
-            # MiniMax H3 主节点的 first_frame/last_frame 是 optional（可空），
-            # 若其 LoadImage 被移除导致值残留（字符串/空/指向已移除节点），
-            # 显式删除让主节点走纯文生
-            for node in workflow.values():
-                if not isinstance(node, dict):
-                    continue
-                ct = node.get('class_type', '')
-                if 'MiniMaxH3' not in ct:
-                    continue
-                inputs = node.get('inputs', {})
-                if not isinstance(inputs, dict):
-                    continue
-                for kf in ('first_frame', 'last_frame'):
-                    vf = inputs.get(kf)
-                    # 非连接（list）形式 → 字符串残留，删除以触发 optional 空值走纯文生
-                    if vf is not None and not isinstance(vf, list):
-                        logger.info(f"[ComfyUI] 清理 {ct} {kf} 残留值({vf!r})，走纯文生")
-                        del inputs[kf]
-                    # 连接指向已被移除的节点 → 也删除（断连兜底）
-                    elif isinstance(vf, list) and len(vf) >= 2 and str(vf[0]) in remove_ids:
-                        logger.info(f"[ComfyUI] 清理 {ct} {kf} 指向已移除节点，走纯文生")
-                        del inputs[kf]
-            # 清理 saved_texts 中的 first_frame/last_frame 旧键，防止下次 _apply_workflow_config 写回字符串
-            try:
-                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
-                wf_cfg = wf_configs.get(self.current_workflow_name, {})
-                saved = wf_cfg.get('__saved_texts__', {}) or {}
-                stale_keys = [k for k in saved if k.endswith('_first_frame') or k.endswith('_last_frame')]
-                if stale_keys:
-                    for k in stale_keys:
-                        del saved[k]
-                    wf_cfg['__saved_texts__'] = saved
-                    wf_configs[self.current_workflow_name] = wf_cfg
-                    self.workflow_config['__workflow_node_configs__'] = wf_configs
-                    logger.info(f"[ComfyUI] 已清理 saved_texts 首尾帧旧键: {stale_keys}")
-                    self._schedule_save_workflow_config()
-            except Exception as e:
-                logger.warning(f"[ComfyUI] 清理 saved_texts 首尾帧旧键失败: {e}")
             if remove_ids:
                 logger.info(f"[ComfyUI] 已移除 {len(remove_ids)} 个未上传加载节点: {remove_ids}")
         except Exception as e:
@@ -4362,9 +4175,7 @@ class ComfyUILocalPlugin(Star):
             disabled_groups = self.workflow_config.get('__disabled_groups__', {})
             groups_data = self.workflow_config.get('__groups_data__', [])
             bind_target = self.workflow_config.get('__bind_target__', '')
-            # 应用禁用：绑定目标等于当前工作流，或未绑定（组源即当前工作流）时都生效
-            is_bound = bool(bind_target)
-            if disabled_groups and groups_data and (bind_target == self.current_workflow_name or not is_bound):
+            if disabled_groups and groups_data and bind_target == self.current_workflow_name:
                 for g in groups_data:
                     if disabled_groups.get(str(g.get('id', ''))):
                         to_delete = []
@@ -4746,17 +4557,6 @@ class ComfyUILocalPlugin(Star):
             logger.warning(f"[ComfyUI] 停止任务失败: {e}")
             yield event.plain_result("停止失败")
 
-    async def _webui_interrupt(self, request):
-        """WebUI 停止按钮：向 ComfyUI 发送 /interrupt 中断当前生成。"""
-        try:
-            async with aiohttp.ClientSession() as s:
-                await s.post(f"http://{self.comfyui_url}/interrupt", timeout=aiohttp.ClientTimeout(total=10))
-            logger.info("[ComfyUI] WebUI 已发送停止命令")
-            return web.json_response({"ok": True})
-        except Exception as e:
-            logger.warning(f"[ComfyUI] WebUI 停止命令失败: {e}")
-            return web.json_response({"ok": False, "error": str(e)})
-
     @filter.command("撤回")
     async def recall_last(self, event: AstrMessageEvent):
         """撤回最近一次本插件发送的图片/视频消息"""
@@ -4913,7 +4713,9 @@ class ComfyUILocalPlugin(Star):
             logger.warning(f"[ComfyUI] /比例 同步分辨率到工作流失败: {e}")
 
     def _sync_duration_to_workflow(self, duration):
-        """将视频时长同步写入当前工作流中的官方时长节点（PrimitiveFloat/Float）：
+        """将视频时长同步写入当前工作流中的时长节点：
+        - 官方 PrimitiveFloat/Float 写 value 字段
+        - xbbox 系列（如 XB_HailuoH3VideoParams）写 duration 字段（节点 min=4，写入时兜底）
         返回是否成功写入。"""
         if not self.workflow_path: return False
         try:
@@ -4927,28 +4729,10 @@ class ComfyUILocalPlugin(Star):
                 inputs = wf[nid].get('inputs', {})
                 if 'value' in inputs:
                     inputs['value'] = float(duration)
+                elif 'duration' in inputs:
+                    # XB 系列节点 duration 校验 min=4，写入值小于 4 会校验失败，兜底抬到 4
+                    inputs['duration'] = max(4, int(duration))
             self._atomic_write_workflow_json(wf, wf_path)
-            # 清理 __saved_texts__ 旧值，否则刷新后 _apply_workflow_config 会用旧值覆盖新写入的值
-            try:
-                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
-                wf_cfg = wf_configs.get(self.current_workflow_name, {})
-                saved = wf_cfg.get('__saved_texts__', {}) or {}
-                keys_to_clear = ['value', 'duration']
-                changed = False
-                for nid in official_ids:
-                    for k in keys_to_clear:
-                        ck = f"{nid}_{k}"
-                        if ck in saved:
-                            del saved[ck]
-                            changed = True
-                if changed:
-                    wf_cfg['__saved_texts__'] = saved
-                    wf_configs[self.current_workflow_name] = wf_cfg
-                    self.workflow_config['__workflow_node_configs__'] = wf_configs
-                    logger.info(f"[ComfyUI] 已清除 saved_texts 旧时长值: 节点{official_ids}")
-                    self._schedule_save_workflow_config()
-            except Exception as e:
-                logger.warning(f"[ComfyUI] 清除 saved_texts 旧时长值失败: {e}")
             logger.info(f"[ComfyUI] 已同步时长到工作流: {wf_path} {duration}s 节点{official_ids}")
             return True
         except Exception as e:

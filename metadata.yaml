@@ -1,6 +1,6 @@
 name: "comfyui_allinone"
-version: "3.6.1"
-description: "AstrBot ComfyUI 插件，支持文生图、图生图、视频、编辑，自带 WebUI 面板。新增 Lora 触发词管理、预览图选择、莫奈色 UI。支持引用图片查询提示词、扩写后文本读取、图片附带提示词开关。"
+version: "3.7.2"
+description: "AstrBot ComfyUI 插件，支持文生图、图生图、视频、编辑，自带 WebUI 面板。新增 Lora 触发词管理、预览图选择、莫奈色 UI。支持引用图片查询提示词、扩写后文本读取、图片附带提示词开关。v3.7.2: 上传图片自动写回 LoadImage 节点并上传 ComfyUI（修复 Invalid image file）、图生视频/图生图空提示词生成、负面提示词紫色化 + 禁用按钮 ⛔ 图标、手机端生成控件布局优化、上传/Lora 文件夹赛博魔法风美化、巡查修复（ensure_future 安全调度/裸 except）。"
 author: "lxmsqm,黑谷"
 license: "MIT"
 repository: "https://github.com/lxmsqm/astrbot-omnipotent-comfyui"

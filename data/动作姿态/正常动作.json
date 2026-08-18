@@ -1,0 +1,1302 @@
+[
+  {
+    "name": "战斗姿态",
+    "tags": "fighting stance",
+    "category": "全身动作"
+  },
+  {
+    "name": "飞行",
+    "tags": "flying",
+    "category": "全身动作"
+  },
+  {
+    "name": "游泳",
+    "tags": "swimming",
+    "category": "全身动作"
+  },
+  {
+    "name": "坠落",
+    "tags": "falling",
+    "category": "全身动作"
+  },
+  {
+    "name": "漂浮",
+    "tags": "floating",
+    "category": "全身动作"
+  },
+  {
+    "name": "回头",
+    "tags": "looking back",
+    "category": "全身动作"
+  },
+  {
+    "name": "持武器",
+    "tags": "holding weapon",
+    "category": "全身动作"
+  },
+  {
+    "name": "旋转",
+    "tags": "spinning",
+    "category": "全身动作"
+  },
+  {
+    "name": "回旋",
+    "tags": "twirling",
+    "category": "全身动作"
+  },
+  {
+    "name": "踢",
+    "tags": "kicking",
+    "category": "全身动作"
+  },
+  {
+    "name": "出拳",
+    "tags": "punching",
+    "category": "全身动作"
+  },
+  {
+    "name": "射箭",
+    "tags": "archery",
+    "category": "全身动作"
+  },
+  {
+    "name": "射击",
+    "tags": "shooting",
+    "category": "全身动作"
+  },
+  {
+    "name": "瞄准",
+    "tags": "aiming",
+    "category": "全身动作"
+  },
+  {
+    "name": "吃东西",
+    "tags": "eating",
+    "category": "全身动作"
+  },
+  {
+    "name": "喝东西",
+    "tags": "drinking",
+    "category": "全身动作"
+  },
+  {
+    "name": "演奏乐器",
+    "tags": "playing instrument",
+    "category": "全身动作"
+  },
+  {
+    "name": "打字",
+    "tags": "typing",
+    "category": "全身动作"
+  },
+  {
+    "name": "写字",
+    "tags": "writing",
+    "category": "全身动作"
+  },
+  {
+    "name": "画画",
+    "tags": "drawing",
+    "category": "全身动作"
+  },
+  {
+    "name": "绘画",
+    "tags": "painting",
+    "category": "全身动作"
+  },
+  {
+    "name": "做饭",
+    "tags": "cooking",
+    "category": "全身动作"
+  },
+  {
+    "name": "打扫",
+    "tags": "cleaning",
+    "category": "全身动作"
+  },
+  {
+    "name": "站立",
+    "tags": "standing, standing pose, upright posture, standing straight, full body standing",
+    "style": "general"
+  },
+  {
+    "name": "坐姿",
+    "tags": "sitting, seated, sitting on chair, sitting down",
+    "style": "general"
+  },
+  {
+    "name": "躺卧",
+    "tags": "lying down, lying flat, reclining, supine pose",
+    "style": "general"
+  },
+  {
+    "name": "跪姿",
+    "tags": "kneeling, kneeling pose, on knees, kneeling down",
+    "style": "general"
+  },
+  {
+    "name": "行走",
+    "tags": "walking, striding, walking forward, in motion walking",
+    "style": "general"
+  },
+  {
+    "name": "奔跑",
+    "tags": "running, sprinting, running forward, jogging",
+    "style": "general"
+  },
+  {
+    "name": "跳跃",
+    "tags": "jumping, leaping, hopping, mid-air jump",
+    "style": "general"
+  },
+  {
+    "name": "翘腿",
+    "tags": "crossed legs, legs crossed, sitting with crossed legs, one leg over other",
+    "style": "general"
+  },
+  {
+    "name": "抱臂",
+    "tags": "arms crossed, folded arms, crossing arms, arms folded",
+    "style": "general"
+  },
+  {
+    "name": "手叉腰",
+    "tags": "hand on hip, hands on hips, akimbo, hand on waist",
+    "style": "general"
+  },
+  {
+    "name": "手背在身后",
+    "tags": "arms behind back, hands behind back, hands clasped behind",
+    "style": "general"
+  },
+  {
+    "name": "托腮",
+    "tags": "hand on chin, chin resting on hand, thinking pose",
+    "style": "general"
+  },
+  {
+    "name": "伸手",
+    "tags": "reaching out, reaching hand, arm extended, outstretched hand",
+    "style": "general"
+  },
+  {
+    "name": "挥手",
+    "tags": "waving, waving hand, waving gesture, hand wave",
+    "style": "general"
+  },
+  {
+    "name": "指向",
+    "tags": "pointing, pointing finger, pointing gesture",
+    "style": "general"
+  },
+  {
+    "name": "点头",
+    "tags": "head tilt, tilting head, tilted head, head cocked, head angled",
+    "style": "general"
+  },
+  {
+    "name": "舞蹈",
+    "tags": "dancing, dancing pose, dance move",
+    "style": "general"
+  },
+  {
+    "name": "伸展",
+    "tags": "stretching, stretch pose, arms stretched overhead",
+    "style": "general"
+  },
+  {
+    "name": "前倾",
+    "tags": "leaning forward, bending forward, upper body leaning",
+    "style": "general"
+  },
+  {
+    "name": "摆姿势",
+    "tags": "posing, model pose, striking a pose",
+    "style": "general"
+  },
+  {
+    "name": "冲刺",
+    "tags": "sprinting, dashing, fast running",
+    "style": "general"
+  },
+  {
+    "name": "慢跑",
+    "tags": "jogging, slow running, light jog",
+    "style": "general"
+  },
+  {
+    "name": "飞跃",
+    "tags": "leaping, soaring, flying leap",
+    "style": "general"
+  },
+  {
+    "name": "攀爬",
+    "tags": "climbing, climbing up, scaling",
+    "style": "general"
+  },
+  {
+    "name": "跳水",
+    "tags": "diving, dive, diving into water",
+    "style": "general"
+  },
+  {
+    "name": "潜行",
+    "tags": "sneaking, crouching walk, stealthy movement",
+    "style": "general"
+  },
+  {
+    "name": "疾冲",
+    "tags": "dashing, charging forward, rushing",
+    "style": "general"
+  },
+  {
+    "name": "跳跃前进",
+    "tags": "skipping, skip step, hopping forward",
+    "style": "general"
+  },
+  {
+    "name": "手抚脸",
+    "tags": "hand on face, touching face, hand on cheek",
+    "style": "general"
+  },
+  {
+    "name": "牵手",
+    "tags": "holding hands, hand in hand",
+    "style": "general"
+  },
+  {
+    "name": "敬礼",
+    "tags": "salute, saluting, hand salute",
+    "style": "general"
+  },
+  {
+    "name": "点赞",
+    "tags": "thumbs up, thumb up gesture",
+    "style": "general"
+  },
+  {
+    "name": "剪刀手",
+    "tags": "peace sign, peace gesture, v sign, victory sign",
+    "style": "general"
+  },
+  {
+    "name": "手持",
+    "tags": "holding, holding object, holding item in hand",
+    "style": "general"
+  },
+  {
+    "name": "祈祷手",
+    "tags": "praying hands, hands together in prayer",
+    "style": "general"
+  },
+  {
+    "name": "鼓掌",
+    "tags": "clapping, applauding, clapping hands",
+    "style": "general"
+  },
+  {
+    "name": "歪头",
+    "tags": "head tilt, tilted head, head cocked",
+    "style": "general"
+  },
+  {
+    "name": "盘腿坐",
+    "tags": "sitting cross legged, lotus sitting, indian style sitting, cross legged",
+    "style": "general"
+  },
+  {
+    "name": "侧卧",
+    "tags": "side lying, lying on side, side sleeping pose, lying sideways",
+    "style": "general"
+  },
+  {
+    "name": "俯卧",
+    "tags": "lying prone, lying face down, belly down, facedown pose",
+    "style": "general"
+  },
+  {
+    "name": "蹲姿",
+    "tags": "squatting, squat pose, crouching, crouch down",
+    "style": "general"
+  },
+  {
+    "name": "单膝跪地",
+    "tags": "one knee kneeling, kneeling on one knee, genuflect",
+    "style": "general"
+  },
+  {
+    "name": "靠墙",
+    "tags": "leaning against wall, wall leaning, resting against wall, wall lean pose",
+    "style": "general"
+  },
+  {
+    "name": "趴桌",
+    "tags": "lying on desk, resting head on desk, head on table, napping on desk",
+    "style": "general"
+  },
+  {
+    "name": "单脚站立",
+    "tags": "standing on one leg, one leg stand, single leg balance",
+    "style": "general"
+  },
+  {
+    "name": "举手",
+    "tags": "raising hand, hand raised, hand up, arm raised, raised arm",
+    "style": "general"
+  },
+  {
+    "name": "遮脸",
+    "tags": "covering face, facepalm, hand over face, hiding face",
+    "style": "general"
+  },
+  {
+    "name": "竖拇指",
+    "tags": "thumbs up, thumb up, giving thumbs up, thumb up gesture",
+    "style": "general"
+  },
+  {
+    "name": "插兜",
+    "tags": "hands in pockets, hand in pocket, hands in pocket",
+    "style": "general"
+  },
+  {
+    "name": "握拳",
+    "tags": "clenched fist, making a fist, fist, fist hand",
+    "style": "general"
+  },
+  {
+    "name": "双手合十",
+    "tags": "hands clasped, hands together, hands pressed together",
+    "style": "general"
+  },
+  {
+    "name": "抱头",
+    "tags": "hands behind head, hands on head, arms behind head, head resting on hands",
+    "style": "general"
+  },
+  {
+    "name": "托下巴",
+    "tags": "hand under chin, chin resting on hand, hand on chin, chin in hand",
+    "style": "general"
+  },
+  {
+    "name": "扶额",
+    "tags": "hand on forehead, forehead touch, palm on forehead, rubbing forehead",
+    "style": "general"
+  },
+  {
+    "name": "扶眼镜",
+    "tags": "adjusting glasses, fixing glasses, pushing up glasses",
+    "style": "general"
+  },
+  {
+    "name": "鞠躬",
+    "tags": "bowing, bow, bowing forward, taking a bow",
+    "style": "general"
+  },
+  {
+    "name": "弯腰",
+    "tags": "bending over, bending at waist, bending forward at waist",
+    "style": "general"
+  },
+  {
+    "name": "侧身",
+    "tags": "side stance, sideways pose, side profile pose, body turned sideways",
+    "style": "general"
+  },
+  {
+    "name": "转身",
+    "tags": "turning around, turning body, looking back over shoulder, turn back",
+    "style": "general"
+  },
+  {
+    "name": "后退",
+    "tags": "stepping back, step back, backward step, backing away",
+    "style": "general"
+  },
+  {
+    "name": "蹦跳",
+    "tags": "hopping, hop, bouncing, jumping up and down",
+    "style": "general"
+  },
+  {
+    "name": "爬行",
+    "tags": "crawling, crawling on hands and knees, on all fours",
+    "style": "general"
+  },
+  {
+    "name": "翻滚",
+    "tags": "rolling, rolling over, somersault, roll",
+    "style": "general"
+  },
+  {
+    "name": "滑步",
+    "tags": "sliding step, foot slide, sliding feet, glide step",
+    "style": "general"
+  },
+  {
+    "name": "扶墙",
+    "tags": "hand on wall, leaning on wall with hand, palm on wall",
+    "style": "general"
+  },
+  {
+    "name": "整理衣服",
+    "tags": "adjusting clothes, fixing clothing, straightening clothes, tugging shirt",
+    "style": "general"
+  },
+  {
+    "name": "伸懒腰",
+    "tags": "stretching, body stretch, stretching arms up, reaching up stretch",
+    "style": "general"
+  },
+  {
+    "name": "全身站立照",
+    "tags": "(full body shot:5),(standing pose:5), standing at attention, straight spine, hands at sides palms against thighs",
+    "style": "general"
+  },
+  {
+    "name": "自拍姿势",
+    "tags": "taking selfie, selfie pose, holding phone, selfie angle, phone in hand, looking at phone camera",
+    "style": "portrait"
+  },
+  {
+    "name": "瑜伽姿势",
+    "tags": "yoga pose, yoga position, yoga stretching, doing yoga, yoga posture",
+    "style": "general"
+  },
+  {
+    "name": "打哈欠",
+    "tags": "yawning, yawning with hand over mouth, sleepy yawn, yawning face",
+    "style": "portrait"
+  },
+  {
+    "name": "跳舞",
+    "tags": "dancing, dancing pose, dance move, dancing gracefully, mid-dance",
+    "style": "general"
+  },
+  {
+    "name": "交叉腿站立",
+    "tags": "standing with legs crossed, crossed legs pose, legs crossed standing, crossing legs while standing",
+    "style": "general"
+  },
+  {
+    "name": "抱膝",
+    "tags": "hugging knees, hugging knees to chest, sitting with knees hugged, crouching and hugging knees, knees curled up",
+    "style": "general"
+  },
+  {
+    "name": "眨眼",
+    "tags": "winking, wink, wink face, one eye closed, winking at viewer, playful wink",
+    "style": "portrait"
+  },
+  {
+    "name": "飞吻",
+    "tags": "blowing kiss, blowing a kiss, throwing kiss, kiss blowing, kiss blowing to viewer",
+    "style": "portrait"
+  },
+  {
+    "name": "踮脚尖",
+    "tags": "tiptoeing, standing on tiptoes, on tiptoe, tiptoe pose, standing on tiptoe",
+    "style": "general"
+  },
+  {
+    "name": "吐舌",
+    "tags": "tongue out, sticking out tongue, playful tongue, tongue out expression, mischievous tongue",
+    "style": "portrait"
+  },
+  {
+    "name": "撩头发",
+    "tags": "hair flip, flipping hair, tucking hair behind ear, running hand through hair, hand in hair, hair play",
+    "style": "portrait"
+  },
+  {
+    "name": "偷看",
+    "tags": "peeking, peeking from behind, peeking around corner, peeking out, hiding and peeking, peeking shyly",
+    "style": "general"
+  },
+  {
+    "name": "撑伞",
+    "tags": "holding umbrella, under umbrella, holding parasol, standing with umbrella, carrying umbrella, umbrella pose",
+    "style": "general"
+  },
+  {
+    "name": "抱东西",
+    "tags": "hugging something, hugging object, holding item to chest, hugging plushie, carrying item, holding plush toy, hugging stuffed animal",
+    "style": "general"
+  },
+  {
+    "name": "侧坐",
+    "tags": "sitting sideways, sideways sitting pose, sitting sideways on the ground, sideways seated, elegant sitting",
+    "style": "general"
+  },
+  {
+    "name": "翘腿坐",
+    "tags": "sitting with legs crossed, crossed legs sitting, one leg over the other, sitting cross-legged on chair, leg cross sitting",
+    "style": "general"
+  },
+  {
+    "name": "滑手机",
+    "tags": "using smartphone, looking at phone, scrolling phone, using mobile phone, holding phone, on phone",
+    "style": "general"
+  },
+  {
+    "name": "戴耳机",
+    "tags": "wearing headphones, listening to music with headphones, headphones on, earphones, enjoying music",
+    "style": "general"
+  },
+  {
+    "name": "看书",
+    "tags": "reading book, reading, holding a book, perusing a book, reading intently, focused on book",
+    "style": "general"
+  },
+  {
+    "name": "比心",
+    "tags": "hand heart, making heart with hands, finger heart, heart gesture, korean finger heart, cute heart sign",
+    "style": "portrait"
+  },
+  {
+    "name": "打电话",
+    "tags": "on phone call, talking on phone, holding phone to ear, phone conversation, calling someone",
+    "style": "general"
+  },
+  {
+    "name": "捂脸",
+    "tags": "covering face, hiding face with hands, hands on face, shyly covering face, facepalm, embarrassed covering face",
+    "style": "portrait"
+  },
+  {
+    "name": "趴床",
+    "tags": "lying on stomach on bed, lying face down on bed, lounging on bed, prone on bed, lying on bed",
+    "style": "general"
+  },
+  {
+    "name": "扎头发",
+    "tags": "tying hair, putting hair up, tying ponytail, fixing hair up, hands in hair, tying up hair",
+    "style": "portrait"
+  },
+  {
+    "name": "靠窗",
+    "tags": "leaning on window, by the window, leaning against windowsill, window frame, looking out window",
+    "style": "portrait"
+  },
+  {
+    "name": "揉眼睛",
+    "tags": "rubbing eyes, sleepy rubbing eyes, tired rubbing eyes, rubbing sleepy eyes, sleepy expression",
+    "style": "portrait"
+  },
+  {
+    "name": "系鞋带",
+    "tags": "tying shoelaces, bending to tie shoes, crouching to tie laces, tying laces, bending down",
+    "style": "general"
+  },
+  {
+    "name": "瘫沙发",
+    "tags": "lounging on sofa, sitting slouched on sofa, relaxing on couch, laid back on sofa, lounging",
+    "style": "general"
+  },
+  {
+    "name": "浇花",
+    "tags": "watering plants, watering flowers, holding watering can, gardening, plant care",
+    "style": "general"
+  },
+  {
+    "name": "骑车",
+    "tags": "riding bicycle, cycling, riding bike, on a bicycle, biking, riding bicycle outdoors",
+    "style": "general"
+  },
+  {
+    "name": "荡秋千",
+    "tags": "swinging on swing, sitting on swing, playground swing, swinging, on a swing",
+    "style": "general"
+  },
+  {
+    "name": "晃脚",
+    "tags": "dangling feet, sitting with legs dangling, swinging legs, feet dangling, sitting on edge, feet not touching ground",
+    "style": "general"
+  },
+  {
+    "name": "勾手指",
+    "tags": "beckoning, finger gesture, come here gesture, crooking finger, teasing beckon, playful finger curl",
+    "style": "portrait"
+  },
+  {
+    "name": "举杯",
+    "tags": "raising a glass, cheers, holding up a cup, toast, raising drink, clinking glasses, celebration",
+    "style": "general"
+  },
+  {
+    "name": "玩水",
+    "tags": "playing with water, splashing water, water play, splashing, playing in water, water fun",
+    "style": "general"
+  },
+  {
+    "name": "照镜子",
+    "tags": "looking in mirror, looking at mirror reflection, mirror selfie, admiring reflection, looking at oneself in mirror",
+    "style": "general"
+  },
+  {
+    "name": "裹被子",
+    "tags": "wrapped in blanket, cocooned in blanket, blanket burrito, cozy in blanket, wrapped up warm, only face showing",
+    "style": "portrait"
+  },
+  {
+    "name": "化妆",
+    "tags": "applying makeup, doing makeup, putting on makeup, holding makeup brush, makeup compact, getting ready",
+    "style": "portrait"
+  },
+  {
+    "name": "戴帽子",
+    "tags": "putting on hat, adjusting hat, wearing hat, holding hat, placing hat on head, hat pose",
+    "style": "general"
+  },
+  {
+    "name": "闻花",
+    "tags": "smelling flower, sniffing flower, smelling a flower, holding flower to nose, fragrance, flower sniffing",
+    "style": "portrait"
+  },
+  {
+    "name": "捧脸",
+    "tags": "cupping face in hands, holding face in hands, hands on cheeks, face in hands, adorable pose",
+    "style": "portrait"
+  },
+  {
+    "name": "转圈",
+    "tags": "spinning, twirling, spinning around, twirling dress, dynamic spin, spinning motion",
+    "style": "general"
+  },
+  {
+    "name": "敷面膜",
+    "tags": "wearing face mask, skincare face mask, sheet mask, doing skincare, face mask on",
+    "style": "portrait"
+  },
+  {
+    "name": "跳绳",
+    "tags": "jumping rope, skipping rope, jumping over rope, skipping, rope jumping",
+    "style": "general"
+  },
+  {
+    "name": "溜冰",
+    "tags": "ice skating, skating, roller skating, ice skates, skating pose, graceful gliding",
+    "style": "general"
+  },
+  {
+    "name": "滑板",
+    "tags": "skateboarding, riding skateboard, on skateboard, balancing on skateboard, skateboard trick",
+    "style": "general"
+  },
+  {
+    "name": "咬手指",
+    "tags": "biting finger, finger in mouth, nibbling finger, finger between lips, finger biting",
+    "style": "portrait"
+  },
+  {
+    "name": "摸后脑勺",
+    "tags": "touching back of head, hand on back of head, scratching head, bashful, embarrassed, hand behind head",
+    "style": "portrait"
+  },
+  {
+    "name": "张开双臂",
+    "tags": "arms wide open, open arms, spreading arms, embracing pose, arms outstretched, welcoming",
+    "style": "general"
+  },
+  {
+    "name": "双手插口袋",
+    "tags": "hands in pockets, hands in jacket pockets, hands in pants pockets, pocketed hands, casual cool",
+    "style": "general"
+  },
+  {
+    "name": "指远方",
+    "tags": "pointing into distance, pointing far away, finger pointing, pointing at something, pointing ahead",
+    "style": "general"
+  },
+  {
+    "name": "吹泡泡",
+    "tags": "blowing bubbles, blowing soap bubbles, bubbles floating, bubble blowing, playing with bubbles",
+    "style": "general"
+  },
+  {
+    "name": "吹蜡烛",
+    "tags": "blowing out candles, birthday candles, blowing candles, birthday cake, making a wish",
+    "style": "portrait"
+  },
+  {
+    "name": "打游戏",
+    "tags": "playing video games, gaming, holding game controller, playing console, video games, gamer girl",
+    "style": "general"
+  },
+  {
+    "name": "遛狗",
+    "tags": "walking dog, walking with dog, dog walking, holding leash, walking pet dog",
+    "style": "general"
+  },
+  {
+    "name": "推眼镜",
+    "tags": "pushing up glasses, adjusting glasses, finger on glasses frame, glasses push, adjusting spectacles",
+    "style": "portrait"
+  },
+  {
+    "name": "看星星",
+    "tags": "stargazing, looking at stars, looking up at night sky, starry sky, gazing at stars",
+    "style": "general"
+  },
+  {
+    "name": "坐地上",
+    "tags": "sitting on ground, sitting on floor, sitting on the floor, sitting cross-legged on floor, ground sitting",
+    "style": "general"
+  },
+  {
+    "name": "编辫子",
+    "tags": "braiding hair, plaiting hair, braiding, braiding hair, hands in hair, making braid",
+    "style": "portrait"
+  },
+  {
+    "name": "涂口红",
+    "tags": "applying lipstick, putting on lipstick, holding lipstick, lipstick application, doing makeup",
+    "style": "portrait"
+  },
+  {
+    "name": "刷牙",
+    "tags": "brushing teeth, holding toothbrush, brushing, dental hygiene, morning routine",
+    "style": "portrait"
+  },
+  {
+    "name": "泡澡",
+    "tags": "taking bath, bathing in tub, in bathtub, bath tub, relaxing in bath, bubbles, bathtime",
+    "style": "general"
+  },
+  {
+    "name": "叠被子",
+    "tags": "folding blanket, making bed, folding blanket neatly, tidying bed, housework",
+    "style": "general"
+  },
+  {
+    "name": "滑滑梯",
+    "tags": "sliding down slide, playground slide, on slide, sliding, going down slide",
+    "style": "general"
+  },
+  {
+    "name": "做鬼脸",
+    "tags": "making funny face, making a face, silly face, goofy expression, playful face, tongue out",
+    "style": "portrait"
+  },
+  {
+    "name": "许愿",
+    "tags": "making a wish, clasped hands, closed eyes wishing, hands clasped, wishing gesture, hopeful",
+    "style": "portrait"
+  },
+  {
+    "name": "切菜",
+    "tags": "cutting vegetables, chopping food, kitchen, holding knife, cutting board, cooking, slicing",
+    "style": "general"
+  },
+  {
+    "name": "包饺子",
+    "tags": "making dumplings, wrapping dumplings, holding dumpling, making jiaozi, cooking together",
+    "style": "general"
+  },
+  {
+    "name": "晾衣服",
+    "tags": "hanging clothes, hanging laundry, putting clothes on line, hanging up clothes, laundry chore",
+    "style": "general"
+  },
+  {
+    "name": "插花",
+    "tags": "flower arranging, arranging flowers, holding flowers, floral arrangement, vase arrangement, ikebana",
+    "style": "portrait"
+  },
+  {
+    "name": "泡茶",
+    "tags": "brewing tea, pouring tea, tea ceremony, holding teapot, pouring hot water, traditional tea",
+    "style": "general"
+  },
+  {
+    "name": "折纸",
+    "tags": "folding paper, paper folding, origami, making origami, folded paper crane, craft activity",
+    "style": "portrait"
+  },
+  {
+    "name": "钓鱼",
+    "tags": "fishing, sitting with fishing rod, holding fishing pole, fishing by lake, angling, relaxed",
+    "style": "general"
+  },
+  {
+    "name": "烧烤",
+    "tags": "barbecue, BBQ, holding skewer, grilling food, outdoor cooking, barbecue grill, summer",
+    "style": "general"
+  },
+  {
+    "name": "打篮球",
+    "tags": "playing basketball, dribbling basketball, holding basketball, basketball court, sporty",
+    "style": "general"
+  },
+  {
+    "name": "打羽毛球",
+    "tags": "playing badminton, holding badminton racket, badminton, swinging racket, sporty",
+    "style": "general"
+  },
+  {
+    "name": "野餐",
+    "tags": "picnic, sitting on picnic blanket, picnic basket, picnic food, outdoors, eating outdoors",
+    "style": "general"
+  },
+  {
+    "name": "下棋",
+    "tags": "playing chess, playing board game, thinking, holding chess piece, concentrated, table",
+    "style": "portrait"
+  },
+  {
+    "name": "拼图",
+    "tags": "doing puzzle, assembling puzzle, jigsaw puzzle, puzzle pieces, focused",
+    "style": "portrait"
+  },
+  {
+    "name": "弹钢琴",
+    "tags": "playing piano, at piano, piano keyboard, pianist, elegant, music",
+    "style": "general"
+  },
+  {
+    "name": "冲浪",
+    "tags": "surfing, surfing on wave, surfboard, ocean riding wave, summer sport",
+    "style": "general"
+  },
+  {
+    "name": "划船",
+    "tags": "rowing boat, rowboat, rowing on lake, holding oars, boat on water",
+    "style": "general"
+  },
+  {
+    "name": "放烟花",
+    "tags": "fireworks, holding sparkler, firework display, night sky, festival, celebration",
+    "style": "general"
+  },
+  {
+    "name": "堆雪人",
+    "tags": "making snowman, building snowman, snowman, winter, snow, cold weather",
+    "style": "general"
+  },
+  {
+    "name": "滑雪",
+    "tags": "skiing, snow skiing, on ski slopes, holding ski poles, winter sport",
+    "style": "general"
+  },
+  {
+    "name": "打雪仗",
+    "tags": "snowball fight, throwing snowball, holding snowball, winter, playful",
+    "style": "general"
+  },
+  {
+    "name": "玩魔方",
+    "tags": "rubik's cube, solving rubik's cube, holding rubik cube, puzzle solving",
+    "style": "portrait"
+  },
+  {
+    "name": "踢毽子",
+    "tags": "playing jianzi, kicking shuttlecock, kicking feather ball, traditional game",
+    "style": "general"
+  },
+  {
+    "name": "攀岩",
+    "tags": "rock climbing, climbing wall, indoor climbing, climbing holds, climbing",
+    "style": "general"
+  },
+  {
+    "name": "写日记",
+    "tags": "writing diary, journaling, writing in notebook, desk, pen, thoughtful",
+    "style": "portrait"
+  },
+  {
+    "name": "喂猫",
+    "tags": "feeding cat, giving food to cat, holding cat food, cat, pet care",
+    "style": "general"
+  },
+  {
+    "name": "吃火锅",
+    "tags": "eating hotpot, hot pot, holding chopsticks, boiling soup, food",
+    "style": "general"
+  },
+  {
+    "name": "拆礼物",
+    "tags": "unwrapping gift, opening present, gift box, unwrapping present, excited",
+    "style": "portrait"
+  },
+  {
+    "name": "写毛笔字",
+    "tags": "calligraphy, writing calligraphy, brush writing, ink brush, traditional writing",
+    "style": "portrait"
+  },
+  {
+    "name": "赏花",
+    "tags": "flower viewing, viewing flowers, hanami, cherry blossoms, looking at flowers",
+    "style": "general"
+  },
+  {
+    "name": "踩水坑",
+    "tags": "stepping in puddle, playing in puddle, rain puddle, splashing water, rainy day",
+    "style": "general"
+  },
+  {
+    "name": "堆沙堡",
+    "tags": "building sandcastle, playing with sand, sandcastle, beach, seaside, summer",
+    "style": "general"
+  },
+  {
+    "name": "开车",
+    "tags": "driving car, driving, steering wheel, car interior, focused",
+    "style": "portrait"
+  },
+  {
+    "name": "喝奶茶",
+    "tags": "drinking bubble tea, drinking boba tea, holding milk tea cup, straw, boba pearls",
+    "style": "portrait"
+  },
+  {
+    "name": "骑马",
+    "tags": "horseback riding, riding horse, on horseback, horse galloping, equestrian",
+    "style": "general"
+  },
+  {
+    "name": "抛接球",
+    "tags": "juggling, juggling balls, juggling act, throwing balls, playful",
+    "style": "general"
+  },
+  {
+    "name": "摘草莓",
+    "tags": "picking strawberries, strawberry picking, holding strawberries, strawberry basket, farm",
+    "style": "general"
+  },
+  {
+    "name": "打水漂",
+    "tags": "skipping stones, skipping stones on water, throwing stone, pond, lake",
+    "style": "general"
+  },
+  {
+    "name": "煎蛋",
+    "tags": "frying egg, cooking egg, frying pan, kitchen, cooking, holding spatula",
+    "style": "portrait"
+  },
+  {
+    "name": "逛超市",
+    "tags": "grocery shopping, shopping in supermarket, pushing shopping cart, picking items, casual",
+    "style": "general"
+  },
+  {
+    "name": "拖地",
+    "tags": "mopping floor, cleaning, holding mop, housework, doing chores",
+    "style": "general"
+  },
+  {
+    "name": "练瑜伽",
+    "tags": "doing yoga, yoga pose, tree pose, yoga mat, stretching, zen, relaxing",
+    "style": "portrait"
+  },
+  {
+    "name": "倒立",
+    "tags": "handstand, doing handstand, upside down, acrobatics, active, balance",
+    "style": "general"
+  },
+  {
+    "name": "吹口哨",
+    "tags": "whistling, whistling with mouth, puckered lips, playful, cute",
+    "style": "portrait"
+  },
+  {
+    "name": "玩手机",
+    "tags": "using phone, scrolling phone, holding smartphone, looking at phone, casual",
+    "style": "portrait"
+  },
+  {
+    "name": "打电脑",
+    "tags": "using laptop, typing on laptop, computer, desk, working, studying, focused",
+    "style": "portrait"
+  },
+  {
+    "name": "吃面条",
+    "tags": "eating noodles, slurping noodles, holding chopsticks, bowl of noodles, happy eating",
+    "style": "portrait"
+  },
+  {
+    "name": "做三明治",
+    "tags": "making sandwich, preparing sandwich, holding bread, kitchen, cooking",
+    "style": "portrait"
+  },
+  {
+    "name": "洗碗",
+    "tags": "washing dishes, doing dishes, kitchen sink, holding plate, sponge, bubbles",
+    "style": "general"
+  },
+  {
+    "name": "洗衣服",
+    "tags": "washing clothes, doing laundry, washing by hand, basin, soap bubbles, housework",
+    "style": "general"
+  },
+  {
+    "name": "放风筝",
+    "tags": "flying kite, kite flying, holding kite string, outdoors, blue sky, running",
+    "style": "general"
+  },
+  {
+    "name": "玩积木",
+    "tags": "building blocks, playing with blocks, stacking blocks, colorful blocks, playful",
+    "style": "general"
+  },
+  {
+    "name": "揉面团",
+    "tags": "kneading dough, making dough, kneading flour, kitchen, cooking, flour on hands",
+    "style": "portrait"
+  },
+  {
+    "name": "打太极拳",
+    "tags": "doing tai chi, tai chi pose, martial arts, slow motion, zen, peaceful",
+    "style": "general"
+  },
+  {
+    "name": "转呼啦圈",
+    "tags": "hula hoop, spinning hula hoop, waist, active, playful, sporty",
+    "style": "general"
+  },
+  {
+    "name": "踢足球",
+    "tags": "playing soccer, kicking soccer ball, sporty, running, active",
+    "style": "general"
+  },
+  {
+    "name": "打网球",
+    "tags": "playing tennis, swinging tennis racket, tennis court, sporty, active",
+    "style": "general"
+  },
+  {
+    "name": "举哑铃",
+    "tags": "lifting dumbbells, weightlifting, gym, fitness, working out, strong",
+    "style": "general"
+  },
+  {
+    "name": "捡贝壳",
+    "tags": "picking seashells, collecting seashells, beach, holding seashell, seaside, summer",
+    "style": "general"
+  },
+  {
+    "name": "涂指甲油",
+    "tags": "painting nails, painting fingernails, nail polish, holding nail polish brush, focused",
+    "style": "portrait"
+  },
+  {
+    "name": "做陶艺",
+    "tags": "making pottery, pottery wheel, clay, hands on clay, pottery studio, focused",
+    "style": "general"
+  },
+  {
+    "name": "露营",
+    "tags": "camping, sitting in tent, camping tent, outdoors, nature, sleeping bag",
+    "style": "general"
+  },
+  {
+    "name": "搭帐篷",
+    "tags": "pitching tent, setting up tent, camping, outdoors, holding tent poles, active",
+    "style": "general"
+  },
+  {
+    "name": "蹦极",
+    "tags": "bungee jumping, jumping off bridge, bungee cord, extreme sports, excited, flying",
+    "style": "general"
+  },
+  {
+    "name": "削铅笔",
+    "tags": "sharpening pencil, holding pencil sharpener, sharpening, desk, studying",
+    "style": "portrait"
+  },
+  {
+    "name": "烧水",
+    "tags": "boiling water, pouring hot water, holding kettle, pouring tea, kitchen, steam",
+    "style": "portrait"
+  },
+  {
+    "name": "扫地",
+    "tags": "sweeping floor, holding broom, sweeping, cleaning, housework, indoors",
+    "style": "general"
+  },
+  {
+    "name": "吃冰淇淋",
+    "tags": "eating ice cream, holding ice cream cone, licking ice cream, happy, summer, treat",
+    "style": "portrait"
+  },
+  {
+    "name": "爬树",
+    "tags": "climbing tree, tree climbing, holding tree branch, outdoors, adventurous",
+    "style": "general"
+  },
+  {
+    "name": "吹笛子",
+    "tags": "playing flute, holding flute, blowing flute, music, musician, focused",
+    "style": "portrait"
+  },
+  {
+    "name": "打鼓",
+    "tags": "playing drums, drum set, holding drumsticks, music, energetic",
+    "style": "general"
+  },
+  {
+    "name": "剥香蕉",
+    "tags": "peeling banana, holding banana, peeling, eating banana, snack, happy",
+    "style": "portrait"
+  },
+  {
+    "name": "劈叉",
+    "tags": "doing splits, full split, stretch, flexible, gymnastic, floor",
+    "style": "general"
+  },
+  {
+    "name": "采蘑菇",
+    "tags": "picking mushrooms, mushroom picking, forest, holding mushroom, basket, foraging",
+    "style": "general"
+  },
+  {
+    "name": "吃爆米花",
+    "tags": "eating popcorn, holding popcorn bucket, eating, snack, happy, carnival",
+    "style": "portrait"
+  },
+  {
+    "name": "打台球",
+    "tags": "playing billiards, pool table, holding pool cue, aiming, billiard balls, focused",
+    "style": "general"
+  },
+  {
+    "name": "捉迷藏",
+    "tags": "hide and seek, hiding, peeking, peeking out, playful, hand over mouth, giggling",
+    "style": "portrait"
+  },
+  {
+    "name": "抓娃娃",
+    "tags": "playing claw machine, claw crane, arcade machine, grabbing plush toy, joystick",
+    "style": "portrait"
+  },
+  {
+    "name": "看电影",
+    "tags": "watching movie, movie theater, sitting in seat, big screen, cinema, holding popcorn",
+    "style": "general"
+  },
+  {
+    "name": "做实验",
+    "tags": "doing experiment, science lab, test tubes, beaker, holding flask, lab coat, focused",
+    "style": "general"
+  },
+  {
+    "name": "打坐",
+    "tags": "sitting meditation, lotus position, meditating, zen, peaceful, eyes closed, calm",
+    "style": "portrait"
+  },
+  {
+    "name": "俯卧撑",
+    "tags": "doing push-ups, push up, exercise, fitness, working out, strong, sporty",
+    "style": "general"
+  },
+  {
+    "name": "看漫画",
+    "tags": "reading manga, holding manga book, reading, lying down, sitting, focused, relaxed, otaku",
+    "style": "portrait"
+  },
+  {
+    "name": "逛街",
+    "tags": "shopping, window shopping, walking in shopping street, carrying shopping bags, happy, stores",
+    "style": "general"
+  },
+  {
+    "name": "压腿",
+    "tags": "leg stretching, stretching leg, putting leg up, flexible, warm up, stretching",
+    "style": "general"
+  },
+  {
+    "name": "做仰卧起坐",
+    "tags": "doing sit-ups, sit up, exercise, fitness, working out, on floor, sporty",
+    "style": "general"
+  },
+  {
+    "name": "看日出",
+    "tags": "watching sunrise, sunrise, morning, outdoors, sitting, looking at horizon, beautiful sky",
+    "style": "general"
+  },
+  {
+    "name": "赏月",
+    "tags": "moon gazing, looking at moon, night sky, sitting, crescent moon, stars, peaceful",
+    "style": "general"
+  },
+  {
+    "name": "坐过山车",
+    "tags": "riding roller coaster, roller coaster, amusement park, excited, hands up, happy, fast",
+    "style": "general"
+  },
+  {
+    "name": "骑摩托车",
+    "tags": "riding motorcycle, motorcycle, motorbike, holding handlebars, driving, cool, helmet",
+    "style": "general"
+  },
+  {
+    "name": "穿鞋子",
+    "tags": "putting on shoes, wearing shoes, sitting, holding shoe, putting shoe on, getting ready",
+    "style": "portrait"
+  },
+  {
+    "name": "吃药",
+    "tags": "taking medicine, holding pill, drinking water, medicine, health, sick",
+    "style": "portrait"
+  },
+  {
+    "name": "爬山",
+    "tags": "mountain climbing, hiking, climbing mountain, outdoors, nature, holding hiking stick, backpack",
+    "style": "general"
+  },
+  {
+    "name": "反向口交69式",
+    "tags": "reverse fellatio, 69 position, sixty-nine position, simultaneous oral sex, upside down oral, mutual cunnilingus and fellatio, face buried in crotch",
+    "style": "general"
+  },
+  {
+    "name": "插入式口交",
+    "tags": "irrumatio, face fucking, rough deep throat, man thrusting into mouth, forced oral sex, mouth fuck",
+    "style": "general"
+  },
+  {
+    "name": "口内射精",
+    "tags": "cum in mouth, ejaculation in mouth, semen in mouth, creampie mouth, swallowing cum",
+    "style": "general"
+  },
+  {
+    "name": "双腿大开",
+    "tags": "spread legs, legs spread wide open, wide open thighs, spread eagle pose, pussy fully exposed",
+    "style": "general"
+  },
+  {
+    "name": "仰卧躺平",
+    "tags": "lying on back, on her back, supine position, lying flat on back, reclining nude",
+    "style": "general"
+  },
+  {
+    "name": "抓胸揉胸",
+    "tags": "grabbing another's breast, groping breast, hand on breast, squeezing boob, fondling breasts",
+    "style": "general"
+  },
+  {
+    "name": "倒立69式深喉全套",
+    "tags": "lying on back, spread legs, upside down, reverse fellatio, 69 position, simultaneous oral sex, oral, irrumatio, face fucking, rough deep throat, female ejaculation, cum in mouth, grabbing another's breast, groping breast",
+    "style": "general"
+  },
+  {
+    "name": "压制撕衣",
+    "tags": "pinned down on bed, dress torn, ripped clothing, struggling, one hand holding both her wrists above head, pinned wrists, immobilized, dominant restraint, desperate squirming",
+    "style": "general"
+  },
+  {
+    "name": "跪姿按头深喉",
+    "tags": "kneeling, forced fellatio, deep throat, face fucking, irrumatio, man grabbing her hair, head pushing, gagging, tears, saliva dripping",
+    "style": "general"
+  },
+  {
+    "name": "后入抓翅膀",
+    "tags": "doggystyle, on all fours, rear entry, penetration from behind, man grabbing her wings, pulling wings, arched back, ass up, breasts bouncing, feathers flying",
+    "style": "general"
+  },
+  {
+    "name": "悬空抱操潮吹",
+    "tags": "standing carry sex, legs wrapped around waist, penetration, suspended, held up by man, female ejaculation, squirting, gushing orgasm, eyes rolled back",
+    "style": "general"
+  }
+]
