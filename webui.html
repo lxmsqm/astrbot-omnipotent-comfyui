@@ -1726,6 +1726,9 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .upload-media-card.ua-ratio-916{aspect-ratio:9/16;width:140px;max-width:150px;}
 .upload-media-card.ua-ratio-169{aspect-ratio:16/9;width:200px;max-width:210px;}
 .upload-media-card.ua-ratio-11{aspect-ratio:1/1;width:120px;max-width:130px;}
+/* 图片按实际比例显示：宽固定、高度随图片比例自适应，预览图完整显示不被裁剪 */
+.upload-media-card.ua-ratio-auto{width:150px;max-width:170px;aspect-ratio:auto;min-height:90px;}
+.upload-media-card.ua-ratio-auto .ua169-preview{object-fit:contain;background:rgba(0,0,0,0.15);}
 .upload-media-card:hover{
   border-color:var(--primary);
   box-shadow:0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent);
@@ -4719,7 +4722,7 @@ textarea:focus-visible,
           <div id="official_duration_panel" style="display:none">
             <div class="official-res-row">
               <label class="official-res-label">视频时长</label>
-              <input type="number" id="official_duration" class="official-res-input" min="4" step="1" value="5" onchange="setOfficialDuration()" oninput="setOfficialDurationDebounced()">
+              <input type="number" id="official_duration" class="official-res-input" min="1" step="1" value="5" onchange="setOfficialDuration()" oninput="setOfficialDurationDebounced()">
               <span class="official-res-unit">秒</span>
             </div>
           </div>
@@ -7235,9 +7238,26 @@ async function loadParams() {
 
   const c = await apiFetch('/api/workflow-params-config', {}, true);
   if (c) {
-    const wfC = c.__workflow_node_configs__ || {}, wf = wfC[getCurrentWF()] || {};
+    // 当前工作流名：优先用后端 /api/workflow-params 返回的权威 workflow_name，
+    // 回退 DOM active 类。切换工作流时 DOM 更新有延迟，用后端名避免读错工作流配置
+    // （曾导致切到生视频工作流后上传区残留/不加载上一个工作流的 LoadImage 配置）。
+    const curWF = (d && d.workflow_name) || getCurrentWF();
+    const wfC = c.__workflow_node_configs__ || {}, wf = wfC[curWF] || {};
     promptNodeId = wf.__prompt_node__ || '';
     resNodeId = wf.__resolution_node__ || '';
+    // 未手动指定分辨率节点时自动识别老式分辨率节点（AspectRatioNode / 分辨率/比例类含 width 的节点），
+    // 保证旧版分辨率面板在 PC/手机上都能显示（与官方 ResolutionSelector 检测互斥，官方优先）
+    if (!resNodeId && allParamsData && allParamsData.nodes) {
+      const autoRes = allParamsData.nodes.find(n => {
+        const ct = n.class_type || '';
+        if (/AspectRatioNode/i.test(ct)) return true;
+        if (/resolution|aspect.?ratio|imageresiz/i.test(ct)) {
+          return n.params && n.params.some(p => p.key === 'width') && n.params.some(p => p.key === 'height');
+        }
+        return false;
+      });
+      if (autoRes) resNodeId = String(autoRes.id);
+    }
     const imgIds = (wf.__load_image_nodes__ || '').split(',').map(s => s.trim()).filter(Boolean);
     loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
     imgIds.forEach((id, i) => { if (i < 10) loadImageNodeIds[i] = id; });
@@ -7287,20 +7307,19 @@ async function loadParams() {
     // 先清空 textarea，避免旧工作流的残留数据
     $id('prompt_textarea').value = '';
     $id('neg_textarea').value = '';
-    // 优先从配置的保存文本加载（用户手动保存过的值），没有才从 JSON 读
-    const wfSaved = (c.__workflow_node_configs__ || {})[getCurrentWF()] || {};
+    // 优先从配置的保存文本加载（用户手动保存过的值），没有则保持空输入框。
+    // 注意：不再用 _loadNodeTextToTextarea 预填节点默认文本——
+    // 打包子节点展开后节点的 value 是工作流自带的大段默认内容（如 subject_definitions），
+    // 预填会让用户以为输入框已有提示词、直接点生成，导致默认内容被当用户提示词注入（“输入不了”）。
+    const wfSaved = (c.__workflow_node_configs__ || {})[curWF] || {};
     const savedTexts = wfSaved.__saved_texts__ || {};
     const promptSavedKey = promptNodeId && `${promptNodeId}_${promptInputKey}`;
     const negSavedKey = negativeNodeId && `${negativeNodeId}_${negativeInputKey}`;
     if (promptSavedKey && promptSavedKey in savedTexts) {
       $id('prompt_textarea').value = savedTexts[promptSavedKey] ?? '';
-    } else if (promptNodeId && promptInputKey) {
-      _loadNodeTextToTextarea(promptNodeId, promptInputKey, 'prompt_textarea');
     }
     if (negSavedKey && negSavedKey in savedTexts) {
       $id('neg_textarea').value = savedTexts[negSavedKey] ?? '';
-    } else if (negativeNodeId && negativeInputKey) {
-      _loadNodeTextToTextarea(negativeNodeId, negativeInputKey, 'neg_textarea');
     }
 
     // 初始化质量与比例 UI（legacy 面板已移除，元素可能不存在，全部空保护）
@@ -7386,8 +7405,10 @@ function updateNodeDisplay() {
   document.getElementById('prep_negative').style.display = hasNeg ? 'block' : 'none';
   document.getElementById('prep_resolution').style.display = (hasRes || hasOfficialRes) ? 'block' : 'none';
   // 每次更新都强制执行官方/旧版互斥：避免切换工作流或 c 为空时两套分辨率面板共存
-  _initOfficialResPanel();
-  _initOfficialDurationPanel();
+  // 各面板渲染独立 try/catch：任一渲染函数对展开后节点数据抛异常时，
+  // 不中断 updateNodeDisplay，保证后续上传区/徽章正常显示（打包工作流含 Lora/UNet 节点曾导致上传区被跳过）
+  try { _initOfficialResPanel(); } catch (e) { console.error('res panel err:', e); }
+  try { _initOfficialDurationPanel(); } catch (e) { console.error('dur panel err:', e); }
   // 终极兜底：内联强制互斥（不依赖独立函数调用时机/顺序），确保任何端任何路径都不并存
   const oPanel = document.getElementById('official_res_panel');
   const lPanel = document.getElementById('legacy_res_panel');
@@ -7395,13 +7416,13 @@ function updateNodeDisplay() {
   if (oPanel) oPanel.style.display = hasOff ? 'block' : 'none';
   if (lPanel) lPanel.style.display = (!hasOff && !!resNodeId) ? 'block' : 'none';
   // 视频专属：BasicScheduler 基本调度器面板（scheduler/steps/denoise）
-  renderBasicScheduler();
+  try { renderBasicScheduler(); } catch (e) { console.error('bs panel err:', e); }
   // Lora 面板：检测工作流中是否有 PowerLoraLoader 节点
   const hasLora = _hasLoraNodes();
   document.getElementById('prep_loras').style.display = hasLora ? 'block' : 'none';
-  if (hasLora) renderLoraPanel();
+  if (hasLora) { try { renderLoraPanel(); } catch (e) { console.error('lora panel err:', e); } }
   // UNet 模型面板：独立显隐（有 UNETLoader 节点才显示，不再依赖 Lora 面板）
-  renderUnetPanel();
+  try { renderUnetPanel(); } catch (e) { console.error('unet panel err:', e); }
   document.getElementById('prep_upload_image').style.display = hasImg ? 'block' : 'none';
   document.getElementById('prep_expanded_text').style.display = hasExp ? 'block' : 'none';
   document.getElementById('prep_unassigned_hint').style.display = hasAny ? 'none' : 'block';
@@ -7445,10 +7466,13 @@ function updateNodeDisplay() {
         const curParam = n.params && n.params.find(p => p.key === g.inputKey);
         const curVal = curParam ? String(curParam.value || '') : '';
         const isPlaceholder = !curVal;
-        // 统一卡片式上传：图片 9:16 竖、视频 16:9 横、音频 1:1 方，并排显示
-        const ratioCls = g.prefix === 'image' ? ' ua-ratio-916' : (g.prefix === 'video' ? ' ua-ratio-169' : ' ua-ratio-11');
+        // 卡片式上传：图片按实际比例显示（不再固定 9:16）、视频 16:9 横、音频 1:1 方
+        // 图片有值时用 ua-ratio-auto（高度随图片比例自适应），占位时才用 9:16 空位
+        const ratioCls = g.prefix === 'image'
+          ? (isPlaceholder ? ' ua-ratio-916' : ' ua-ratio-auto')
+          : (g.prefix === 'video' ? ' ua-ratio-169' : ' ua-ratio-11');
         const iconUse = g.prefix === 'image' ? 'icon-image' : (g.prefix === 'video' ? 'icon-video' : 'icon-audio');
-        const noteText = g.prefix === 'image' ? '9:16 · 点击上传' : (g.prefix === 'video' ? '16:9 · 点击上传' : '点击上传音频');
+        const noteText = g.prefix === 'image' ? '点击上传' : (g.prefix === 'video' ? '16:9 · 点击上传' : '点击上传音频');
         // 节点已有文件名（上传过/刷新后读回）→ 加载预览图（图片分组）/ 显示文件名（音频/视频）
         const curFname = curVal ? String(curVal).split(/[\\/]/).pop() : '';
         const previewSrc = (!isPlaceholder && g.prefix === 'image')
@@ -7459,7 +7483,7 @@ function updateNodeDisplay() {
           ontouchstart="onUploadCardTouchStart(event,'${n.id}')" ontouchmove="onUploadCardTouchMove(event,'${n.id}')" ontouchend="onUploadCardTouchEnd(event,'${n.id}')"
           onclick="document.getElementById('${g.prefix}_upload_${idx}').click()" title="${noteText}（长按/拖动可排序）">
           <input type="file" id="${g.prefix}_upload_${idx}" accept="${g.accept}" onchange="${g.uploadFn}(this,'${n.id}',${idx})" style="display:none">
-          <img class="ua169-preview" id="${g.prefix}_preview_${idx}" alt="" style="${previewSrc ? '' : 'display:none'}" src="${previewSrc}" onerror="this.style.display='none'">
+          <img class="ua169-preview" id="${g.prefix}_preview_${idx}" alt="" style="${previewSrc ? '' : 'display:none'}" src="${previewSrc}" onerror="this.style.display='none'" onload="adjustUploadRatio(this)">
           ${!isPlaceholder ? `<button class="ua169-clear" data-nodeid="${n.id}" data-key="${g.inputKey}" onclick="event.stopPropagation();clearNodeMedia('${n.id}','${g.inputKey}')" title="清空此图片">✕</button>` : ''}
           <div class="ua169-empty" id="${g.prefix}_empty_${idx}" style="${previewSrc ? 'display:none' : ''}">
             <svg class="ua169-icon" aria-hidden="true"><use href="#${iconUse}"/></svg>
@@ -7770,7 +7794,7 @@ function renderLoraPanel() {
     }
     html += `</div>`;
     html += `<div style="display:flex;gap:6px;margin-top:6px">
-      <button class="btn btn-xs btn-primary" onclick="addLoraForNode('${nid}', true);renderLoraPanel()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> 添加 Lora</button>
+      <button class="btn btn-xs btn-primary" onclick="addLoraForNode('${nid}', true);refreshLoraPanelPreserveExpanded()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> 添加 Lora</button>
       <button class="btn btn-xs btn-secondary" onclick="toggleAllLorasInPanel('${nid}')" title="全部启用/禁用">⏻ 全部开关</button>
     </div>`;
     html += `</div></div>`;
@@ -7869,7 +7893,7 @@ function deleteLoraInPanel(nodeId, idx) {
   if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
     loraNodesConfig[nodeId].splice(idx, 1);
     if (loraNodesConfig[nodeId].length === 0) delete loraNodesConfig[nodeId];
-    renderLoraPanel();
+    refreshLoraPanelPreserveExpanded();
     _saveLoraConfig();
   }
 }
@@ -7913,7 +7937,7 @@ function toggleAllLorasInPanel(nodeId) {
   if (!loras || !loras.length) return;
   const allOn = loras.every(l => l.on);
   loras.forEach(l => { l.on = !allOn; });
-  renderLoraPanel();
+  refreshLoraPanelPreserveExpanded();
   _saveLoraConfig();
 }
 
@@ -7929,7 +7953,7 @@ function deleteLoraPanelItem(nodeId, idx) {
   if (loraNodesConfig[nodeId] && loraNodesConfig[nodeId][idx]) {
     loraNodesConfig[nodeId].splice(idx, 1);
     if (loraNodesConfig[nodeId].length === 0) delete loraNodesConfig[nodeId];
-    renderLoraPanel();
+    refreshLoraPanelPreserveExpanded();
     // 同时刷新弹窗（如果打开）
     const modalBody = document.getElementById('node_modal_body');
     if (modalBody && modalBody.dataset.nodeId === nodeId) showNodeDetail(nodeId);
@@ -7937,16 +7961,19 @@ function deleteLoraPanelItem(nodeId, idx) {
   }
 }
 
-/** 保存 Lora 配置到后端 */
+/** 保存 Lora 配置到后端（只带非空角色字段，避免空值覆盖后端已保存的节点配置） */
 function _saveLoraConfig() {
   const saveData = {
     __lora_nodes__: { ...loraNodesConfig },
-    __prompt_node__: promptNodeId,
-    __negative_node__: negativeNodeId,
-    __resolution_node__: resNodeId,
-    __expanded_text_node__: expandedTextNodeId,
-    __load_image_nodes__: (loadImageNodeIds || []).filter(id => id).join(',')
   };
+  // 角色字段只在有值时附带：防止 resNodeId/promptNodeId 等为空时
+  // 把后端已保存的分辨率节点/提示词节点等配置覆盖成空，导致刷新后旧版分辨率面板消失
+  if (promptNodeId) saveData.__prompt_node__ = promptNodeId;
+  if (negativeNodeId) saveData.__negative_node__ = negativeNodeId;
+  if (resNodeId) saveData.__resolution_node__ = resNodeId;
+  if (expandedTextNodeId) saveData.__expanded_text_node__ = expandedTextNodeId;
+  const imgIds = (loadImageNodeIds || []).filter(id => id);
+  if (imgIds.length) saveData.__load_image_nodes__ = imgIds.join(',');
   apiFetch('/api/workflow-params', { method: 'POST', body: JSON.stringify(saveData) }, true).catch(() => {});
 }
 
@@ -8367,8 +8394,8 @@ async function loadLoras() {
 async function loadLoraMetadata() {
   try {
     loraMetadata = await apiFetch('/api/lora-metadata', {}, true) || {};
-    // 元数据加载完成后刷新 Lora 面板（首次渲染时可能还没加载完）
-    renderLoraPanel();
+    // 元数据加载完成后刷新 Lora 面板（保留展开状态，避免重渲染后全部折叠）
+    refreshLoraPanelPreserveExpanded();
   } catch(e) {
     console.warn('Lora 元数据加载失败:', e);
     loraMetadata = {};
@@ -8469,19 +8496,26 @@ function onLoraTouchMove() {
 // ========================================================================
 // Lora 下拉面板（搜索在面板顶部）
 // ========================================================================
+/** 移除全部 Lora 下拉面板并恢复页面滚动（面板打开时锁定滚动，保证选择框固定在视口不随页面下滑） */
+function _cleanupLoraPanels() {
+  document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
+  document.querySelectorAll('.lora-select').forEach(el => el._ldpAttached = false);
+  if (!document.querySelector('.lora-dropdown-panel')) {
+    document.body.style.overflow = '';
+  }
+}
+
 function toggleLoraDropdown(event, trigger, nodeId, idx, fromPanel) {
   event.stopPropagation();
   // 如果已有面板，先关掉所有（避免多个下拉共存）
   const allPanels = document.querySelectorAll('.lora-dropdown-panel');
   // 检查点的是不是当前 trigger 关联的面板（通过 trigger 上的状态位判断）
   if (trigger._ldpAttached) {
-    allPanels.forEach(p => p.remove());
-    trigger._ldpAttached = false;
+    _cleanupLoraPanels();
     return;
   }
   // 关闭所有其他面板
-  allPanels.forEach(p => p.remove());
-  document.querySelectorAll('.lora-select').forEach(el => el._ldpAttached = false);
+  _cleanupLoraPanels();
 
   const curVal = (loraNodesConfig[nodeId]?.[idx]?.lora_name) || '';
 
@@ -8512,7 +8546,10 @@ function toggleLoraDropdown(event, trigger, nodeId, idx, fromPanel) {
   panel.style.maxHeight = '380px';  // 加高
   trigger._ldpAttached = true;
   document.body.appendChild(panel);
-  setTimeout(() => panel.querySelector('.ldp-search input')?.focus(), 50);
+  // 打开面板时锁定页面滚动：手机上下滑页面不会把选择框一起带走（固定在视口）
+  document.body.style.overflow = 'hidden';
+  // 不再自动聚焦搜索框：手机上打开面板即弹输入键盘，影响先浏览分类/列表再搜索的体验。
+  // 用户主动点击搜索框时才聚焦（配合面板定位：打开时不抢占键盘）。
 }
 
 function buildLdpItemHtml(lr, curVal, nodeId, idx, fromPanel) {
@@ -8620,8 +8657,8 @@ function selectLdpItem(nodeId, idx, val, fromPanel) {
     loraNodesConfig[nodeId][idx].trigger_words_selected = [];
   }
   updateLoraForNode(nodeId, idx, 'lora_name', val);
-  // 关闭所有下拉面板 + 清标记
-  document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
+  // 关闭所有下拉面板 + 清标记（同时恢复页面滚动）
+  _cleanupLoraPanels();
   document.querySelectorAll('.lora-select').forEach(el => { el._ldpAttached = false; el.textContent = val.replace(/^.*[\\\/]/, ''); });
   // 外部面板场景不弹节点弹窗，只刷新外部 Lora 管理面板
   if (!fromPanel) {
@@ -8632,11 +8669,10 @@ function selectLdpItem(nodeId, idx, val, fromPanel) {
   refreshLoraPanelPreserveExpanded();
 }
 
-// 点击外部关闭所有 Lora 面板
+// 点击外部关闭所有 Lora 面板（同时恢复页面滚动）
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.lora-dropdown-panel') && !e.target.closest('.lora-select')) {
-    document.querySelectorAll('.lora-dropdown-panel').forEach(p => p.remove());
-    document.querySelectorAll('.lora-select').forEach(el => el._ldpAttached = false);
+    _cleanupLoraPanels();
   }
 });
 
@@ -8704,6 +8740,8 @@ function addLoraForNode(nodeId, skipModal) {
   }
   if (!loraNodesConfig[nodeId]) loraNodesConfig[nodeId] = [];
   loraNodesConfig[nodeId].push({ on: true, lora_name: availableLoras[0] || '', strength_model: 1.0, strength_clip: null });
+  // 立即持久化，防止刷新网页后新增的 Lora 丢失
+  _scheduleLoraSave();
   if (!skipModal) {
     // 重新渲染弹窗
     showNodeDetail(nodeId);
@@ -8970,12 +9008,19 @@ function showNodeDetail(nid) {
     const modelKey = `${node.class_type  }_${  p.key}`;
     const elId = `param_${  node.id  }_${  p.key}`;
     html += `<div class="param-row"><label for="${  elId  }">${  p.key  }</label>`;
-    if (modelLists[modelKey]) {
+    if (Array.isArray(p.options) && p.options.length) {
+      // object_info 提供的 COMBO 选项 → 下拉选择
+      html += `<select id="${  elId  }">${  p.options.map((o) => { return `<option${  String(o) === String(p.value) ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
+    } else if (modelLists[modelKey]) {
       html += `<select id="${  elId  }">${  modelLists[modelKey].map((o) => { return `<option${  o === p.value ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
     } else if (p.type === 'text') {
       html += `<textarea id="${  elId  }" rows="2">${  p.value === 0 ? '0' : (p.value || '')  }</textarea>`;
     } else if (p.type === 'bool') {
       html += `<select id="${  elId  }"><option value="true"${  p.value ? ' selected' : ''  }>true</option><option value="false"${  !p.value ? ' selected' : ''  }>false</option></select>`;
+    } else if (p.type === 'number' && (p.min !== undefined || p.max !== undefined)) {
+      // INT/FLOAT 带范围 → 数字输入限幅
+      const stp = (p.step !== undefined && p.step > 0) ? p.step : 1;
+      html += `<input type="number" id="${  elId  }" value="${  p.value  }"${  p.min !== undefined ? ` min="${  p.min  }"` : ''  }${  p.max !== undefined ? ` max="${  p.max  }"` : ''  } step="${  stp  }">`;
     } else if (p.type === 'select') {
       if (Array.isArray(p.value)) {
         html += `<select id="${  elId  }">${  p.value.map((o) => { return `<option>${  o  }</option>`; }).join('')  }</select>`;
@@ -9055,18 +9100,22 @@ async function saveParams() {
       __groups_data__: c.__groups_data__ || [],
       __hidden_workflows__: c.__hidden_workflows__ || [],
       __workflow_aliases__: c.__workflow_aliases__ || {},
-      // 节点角色直接放在根级别（与后端匹配）
-      __prompt_node__: promptNodeId,
-      __resolution_node__: resNodeId,
-      __load_image_nodes__: loadImageNodeIds.filter(id => id).join(','),
-      __load_audio_nodes__: loadAudioNodeIds.filter(id => id).join(','),
-      __load_video_nodes__: loadVideoNodeIds.filter(id => id).join(','),
-      __empty_load_nodes__: emptyLoadNodes.join(','),
-      __negative_node__: negativeNodeId,
-      __expanded_text_node__: expandedTextNodeId,
-      __disabled_nodes__: disabledNodes,
-      __lora_nodes__: loraNodesConfig
+      // 节点角色只在非空时附带：避免 loadImageNodeIds 等为空（如切换工作流后未初始化）
+      // 触发保存时用空值覆盖后端已保存的节点配置，导致刷新后图片/角色丢失
+      __empty_load_nodes__: emptyLoadNodes.join(',')
     };
+    if (promptNodeId) d.__prompt_node__ = promptNodeId;
+    if (resNodeId) d.__resolution_node__ = resNodeId;
+    if (negativeNodeId) d.__negative_node__ = negativeNodeId;
+    if (expandedTextNodeId) d.__expanded_text_node__ = expandedTextNodeId;
+    const imgIds = loadImageNodeIds.filter(id => id);
+    if (imgIds.length) d.__load_image_nodes__ = imgIds.join(',');
+    const audioIds = loadAudioNodeIds.filter(id => id);
+    if (audioIds.length) d.__load_audio_nodes__ = audioIds.join(',');
+    const videoIds = loadVideoNodeIds.filter(id => id);
+    if (videoIds.length) d.__load_video_nodes__ = videoIds.join(',');
+    d.__disabled_nodes__ = disabledNodes;
+    d.__lora_nodes__ = loraNodesConfig;
     console.log('[saveParams] sending:', cW, JSON.stringify({...d, __prompt_node__: d.__prompt_node__, __resolution_node__: d.__resolution_node__, __load_image_nodes__: d.__load_image_nodes__, __negative_node__: d.__negative_node__, __expanded_text_node__: d.__expanded_text_node__}));
 
     // 收集所有已知节点的参数值（不仅是当前弹窗的）
@@ -10107,7 +10156,7 @@ function renderBasicScheduler() {
   const stepsInput = document.getElementById('bs_steps_input');
   if (stepsInput && curSteps !== undefined) stepsInput.value = curSteps;
   const denoiseInput = document.getElementById('bs_denoise_input');
-  if (denoiseInput && curDenoise !== undefined) denoiseInput.value = curDenoise;
+  if (denoiseInput && curDenoise !== undefined) denoiseInput.value = Number(curDenoise.toFixed(6));
   // 控件 id 用 param_{nid}_{key}，复用 saveParams() 自动收集写回
   if (sel) sel.id = `param_${n.id}_scheduler`;
   if (stepsInput) stepsInput.id = `param_${n.id}_steps`;
@@ -10152,9 +10201,9 @@ function _initOfficialResPanel() {
     }
   }
   const mpInput = document.getElementById('official_megapixels');
-  if (curMp !== undefined && mpInput) mpInput.value = curMp;
+  if (curMp !== undefined && mpInput) mpInput.value = Number(Number(curMp).toFixed(6));
   const multInput = document.getElementById('official_multiple');
-  if (curMult !== undefined && multInput) multInput.value = curMult;
+  if (curMult !== undefined && multInput) multInput.value = Number(Number(curMult).toFixed(6));
 }
 
 function _initOfficialDurationPanel() {
@@ -10172,7 +10221,7 @@ function _initOfficialDurationPanel() {
         const pVal = node.params.find(p => p.key === 'value' && typeof p.value === 'number');
         if (pVal) { curDur = pVal.value; break; }
       }
-      if (curDur !== null && !isNaN(curDur)) durInput.value = curDur;
+      if (curDur !== null && !isNaN(curDur)) durInput.value = Number(Number(curDur).toFixed(6));
     }
   }
 }
@@ -10184,7 +10233,14 @@ function setOfficialRes() {
   if (!aspect) return;
   apiFetch('/api/set-official-res', { method:'POST', body:JSON.stringify({ aspect_ratio: aspect, megapixels: mp ? parseFloat(mp) : undefined, multiple: mult ? parseInt(mult) : undefined }) }, true)
     .then((d) => {
-      if (d && d.ok) toast(`✅ 官方分辨率已设置: ${aspect} ${d.megapixels}MP ×${d.multiple}`);
+      // 成功提示去重：oninput(防抖)+onchange 双触发会连续弹多个 toast
+      if (d && d.ok) {
+        const sig = `${aspect}|${d.megapixels}|${d.multiple}`;
+        if (window._lastResToast !== sig) {
+          toast(`✅ 官方分辨率已设置: ${aspect} ${d.megapixels}MP ×${d.multiple}`);
+          window._lastResToast = sig;
+        }
+      }
       else toast(d?.error || '官方分辨率设置失败', 'error');
     }).catch(e => console.error('setOfficialRes error:', e));
 }
@@ -10199,7 +10255,13 @@ function setOfficialDuration() {
   if (v === undefined || v === '') return;
   apiFetch('/api/set-duration', { method:'POST', body:JSON.stringify({ duration: parseFloat(v) }) }, true)
     .then((d) => {
-      if (d && d.ok) toast(`✅ 视频时长已设置: ${d.duration} 秒`);
+      // 成功提示去重：oninput(防抖)+onchange 双触发会连续弹多个 toast,相同值只提示一次
+      if (d && d.ok) {
+        if (window._lastDurToast !== String(d.duration)) {
+          toast(`✅ 视频时长已设置: ${d.duration} 秒`);
+          window._lastDurToast = String(d.duration);
+        }
+      }
       else toast(d?.error || '时长设置失败', 'error');
       // 实时刷新：重新拉取参数并重渲染（预设视频时长 / 指令推理最大帧数联动显示）
       refreshParamsAfterDuration();
@@ -10220,6 +10282,14 @@ async function refreshParamsAfterDuration() {
       updateNodeDisplay();
     }
   } catch (e) { console.warn('refreshParamsAfterDuration error:', e); }
+}
+function adjustUploadRatio(img) {
+  // 图片预览加载完成后，按实际宽高比调整卡片比例（ua-ratio-auto 场景）
+  const card = img.closest('.upload-media-card');
+  if (!card || !card.classList.contains('ua-ratio-auto')) return;
+  if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+    card.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+  }
 }
 function handleImageUpload(input, nodeId, idx) {
   const file = input.files[0];
@@ -10584,8 +10654,8 @@ function escGallery(str) {
   return d.innerHTML;
 }
 
-async function loadGalleryImages() {
-  if (!_acceptData) return; // 数据接收已暂停，不加载
+async function loadGalleryImages(force = false) {
+  if (!force && !_acceptData) return; // 数据接收已暂停，不加载（删除后强制刷新不受此限制）
   const d = await apiFetch('/api/gallery', {}, true);
   _galleryData = (d && d.images) ? d.images : [];
   // 更新FAB徽标
@@ -10938,7 +11008,7 @@ function executeBatchDelete() {
       if (success > 0) toast(`✅ 已删除 ${success} 项`);
       if (fail > 0) toast(`❌ ${fail} 项删除失败`, 'error');
       exitBatchMode();
-      loadGalleryImages();
+      loadGalleryImages(true); // 删除后强制刷新，立即从画廊消失
       return;
     }
     const name = pending.shift();
@@ -10955,7 +11025,7 @@ function executeBatchDelete() {
 function gallerySingleDelete(name) {
   if (!confirm(`确定要删除此文件吗？\n${name}`)) return;
   apiFetch('/api/gallery/delete', { method: 'POST', body: JSON.stringify({name}) }).then(r => {
-    if (r && r.ok) { toast('✅ 已删除'); loadGalleryImages(); }
+    if (r && r.ok) { toast('✅ 已删除'); loadGalleryImages(true); } // 删除后强制刷新，立即从画廊消失
     else { toast('❌ 删除失败', 'error'); }
   });
 }
