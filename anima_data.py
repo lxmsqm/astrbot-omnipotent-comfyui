@@ -13,6 +13,7 @@ Anima 数据融合模块
   {"name": "显示名", "tags": "逗号分隔的提示词标签", "category": "分类名(可选)", "note": "备注(可选)"}
 """
 
+import bisect
 import json
 import os
 import re
@@ -866,6 +867,8 @@ class AnimaDataManager:
         """{分类名: [{name, tags, ...}]}"""
         self._name_index: dict[str, list[tuple[str, int]]] = {}
         """{关键词: [(分类名, 索引), ...]}"""
+        self._name_index_sorted: list = []
+        """_name_index 键的排序表（前缀匹配二分查找用，避免 O(N) 全表扫描）"""
         self._loaded = False
 
     # ------------------------------------------------------------------
@@ -905,8 +908,7 @@ class AnimaDataManager:
             item_id = str(item.get("id", ""))
             partition = item.get("p", 1)
             image_url = (
-                f"https://fastly.jsdelivr.net/gh/ThetaCursed/"
-                f"Anima-Assets@main/images/{partition}/{item_id}.webp"
+                f"https://anima.mooshieblob.com/images/{partition}/{item_id}.webp"
             )
             items.append({
                 "name": name,
@@ -1078,6 +1080,8 @@ class AnimaDataManager:
                     if word not in self._name_index:
                         self._name_index[word] = []
                     self._name_index[word].append((cat, idx))
+        # 同步排序表（前缀匹配二分查找用）
+        self._name_index_sorted = sorted(self._name_index.keys())
 
     def search(self, keyword: str, top_k: int = 10) -> list[dict]:
         """搜索关键词，返回匹配结果"""
@@ -1100,12 +1104,17 @@ class AnimaDataManager:
                 for cat, idx in self._name_index[word]:
                     key = (cat, idx)
                     matched_scores[key] = matched_scores.get(key, 0) + 2.0
-            # 前缀匹配
-            for indexed_word, indices in self._name_index.items():
-                if indexed_word.startswith(word) and indexed_word != word:
-                    for cat, idx in indices:
+            # 前缀匹配（二分定位起点 + 顺序扫描，同前缀的键在排序表中必然连续，
+            # O(log N + M)，M 为命中词数；兼容 emoji 等增补平面字符）
+            sorted_keys = self._name_index_sorted
+            j = bisect.bisect_left(sorted_keys, word)
+            while j < len(sorted_keys) and sorted_keys[j].startswith(word):
+                indexed_word = sorted_keys[j]
+                if indexed_word != word:
+                    for cat, idx in self._name_index[indexed_word]:
                         key = (cat, idx)
                         matched_scores[key] = matched_scores.get(key, 0) + 1.0
+                j += 1
 
         # 按评分排序取 top_k
         scored = []
@@ -1169,19 +1178,8 @@ _ANIMA_LOADER_CACHE: dict[str, list[dict]] = {}
 
 
 def _loader_extract_js_array(filepath: Path) -> list:
-    """从 JS 文件中提取 JSON 数组"""
-    if not filepath.exists():
-        return []
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            text = f.read()
-        start = text.find('[')
-        end = text.rfind(']')
-        if start == -1 or end == -1:
-            return []
-        return json.loads(text[start:end+1])
-    except Exception:
-        return []
+    """从 JS 文件中提取 JSON 数组（复用 AnimaDataManager._extract_js_array，避免双份解析逻辑）"""
+    return AnimaDataManager._extract_js_array(filepath)
 
 
 def load_anima_tools_source(source_name: str) -> list[dict]:
@@ -1204,8 +1202,7 @@ def load_anima_tools_source(source_name: str) -> list[dict]:
             item_id = str(item.get("id", ""))
             partition = item.get("p", 1)
             image_url = (
-                f"https://fastly.jsdelivr.net/gh/ThetaCursed/"
-                f"Anima-Assets@main/images/{partition}/{item_id}.webp"
+                f"https://anima.mooshieblob.com/images/{partition}/{item_id}.webp"
             )
             items.append({
                 "name": name,
