@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#faf0f5" media="(prefers-color-scheme:light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>魔导书 — AStrBot ComfyUI</title>
+<title>魔导书 — AStrBot ComfyUI [v3.8.2]</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -192,6 +192,16 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
   touch-action:manipulation;
 }
 ::selection{background:oklch(60% 0.22 300 / 0.35);color:var(--text)}
+
+/* ========== 自定义滚动条（视觉统一：深底 + 橙紫渐变滑块） ========== */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg, oklch(65% 0.25 50 / 0.55), oklch(60% 0.25 300 / 0.55));
+  border-radius:8px;border:2px solid transparent;background-clip:padding-box;
+}
+*::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg, oklch(65% 0.25 50 / 0.8), oklch(60% 0.25 300 / 0.8));background-clip:padding-box;}
+*{scrollbar-width:thin;scrollbar-color:oklch(60% 0.22 300 / 0.55) transparent}
 
 /* 背景层 */
 body::before{
@@ -1479,12 +1489,43 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   flex-shrink:0;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .prompt-pins-tag .prompt-pins-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 输入框下方标签：取消固定按钮 */
+.prompt-pins-x{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;border:none;cursor:pointer;
+  font-size:10px;line-height:1;color:var(--text-sub2);
+  background:transparent;flex-shrink:0;padding:0;
+}
+.prompt-pins-x:hover{background:color-mix(in oklch, var(--danger, red) 18%, transparent);color:#fff;}
+/* 输入框下方标签：添加按钮（打开魔导书） */
+.prompt-pins-add{
+  display:inline-flex;align-items:center;gap:3px;
+  background:transparent;border:1px dashed var(--card-border);
+  border-radius:12px;padding:2px 10px;font-size:11px;color:var(--text-sub2);
+  cursor:pointer;flex-shrink:0;
+}
+.prompt-pins-add:hover{color:var(--primary);border-color:var(--primary);background:color-mix(in oklch, var(--primary) 8%, transparent);}
 .prompt-pins-count{
   font-size:10px;color:var(--text-sub2);background:var(--card-border);
   border-radius:8px;padding:0 6px;margin-left:2px;flex-shrink:0;
 }
 @media(max-width:768px){
   .prompt-pins-tag{font-size:10px;padding:1px 8px;max-width:150px;}
+  /* 移动端触控目标：常用按钮/标签提升可点高度，减少误触 */
+  .prep-section{padding:14px 14px;}
+  .card{padding:14px;}
+  .node-card{min-height:96px;padding:12px 12px;}
+  .node-tag-btn{min-width:36px;min-height:36px;}
+  .gq-btn{min-height:44px;}
+  .res-preset-btn{min-height:38px;}
+  .ratio-btn{min-height:38px;}
+  .tool-card{padding:14px 14px;}
+  /* 手机端工作流缩略图：限制高度，图片完整显示(contain)且不遮挡名称文字 */
+  .wf-thumb{max-height:150px;}
+  .wf-thumb img{max-height:150px;width:auto;max-width:100%;object-fit:contain;}
+  /* 手机端工作流卡片：留出透气间距，名称区与图片分离 */
+  .sidebar-cat-body .wf-item{padding:8px;margin-bottom:6px;gap:6px;}
+  .sidebar-cat-body .wf-item-name{font-size:11px;line-height:1.35;padding:2px 2px 0;}
 }
 .section-title{
   font-size:13px;font-weight:600;color:var(--text);
@@ -1537,11 +1578,7 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   from{opacity:0;transform:translateY(-12px) scale(0.97)}
   to{opacity:1;transform:translateY(0) scale(1)}
 }
-/* ========== 分辨率面板 CSS 级强制互斥（浏览器渲染层面，不依赖 JS 时序） ========== */
-/* 官方方案显示时（inline style 不含 display:none），旧版预设强制隐藏 */
-#official_res_panel:not([style*="display: none"]) ~ #legacy_res_panel{display:none !important;}
-/* 旧版预设显示时，官方方案强制隐藏（:has 现代浏览器支持） */
-#prep_resolution:has(#legacy_res_panel:not([style*="display: none"])) #official_res_panel{display:none !important;}
+/* ========== 分辨率面板显隐由 JS 内联 style 统一控制（不依赖 :has / ~ 等浏览器兼容性差的选择器） ========== */
 /* ========== 生成操作区（卡片化） ========== */
 .gen-quick{
   display:flex;align-items:center;gap:8px;
@@ -4463,7 +4500,7 @@ textarea:focus-visible,
   <nav class="page-tabs" id="page_tabs" aria-label="页面导航">
     <button class="page-tab active" data-page="wf" onclick="switchPage('wf')"><svg class="icon" aria-hidden="true"><use href="#icon-folder-closed"/></svg> 工作流</button>
     <button class="page-tab" data-page="gallery" onclick="switchPage('gallery')"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 画廊</button>
-    <button class="page-tab" data-page="grimoire" onclick="showGrimoire()"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg> 魔导书</button>
+    <button class="page-tab" data-page="grimoire" onclick="toggleGrimoire()"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg> 魔导书</button>
     <button class="page-tab" data-page="wfmgr" onclick="switchPage('wfmgr')"><svg class="icon" aria-hidden="true"><use href="#icon-edit"/></svg> 工作流管理</button>
     <button class="page-tab" data-page="settings" onclick="switchPage('settings')"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg> 设置</button>
   </nav>
@@ -4726,7 +4763,7 @@ textarea:focus-visible,
               <span class="official-res-unit">秒</span>
             </div>
           </div>
-          <!-- 旧版方案：无官方节点时兜底显示（默认隐藏，由 _initOfficialResPanel 控制显隐） -->
+          <!-- 旧版方案：无官方节点时由 updateResPanels() 统一控制显示（默认隐藏） -->
           <div id="legacy_res_panel" style="display:none">
             <div class="res-presets" id="res_presets" role="group" aria-label="分辨率预设">
               <button class="res-preset-btn preset-480p" data-action="setRes480p">480p SD</button>
@@ -6208,6 +6245,13 @@ function switchPage(page) {
   ['wf', 'gen', 'gallery', 'wfmgr', 'settings'].forEach((p) => {
     document.body.classList.toggle('page-' + p, p === page);
   });
+  // 记住页面状态（仅工作流列表/生成台，刷新后恢复生成台用）
+  // 画廊/设置/工作流管理是浮层，刷新后不恢复，避免出现无内容的浮层
+  try {
+    if (page === 'wf' || page === 'gen') {
+      localStorage.setItem('ui_last_page', page);
+    }
+  } catch (_) { /* noop */ }
   // 先关闭所有浮层，避免页面切换时残留（设置/工作流管理/画廊互相切换会互相弹出）
   closeGalleryDropdown();
   closeWfMgrModal();
@@ -7245,19 +7289,8 @@ async function loadParams() {
     const wfC = c.__workflow_node_configs__ || {}, wf = wfC[curWF] || {};
     promptNodeId = wf.__prompt_node__ || '';
     resNodeId = wf.__resolution_node__ || '';
-    // 未手动指定分辨率节点时自动识别老式分辨率节点（AspectRatioNode / 分辨率/比例类含 width 的节点），
-    // 保证旧版分辨率面板在 PC/手机上都能显示（与官方 ResolutionSelector 检测互斥，官方优先）
-    if (!resNodeId && allParamsData && allParamsData.nodes) {
-      const autoRes = allParamsData.nodes.find(n => {
-        const ct = n.class_type || '';
-        if (/AspectRatioNode/i.test(ct)) return true;
-        if (/resolution|aspect.?ratio|imageresiz/i.test(ct)) {
-          return n.params && n.params.some(p => p.key === 'width') && n.params.some(p => p.key === 'height');
-        }
-        return false;
-      });
-      if (autoRes) resNodeId = String(autoRes.id);
-    }
+    // 恢复手动指定：不再自动识别老式分辨率节点（否则取消指定后自动检测又填回，
+    // 前端看起来"点了没反应"）。未指定时 legacy 预设面板仍显示，用户可直接选 480p~4K
     const imgIds = (wf.__load_image_nodes__ || '').split(',').map(s => s.trim()).filter(Boolean);
     loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
     imgIds.forEach((id, i) => { if (i < 10) loadImageNodeIds[i] = id; });
@@ -7346,6 +7379,20 @@ async function loadParams() {
     // 官方原生节点检测：有 ResolutionSelector → 显示官方面板；有 PrimitiveFloat/Float → 显示时长面板
     officialResNodes = (c && c.official_res_nodes) || [];
     officialDurationNodes = (c && c.official_duration_nodes) || [];
+    // 兜底互斥：部分旧手机 WebView 对 inline style="display:none" 控制失效，
+    // 导致官方/旧版两面板并存。改用 class + CSS !important 强制隐藏另一面板
+    //（普通后代选择器，旧 WebView 均支持，不依赖 :has()）。
+    (function () {
+      if (!window._resCssInjected) {
+        var st = document.createElement('style');
+        st.textContent = '#prep_resolution.has-official-res #legacy_res_panel{display:none!important}#prep_resolution.no-official-res #official_res_panel{display:none!important}';
+        document.head.appendChild(st);
+        window._resCssInjected = true;
+      }
+      var pr = document.getElementById('prep_resolution');
+      var ho = (officialResNodes || []).length > 0;
+      if (pr) { pr.classList.toggle('has-official-res', ho); pr.classList.toggle('no-official-res', !ho); }
+    })();
     _initOfficialResPanel();
     _initOfficialDurationPanel();
   }
@@ -7403,18 +7450,17 @@ function updateNodeDisplay() {
   const hasAny = hasPos || hasNeg || hasRes || hasImg || hasExp || hasDisabled || hasOfficialRes || hasUnet;
   document.getElementById('prep_positive').style.display = hasPos ? 'block' : 'none';
   document.getElementById('prep_negative').style.display = hasNeg ? 'block' : 'none';
-  document.getElementById('prep_resolution').style.display = (hasRes || hasOfficialRes) ? 'block' : 'none';
+  document.getElementById('prep_resolution').style.display = 'block';
+  // 分辨率区块始终显示（不再依赖 resNodeId/官方节点是否指定——否则未指定节点时
+  // 整块隐藏，用户既看不到 480p~4K 预设、点击指定/取消也因区块消失而无反馈）。
+  // 官方/legacy 互斥由下方 JS 内联强制：官方节点存在只显示官方，否则只显示旧版预设。
   // 每次更新都强制执行官方/旧版互斥：避免切换工作流或 c 为空时两套分辨率面板共存
   // 各面板渲染独立 try/catch：任一渲染函数对展开后节点数据抛异常时，
   // 不中断 updateNodeDisplay，保证后续上传区/徽章正常显示（打包工作流含 Lora/UNet 节点曾导致上传区被跳过）
   try { _initOfficialResPanel(); } catch (e) { console.error('res panel err:', e); }
   try { _initOfficialDurationPanel(); } catch (e) { console.error('dur panel err:', e); }
-  // 终极兜底：内联强制互斥（不依赖独立函数调用时机/顺序），确保任何端任何路径都不并存
-  const oPanel = document.getElementById('official_res_panel');
-  const lPanel = document.getElementById('legacy_res_panel');
-  const hasOff = officialResNodes.length > 0;
-  if (oPanel) oPanel.style.display = hasOff ? 'block' : 'none';
-  if (lPanel) lPanel.style.display = (!hasOff && !!resNodeId) ? 'block' : 'none';
+  // 统一面板显隐：官方节点存在→只显示官方；无官方→只显示旧版预设；时长面板独立
+  try { updateResPanels(); } catch (e) { console.error('res panels err:', e); }
   // 视频专属：BasicScheduler 基本调度器面板（scheduler/steps/denoise）
   try { renderBasicScheduler(); } catch (e) { console.error('bs panel err:', e); }
   // Lora 面板：检测工作流中是否有 PowerLoraLoader 节点
@@ -8338,20 +8384,20 @@ function renderNodes() {
     if (iE) cls += ' exp-active';
     if (isDisabled) cls += ' node-disabled';
     if (isLoraCard) cls += ' lora-active';
-    const icon = isDisabled ? '⛔' : (iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '📐' : (iE ? '📝' : (isLoraCard ? '🧩' : '📦'))))));
+    const icon = isDisabled ? '⛔' : (iN ? '🚫' : (iP ? '🎯' : (iLany ? '🖼️' : (iR ? '<svg class="icon-sm" aria-hidden="true"><use href="#icon-ruler"/></svg>' : (iE ? '📝' : (isLoraCard ? '🧩' : '📦'))))));
     // 角色标签
     let roleLabel = '';
     if (iP) roleLabel = '<span class="node-role-label role-prompt">🎯 正面</span>';
     else if (iN) roleLabel = '<span class="node-role-label role-negative">🚫 负面</span>';
     else if (iLany) roleLabel = '<span class="node-role-label role-load">🖼️ 图片</span>';
-    else if (iR) roleLabel = '<span class="node-role-label role-res">📐 分辨率</span>';
+    else if (iR) roleLabel = '<span class="node-role-label role-res"><svg class="icon-sm" aria-hidden="true"><use href="#icon-ruler"/></svg> 分辨率</span>';
     else if (iE) roleLabel = '<span class="node-role-label role-exp">📝 扩写文本</span>';
     else if (isDisabled) roleLabel = '<span class="node-role-label role-disabled">⛔ 已禁用</span>';
     else if (isLoraCard) roleLabel = '<span class="node-role-label role-lora">🧩 Lora</span>';
     // 互斥按钮
     const posDisabled = (promptNodeId && !iP) || (isAssigned && !iP) ? ' disabled' : '';
     const negDisabled = (negativeNodeId && !iN) || (isAssigned && !iN) ? ' disabled' : '';
-    const resDisabled = (resNodeId && !iR) || (isAssigned && !iR) ? ' disabled' : '';
+    const resDisabled = (isAssigned && !iR) ? ' disabled' : '';
     const expDisabled = (expandedTextNodeId && !iE) || (isAssigned && !iE) ? ' disabled' : '';
     // 图片槽位按钮：该节点已被其他角色占用时禁用
     const imgDisabled = (isAssigned && !iLany) ? ' disabled' : '';
@@ -10163,15 +10209,30 @@ function renderBasicScheduler() {
   if (denoiseInput) denoiseInput.id = `param_${n.id}_denoise`;
 }
 
+/**
+ * 分辨率面板统一显隐（重构版：单一入口，纯 JS 内联 style，不依赖 :has / ~ 选择器）：
+ * - 官方 ResolutionSelector 节点存在 → 只显示官方方案
+ * - 无官方节点 → 只显示旧版预设（480p~4K + 比例）
+ * - 官方时长节点(PrimitiveFloat/Float)存在 → 额外显示时长面板
+ * 面板默认全部隐藏，此函数每次 updateNodeDisplay 时强制刷新，任何端/任何路径都不并存。
+ */
+function updateResPanels() {
+  const hasOff = (officialResNodes || []).length > 0;
+  const hasDur = (officialDurationNodes || []).length > 0;
+  const oPanel = document.getElementById('official_res_panel');
+  const lPanel = document.getElementById('legacy_res_panel');
+  const dPanel = document.getElementById('official_duration_panel');
+  if (oPanel) oPanel.style.display = hasOff ? 'block' : 'none';
+  if (lPanel) lPanel.style.display = hasOff ? 'none' : 'block';
+  if (dPanel) dPanel.style.display = hasDur ? 'block' : 'none';
+}
+
 function _initOfficialResPanel() {
   const panel = document.getElementById('official_res_panel');
   const legacy = document.getElementById('legacy_res_panel');
   if (!panel) return;
   const hasOfficial = officialResNodes.length > 0;
-  // 官方节点存在 → 显示官方方案；否则官方隐藏
-  panel.style.display = hasOfficial ? 'block' : 'none';
-  // 旧版预设只在「无官方节点且手动指定了分辨率节点」时显示（用户原始逻辑：指定节点后才显示 legacy）
-  if (legacy) legacy.style.display = (!hasOfficial && !!resNodeId) ? 'block' : 'none';
+  // 面板显隐统一由 updateResPanels() 控制；此函数只负责官方控件回填
   if (!hasOfficial) return;
   // 填充宽高比下拉
   const sel = document.getElementById('official_aspect_ratio');
@@ -10209,7 +10270,7 @@ function _initOfficialResPanel() {
 function _initOfficialDurationPanel() {
   const panel = document.getElementById('official_duration_panel');
   if (!panel) return;
-  panel.style.display = officialDurationNodes.length > 0 ? 'block' : 'none';
+  // 面板显隐统一由 updateResPanels() 控制；此函数只负责时长回填
   // 回填当前时长：从工作流节点读取官方时长节点 value，避免刷新后显示默认 5
   if (officialDurationNodes.length > 0 && allParamsData && allParamsData.nodes) {
     const durInput = document.getElementById('official_duration');
@@ -10425,6 +10486,8 @@ function handleVideoUpload(input, nodeId, idx) {
   if (window.innerWidth > 768) return;
   const sections = document.querySelectorAll('.prep-section');
   sections.forEach((section) => {
+    // 分辨率区块不参与折叠：避免被 Storage 折叠状态隐藏导致"分辨率不显示"（手机端常见）
+    if (section.id === 'prep_resolution') return;
     const title = section.querySelector('.section-title');
     const body = section.querySelector('textarea, .res-presets, .upload-area');
     if (!title || !body) return;
@@ -10594,11 +10657,20 @@ function closeGalleryDropdown() {
 }
 
 // PC 端初始默认进入「工作流」页（与默认 active tab 一致）；移动端保持生成台+底部导航
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.innerWidth > 768 && typeof switchPage === 'function') switchPage('wf');
-});
+// ⚠️ 修复：旧版无条件 switchPage('wf')，导致在生成台刷新后强制退回工作流列表，
+//    且该调用会覆盖 ui_last_page 记录，使恢复逻辑失效。现在按上次所在页决定初始页。
+function _initInitialPage() {
+  if (window.innerWidth > 768 && typeof switchPage === 'function') {
+    let target = 'wf';
+    try {
+      if (localStorage.getItem('ui_last_page') === 'gen') target = 'gen';
+    } catch (_) { /* noop */ }
+    switchPage(target);
+  }
+}
+document.addEventListener('DOMContentLoaded', () => { _initInitialPage(); });
 if (document.readyState !== 'loading' && window.innerWidth > 768 && typeof switchPage === 'function') {
-  setTimeout(() => switchPage('wf'), 50);
+  setTimeout(() => _initInitialPage(), 50);
 }
 
 function toggleAcceptData() {
@@ -11051,6 +11123,20 @@ document.addEventListener('touchstart', () => {
 // ========================================================================
 setTimeout(() => { testComfyUI(); loadWorkflows(); }, 500);
 setTimeout(() => { loadParams(); }, 800);
+// 页面加载即加载魔导书固定标签/随机池并渲染输入框下方标签栏
+// （修复：旧版只在打开魔导书(showGrimoire→loadGrimoireData→updatePinnedBar)时才渲染，
+//   导致刚进页面时输入框下方不显示标签）
+setTimeout(() => { loadPromptPinsStandalone(); }, 1500);
+// 刷新后恢复上次所在页面（生成台/工作流列表）：
+// 在生成台刷新界面时，回到当前工作流的生成台而不是工作流列表
+setTimeout(() => {
+  try {
+    const lastPage = localStorage.getItem('ui_last_page');
+    if (lastPage === 'gen' && document.querySelector('.wf-item.active')) {
+      switchPage('gen');
+    }
+  } catch (_) { /* noop */ }
+}, 2200);
 schedulePoll(2000);
 
 // ========================================================================
@@ -11092,6 +11178,15 @@ const GRIMOIRE_CN_NAMES = {
   'custom': '自定义',
 };
 
+function toggleGrimoire() {
+  const sheet = document.getElementById('grimoire_sheet');
+  if (sheet && sheet.classList.contains('show')) {
+    hideGrimoire();
+  } else {
+    showGrimoire();
+  }
+}
+
 function showGrimoire() {
   const sheet = document.getElementById('grimoire_sheet');
   const backdrop = document.getElementById('grimoire_backdrop');
@@ -11122,6 +11217,28 @@ function backToGrimoireSources() {
   if (!sheet) return;
   sheet.classList.remove('drill-down');
   document.getElementById('grm_back_btn').style.display = 'none';
+}
+
+/** 独立加载固定标签/随机池并渲染输入框下方标签栏（页面加载时调用） */
+async function loadPromptPinsStandalone() {
+  try {
+    const pinsData = await apiFetch('/api/grimoire/pins', {}, true);
+    if (pinsData && pinsData.ok) {
+      _grimoirePins = {};
+      for (const [k, v] of Object.entries(pinsData.pins || {})) {
+        _grimoirePins[k.replace(/\\/g, '/')] = v;
+      }
+    }
+    const poolData = await apiFetch('/api/grimoire/rand-pool', {}, true);
+    if (poolData && poolData.ok) {
+      _grimoireRandPool = (poolData.pool || []).map(p => p.replace(/\\/g, '/'));
+    } else {
+      _grimoireRandPool = [];
+    }
+    renderPromptPins();
+  } catch (e) {
+    // 静默失败，不影响页面其它功能
+  }
 }
 
 async function loadGrimoireData() {
@@ -11211,6 +11328,15 @@ async function toggleGrimoireSwitch() {
   if (!toggle) return;
   const current = toggle.dataset.enabled === '1';
   const next = !current;
+  const result = await apiFetch('/api/grimoire/status', {
+    method: 'POST',
+    body: JSON.stringify({ enabled: next })
+  }, true);
+  if (result && result.ok) {
+    updateGrimoireToggle(result.enabled);
+    toast(`✅ 魔导书已${result.enabled ? '启用' : '禁用'}`);
+  }
+}
 
 async function changeGrimoireModel(model) {
   try {
@@ -11227,15 +11353,6 @@ async function changeGrimoireModel(model) {
       }
     }
   } catch (e) {}
-}
-  const result = await apiFetch('/api/grimoire/status', {
-    method: 'POST',
-    body: JSON.stringify({ enabled: next })
-  }, true);
-  if (result && result.ok) {
-    updateGrimoireToggle(result.enabled);
-    toast(`✅ 魔导书已${result.enabled ? '启用' : '禁用'}`);
-  }
 }
 
 function renderGrimoireSources() {
@@ -12523,12 +12640,21 @@ function renderPromptPins() {
     const label = src.replace('.json', '').split(/[/\\]/).pop();
     for (const item of items) {
       const text = item && item.name ? `${label}: ${item.name}` : label;
-      html += `<span class="prompt-pins-tag"><span class="prompt-pins-name">${esc(text)}</span></span>`;
+      // 标签可点击：取消固定（×）或点击打开魔导书定位该源
+      html += `<span class="prompt-pins-tag" title="点击取消固定">` +
+              `<span class="prompt-pins-name" onclick="showGrimoire()" style="cursor:pointer">${esc(text)}</span>` +
+              `<button class="prompt-pins-x" onclick="event.stopPropagation();unpinSource('${esc(src)}','${esc(item && item.name ? item.name : '')}')" title="取消固定">×</button>` +
+              `</span>`;
     }
   }
   if (poolCount > 0) {
-    html += `<span class="prompt-pins-tag">🎲 随机池 <span class="prompt-pins-count">${poolCount}</span></span>`;
+    html += `<span class="prompt-pins-tag" title="点击打开魔导书">` +
+            `<span class="prompt-pins-name" onclick="showGrimoire()" style="cursor:pointer">🎲 随机池 <span class="prompt-pins-count">${poolCount}</span></span>` +
+            `</span>`;
   }
+  // 添加按钮：打开魔导书选择/固定其它标签
+  html += `<button class="prompt-pins-add" onclick="showGrimoire()" title="添加魔导书标签">` +
+          `<svg class="icon-xs" aria-hidden="true"><use href="#icon-plus"/></svg> 添加</button>`;
   bar.innerHTML = html;
   bar.style.display = 'flex';
 }

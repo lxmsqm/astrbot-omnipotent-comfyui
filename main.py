@@ -502,7 +502,9 @@ class WorkflowMixin:
             if d: return Path(d)
         except Exception as e:
             logger.warning(f"[ComfyUI] 读取工作流目录配置失败: {e}")
-        return Path(self.config.get("workflow_dir", "E:\\AIwork\\NapCat.Shell.Windows.Node\\napcat\\temp\\comfyui_data\\workflows"))
+        # 从 AstrBot 插件配置读取，无默认值；用户必须通过 WebUI 或管理界面配置 workflow_dir
+        wd = self.config.get("workflow_dir", "")
+        return Path(wd) if wd else self._user_data_dir / "workflows"
 
     def _save_workflow_dir(self, path):
         self.workflow_dir = Path(path)
@@ -523,20 +525,24 @@ class WorkflowMixin:
     async def _save_workflow_config(self):
         """持久化 workflow_config 到文件（线程安全 + 原子写入防并发丢失）"""
         config_path = self._user_data_dir / "config.json"
-        try:
-            # 先读取文件最新内容，合并到内存数据中，防止丢失 __local_config__ 等
-            if config_path.exists():
-                with open(str(config_path), 'r', encoding='utf-8-sig') as f:
-                    file_data = json.load(f)
-                file_data.update(self.workflow_config)
-                self.workflow_config = file_data
-            # 原子写入：先写临时文件再重命名，防止写入中断导致文件损坏
-            tmp_path = config_path.with_suffix('.json.tmp')
-            with open(str(tmp_path), 'w', encoding='utf-8') as f:
-                json.dump(self.workflow_config, f, ensure_ascii=False, indent=2)
-            tmp_path.replace(config_path)
-        except Exception as e:
-            logger.warning(f"[ComfyUI] 保存工作流配置失败: {e}\n{traceback.format_exc()}")
+        # 与 _save_local_config 共用同一把 threading.Lock，防止并发写互相覆盖
+        with self._config_file_lock:
+            try:
+                # 先读取文件最新内容，合并到内存数据中，防止丢失 __local_config__ 等
+                if config_path.exists():
+                    with open(str(config_path), 'r', encoding='utf-8-sig') as f:
+                        file_data = json.load(f)
+                    # 仅合并 __local_config__ 等非 workflow_config 持有的键，避免覆盖
+                    for _k in ('__local_config__',):
+                        if _k in file_data:
+                            self.workflow_config[_k] = file_data[_k]
+                # 原子写入：先写临时文件再重命名，防止写入中断导致文件损坏
+                tmp_path = config_path.with_suffix('.json.tmp')
+                with open(str(tmp_path), 'w', encoding='utf-8') as f:
+                    json.dump(self.workflow_config, f, ensure_ascii=False, indent=2)
+                tmp_path.replace(config_path)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 保存工作流配置失败: {e}\n{traceback.format_exc()}")
 
     def _atomic_write_workflow_json(self, wf, wf_path):
         """原子写入工作流 JSON 文件：带锁 + 临时文件再替换，防止并发写损坏。
@@ -560,6 +566,12 @@ class WorkflowMixin:
             self._context_workflows[context_key] = wf['name']
         self.workflow_path = wf['path']
         self.current_workflow_name = wf['name']
+        # 持久化 __bind_target__：切换后写回 config，重启后 _refresh_workflow_list 才能恢复该工作流
+        # （否则重启后回退到第一个工作流，官方分辨率/时长节点检测错乱）
+        wname = wf.get('name') if isinstance(wf, dict) else wf
+        if wname and self.workflow_config.get('__bind_target__') != wname:
+            self.workflow_config['__bind_target__'] = wname
+            self._schedule_save_workflow_config()
         self._refresh_workflow_list()
 
     def _refresh_workflow_list(self):
@@ -864,6 +876,35 @@ class GenerateMixin:
         nodes.sort()
         return nodes
 
+    def _find_image_input_nodes(self, workflow):
+        """反推/加载类节点定位：优先带 image 输入的 LoadImage，其次任何含 image 输入的 Load* 节点。
+        返回节点ID列表（按ID排序）。"""
+        def _sorted(nids):
+            try:
+                return sorted(nids, key=int)
+            except (TypeError, ValueError):
+                return sorted(nids)
+        primary = [nid for nid, node in workflow.items()
+                   if isinstance(node, dict) and node.get('class_type') == 'LoadImage'
+                   and 'image' in (node.get('inputs') or {})]
+        if primary:
+            return _sorted(primary)
+        secondary = [nid for nid, node in workflow.items()
+                     if isinstance(node, dict)
+                     and str(node.get('class_type', '')).startswith('Load')
+                     and 'image' in (node.get('inputs') or {})]
+        return _sorted(secondary)
+
+    def _find_show_text_nodes(self, workflow):
+        """找出工作流中的 ShowText 类文本输出节点（ShowText / ShowText|pysssss 等），返回节点ID列表（按ID排序）。"""
+        nodes = [nid for nid, node in workflow.items()
+                 if isinstance(node, dict) and 'ShowText' in str(node.get('class_type', ''))]
+        try:
+            nodes.sort(key=int)
+        except (TypeError, ValueError):
+            nodes.sort()
+        return nodes
+
     def _find_sampler_node(self, workflow):
         for nid, node in workflow.items():
             if node.get('class_type') in ['KSampler', 'ROCMOptimizedKSampler', 'KSamplerAdvanced']:
@@ -908,9 +949,10 @@ class GenerateMixin:
                             continue
                     elif isinstance(orig, bool): val = str(val).lower() in ('true', '1', 'yes')
                     elif not isinstance(orig, str): continue
-                    # 清理路径前缀：如果是完整路径（含盘符如 E:\...），只取文件名部分
+                    # 清理路径前缀：如果是 Windows 盘符路径（如 E:\...），只取文件名部分
                     # 但保留 ComfyUI 子文件夹引用（如 "Anima/角色lora/穗穗.safetensors"）
-                    if isinstance(val, str) and ':' in val:
+                    # 只对盘符开头（如 C:）的路径做截断，避免误伤含冒号的参数值（如 16:9、00:00:00）
+                    if isinstance(val, str) and len(val) >= 2 and val[1] == ':' and val[0].isalpha():
                         val = os.path.basename(val.replace('\\', '/'))
                     # 保护：如果原值是 dropdown 选择（模型名/Lora 名等），且保存的值与原值不同，
                     # 跳过写回，避免过期的旧值导致 ComfyUI 校验失败。
@@ -1238,12 +1280,19 @@ class GenerateMixin:
 
 class WebUIMixin:
     """WebUI 服务与 API:启动 aiohttp 服务、页面与全部 /api/* 处理器。"""
+    # WebUI 直连模式：不再 302 跳转到带 _v 版本参数的 URL，直接返回页面。
+    # （原缓存熔断跳转会让 http://192.168.0.102:8898/ 变成 302 → /?_v=…，
+    #   用户要求恢复直连地址。缓存仍由下方 Cache-Control 头控制。）
+    WEBUI_CACHE_TAG = "v3.8.1-r4.1"
 
     async def _serve_webui(self, r):
         resp = web.FileResponse(Path(__file__).parent / 'webui.html')
         resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         resp.headers['Pragma'] = 'no-cache'
         resp.headers['Expires'] = '0'
+        # 强制清除该源旧缓存：手机浏览器(QQ内置/X5)常无视 no-cache 强缓存旧页面，
+        # 每次访问都清一次，确保用户拿到最新版（Clear-Site-Data 仅作用于本页面源，不破坏其它站点）
+        resp.headers['Clear-Site-Data'] = '"cache"'
         return resp
 
     def _start_webui(self):
@@ -1477,6 +1526,9 @@ class WebUIMixin:
         # 图生视频/图生图等允许空提示词（仅靠图片即可生成），不再强制要求 prompt
         quality = data.get("quality") or ""
         qo = quality if quality in self.quality_presets else None
+        # 根据当前工作流分类获取 cmd_config，与 QQ 命令行为一致
+        cur_cat = (self.workflow_config.get('__wf_categories__', {}) or {}).get(self.current_workflow_name, '')
+        cmd_config = dict(self.workflow_config.get('__commands__', {}).get(cur_cat, {})) if cur_cat else None
         all_paths = []
         last_text = ""
         for i in range(count):
@@ -1500,7 +1552,7 @@ class WebUIMixin:
                     break
             try:
                 status, text, out_path = await self._process_and_submit(
-                    gen_prompt, None, cmd_config=None, user_id="webui",
+                    gen_prompt, None, cmd_config=cmd_config, user_id="webui",
                     quality_override=qo
                 )
             except Exception as e:
@@ -1523,13 +1575,15 @@ class WebUIMixin:
     async def _webui_open_dir(self, r):
         data = await r.json()
         path = data.get('path', str(self._get_workflow_dir()))
-        # 路径安全校验：只允许白名单目录
+        # 路径安全校验：只允许白名单目录（resolve 规范化后比较，防止符号链接/../ 绕过）
         allowed_dirs = [
             str(Path(self._get_workflow_dir()).resolve()),
             str(Path(self.output_dir).resolve()),
         ]
         resolved = str(Path(path).resolve())
-        if not any(resolved.startswith(d) for d in allowed_dirs):
+        # 必须完全在白名单目录下（带尾部分隔符防止 /dirA 匹配 /dirABC）
+        ok = any(resolved == d or resolved.startswith(d.rstrip('\\/') + os.sep) for d in allowed_dirs if d)
+        if not ok:
             logger.warning(f"[ComfyUI] 拒绝访问非白名单目录: {resolved}")
             return web.json_response({"ok": False, "error": "拒绝访问"})
         try:
@@ -1547,7 +1601,9 @@ class WebUIMixin:
             return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_pick_dir(self, r):
-        """弹出系统原生文件夹选择器，返回选中路径"""
+        """弹出系统原生文件夹选择器，返回选中路径。
+        手机/headless 环境 tkinter 不可用时返回 need_manual_input=true，
+        前端应显示文本输入框让用户手动输入路径。"""
         try:
             import tkinter as tk
             from tkinter import filedialog
@@ -1561,9 +1617,9 @@ class WebUIMixin:
                 return web.json_response({"ok": True, "path": path})
             return web.json_response({"ok": False, "error": "未选择"})
         except Exception as e:
-            # tkinter 不可用时的回退
-            logger.warning(f"[ComfyUI] pick-dir tkinter 失败: {e}")
-            return web.json_response({"ok": False, "error": str(e)})
+            # tkinter 不可用时的回退（手机/headless 环境）
+            logger.warning(f"[ComfyUI] pick-dir tkinter 不可用(手机/headless环境): {e}")
+            return web.json_response({"ok": False, "error": "GUI 选择器不可用，请手动输入路径", "need_manual_input": True})
 
     async def _webui_set_workflow_dir(self, r):
         new_dir = (await r.json()).get('path', '')
@@ -2402,8 +2458,14 @@ class WebUIMixin:
         config_path = self._user_data_dir / "config.json"
         if config_path.exists():
             try:
-                with open(str(config_path), 'r', encoding='utf-8') as f:
-                    self.workflow_config = json.load(f)
+                with self._config_file_lock:
+                    with open(str(config_path), 'r', encoding='utf-8') as f:
+                        file_data = json.load(f)
+                # 只回填内存中缺失的顶层键，绝不整表覆盖 self.workflow_config，
+                # 否则打开面板会丢掉尚未落盘的内存改动（random_pick_mode / __bind_target__ 等）
+                if isinstance(file_data, dict):
+                    for _k, _v in file_data.items():
+                        self.workflow_config.setdefault(_k, _v)
             except Exception as e:
                 logger.warning(f"[ComfyUI] 读取工作流参数配置失败: {e}")
         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
@@ -3042,6 +3104,9 @@ class WebUIMixin:
         try:
             d = await r.json()
             mode = d.get('mode', 'windows')
+            # 白名单校验，防止写入任意字符串导致前端/路径逻辑错乱
+            if mode not in ('windows', 'linux'):
+                return web.json_response({'ok': False, 'error': f'无效的部署模式: {mode!r}（仅支持 windows / linux）'})
             self.config['deploy_mode'] = mode
             self._save_local_config({'deploy_mode': mode})
             return web.json_response({'ok': True, 'mode': mode})
@@ -3096,14 +3161,22 @@ class GrimoireMixin:
                 })
                 logger.info(f"[魔导书] 补充 Anima-Tools 源: {label} ({count} 条)")
 
-        # 应用子分类排序（按目录分组）
+        # 应用大分类排序 + 子分类排序（按目录分组）
+        # ⚠️ 修复：旧版只应用了 __grimoire_source_order__（子分类），漏掉 __grimoire_dir_order__
+        #     （大分类），导致魔导书大分类拖拽排序后刷新即恢复字母序。现在两者都生效。
+        dir_order = self.workflow_config.get('__grimoire_dir_order__', [])
         source_order = self.workflow_config.get('__grimoire_source_order__', {})
-        if source_order:
+        if dir_order or source_order:
             from functools import cmp_to_key
             def source_sort_key(a, b):
                 dir_a = a.get('dir', '')
                 dir_b = b.get('dir', '')
                 if dir_a != dir_b:
+                    # 大分类排序：优先按用户拖拽的 dir_order，未出现的大分类按字母序放后
+                    ia = dir_order.index(dir_a) if dir_a in dir_order else len(dir_order)
+                    ib = dir_order.index(dir_b) if dir_b in dir_order else len(dir_order)
+                    if ia != ib:
+                        return ia - ib
                     return -1 if dir_a < dir_b else 1
                 order_list = source_order.get(dir_a, [])
                 if not order_list:
@@ -3161,7 +3234,7 @@ class GrimoireMixin:
                 p = it.get("p", 1)
                 img_id = it.get("id", "")
                 if img_id:
-                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+                    it["image_url"] = f"https://anima.mooshieblob.com/images/{p}/{img_id}.webp"
             if not it.get("image_url") and it.get("name") and it.get("copyright"):
                 raw_name = f"{it['name']}, {it['copyright']}"
                 import urllib.parse
@@ -4492,7 +4565,7 @@ class GrimoireMixin:
                 p = it.get("p", 1)
                 img_id = it.get("id", "")
                 if img_id:
-                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+                    it["image_url"] = f"https://anima.mooshieblob.com/images/{p}/{img_id}.webp"
             if not it.get("image_url") and it.get("name") and it.get("copyright"):
                 raw_name = f"{it['name']}, {it['copyright']}"
                 import urllib.parse
@@ -4967,6 +5040,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._ctx_lock = asyncio.Lock()      # 保护 _context_workflows 的并发写入
         import threading as _wf_threading
         self._wf_file_lock = _wf_threading.Lock()  # 保护工作流 JSON 文件并发写（原子写入防损坏）
+        # 跨方法锁：保护 data/user/config.json 不因 _save_local_config（同步）与
+        # _save_workflow_config（异步）并发写而互相覆盖
+        self._config_file_lock = _wf_threading.Lock()
         self.workflow_config = {}
         # Lora 元数据缓存：从 ComfyUI LoRA Manager 获取（含触发词、预览图、标签等）
         self._lora_metadata_cache = {}      # key: lora 全路径(含子目录), value: {trigger_words, preview_url, model_name, tags, file_path}
@@ -5105,9 +5181,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
-        loop.create_task(self._cleanup_upload_loop())
-        loop.create_task(self._cleanup_output_loop())
-        loop.create_task(self._ws_progress_listener())
+        # 保存句柄，terminate() 时统一 cancel，避免插件卸载后循环继续空转
+        self._background_tasks = [
+            loop.create_task(self._cleanup_upload_loop()),
+            loop.create_task(self._cleanup_output_loop()),
+            loop.create_task(self._ws_progress_listener()),
+        ]
         lan = f"，局域网 http://你的IP:{self.webui_port}" if self.webui_lan else ""
         ipv6 = f"，IPv6 http://[你的IPv6]:{self.webui_port}" if self.webui_ipv6 else ""
         logger.info(f"[ComfyUI] WebUI: http://127.0.0.1:{self.webui_port}{lan}{ipv6} | 工作流目录: {wdir}")
@@ -5129,27 +5208,28 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return
         p = self._user_data_dir / "config.json"
         tmp_p = p.with_suffix('.json.tmp')
-        try:
-            existing = {}
-            if p.exists():
-                with open(str(p), 'r', encoding='utf-8-sig') as f:
-                    existing = json.load(f)
-            lc = existing.get('__local_config__', {})
-            lc.update(updates)
-            existing['__local_config__'] = lc
-            with open(str(tmp_p), 'w', encoding='utf-8') as f:
-                json.dump(existing, f, ensure_ascii=False, indent=2)
-            tmp_p.replace(p)  # 原子替换
-            # 同步更新内存中的 self.workflow_config，防止 _save_workflow_config 覆盖
-            if hasattr(self, 'workflow_config') and isinstance(self.workflow_config, dict):
-                self.workflow_config.update(existing)
-        except Exception as e:
-            logger.warning(f"[ComfyUI] 保存配置失败: {e}")
-            if tmp_p.exists():
-                try:
-                    tmp_p.unlink()
-                except Exception:
-                    pass
+        with self._config_file_lock:
+            try:
+                existing = {}
+                if p.exists():
+                    with open(str(p), 'r', encoding='utf-8-sig') as f:
+                        existing = json.load(f)
+                lc = existing.get('__local_config__', {})
+                lc.update(updates)
+                existing['__local_config__'] = lc
+                with open(str(tmp_p), 'w', encoding='utf-8') as f:
+                    json.dump(existing, f, ensure_ascii=False, indent=2)
+                tmp_p.replace(p)  # 原子替换
+                # 同步更新内存中的 self.workflow_config
+                if hasattr(self, 'workflow_config') and isinstance(self.workflow_config, dict):
+                    self.workflow_config.update(existing)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 保存配置失败: {e}")
+                if tmp_p.exists():
+                    try:
+                        tmp_p.unlink()
+                    except Exception:
+                        pass
 
     def _register_tools(self):
         try:
@@ -5502,9 +5582,16 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         if now - self._blocked_groups_checked > 60:
             self._blocked_groups_checked = now
             try:
-                bp = Path(__file__).resolve().parent.parent / "astrbot_plugin_persona_switcher" / "blocked_groups.json"
+                # 优先固定目录名，找不到时自动发现插件目录下的 blocked_groups.json
+                # （避免插件改名/重命名后硬编码路径失效）
+                plugins_dir = Path(__file__).resolve().parent.parent
+                bp = plugins_dir / "astrbot_plugin_persona_switcher" / "blocked_groups.json"
+                if not bp.exists():
+                    for cand in sorted(plugins_dir.glob("*/blocked_groups.json")):
+                        bp = cand
+                        break
                 if bp.exists():
-                    with open(bp, 'r', encoding='utf-8') as f:
+                    with open(str(bp), 'r', encoding='utf-8') as f:
                         self._blocked_groups_cache = json.load(f) or []
                 else:
                     self._blocked_groups_cache = []
@@ -5552,17 +5639,38 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         umo 格式必须为 {platform_id}:{message_type.value}:{session_id}。
         platform_id 取 cmd_config.json 的 platform[].id（本机为 "default"），不是适配器 type；
         私聊 message_type.value = "FriendMessage"。
-        按扩展名分类型发送：图片→image、视频→video、音频→voice/文件、其他→文件。"""
+        按扩展名分类型发送：图片→image、视频→video、音频→voice/文件、其他→文件。
+        优先走 event.bot 直连 OneBot API（与 QQ 命令链路一致）：CQ 码 file=本地路径，
+        由 OneBot 客户端读取本地文件上传；回退 context.send_message（Image 组件会转 base64://，
+        多张/大图时 base64 超大易被 QQ 判"图片已过期"）。"""
         try:
             from astrbot.api.event import MessageChain
             # platform_id 取 AstrBot 平台实例 id（cmd_config.json platform[].id），兜底 default
             platform_id = self._get_platform_id() or "default"
             umo = f"{platform_id}:FriendMessage:{qq}"
+            # 方式一：event.bot 直连 OneBot API（推荐，图片完整不超时）
+            bot = self._bot_ref
+            if bot:
+                try:
+                    cq_text = (f"✨ 生成完成: {prompt[:30]}" if prompt else "")
+                    for p in paths[:10]:
+                        if not Path(p).exists():
+                            continue
+                        ext = Path(p).suffix.lower()
+                        is_video = ext in ('.mp4', '.webm', '.mov', '.avi', '.mkv', '.gif')
+                        cq_type = 'video' if is_video else 'image'
+                        cq_text += f"\n[CQ:{cq_type},file={p}]"
+                    await bot.send_private_msg(user_id=int(qq), message=cq_text)
+                    logger.info(f"[ComfyUI] 已主动发送生成结果到 QQ {qq}（OneBot直连）")
+                    return True
+                except Exception as e:
+                    logger.warning(f"[ComfyUI] OneBot 直连发送失败，回退 context.send_message: {type(e).__name__}: {e}")
+            # 方式二：回退 context.send_message（chain.file_image → base64://）
             chain = MessageChain()
             if prompt:
                 chain.message(f"✨ 生成完成: {prompt[:30]}")
             from astrbot.api.message_components import Video, File, Record
-            for p in paths[:3]:
+            for p in paths[:10]:
                 if not Path(p).exists():
                     continue
                 ext = Path(p).suffix.lower()
@@ -5586,10 +5694,17 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return False
 
     def _get_platform_id(self):
-        """读取 AstrBot 平台实例 id（cmd_config.json platform[].id），找不到返回 None"""
+        """读取 AstrBot 平台实例 id（cmd_config.json platform[].id），找不到返回 None。
+        路径解析：从插件目录逐级向上找 <root>/data/cmd_config.json（兼容
+        data/plugins/<plugin>/data/user 结构，不再硬编码 /root/AstrBot）。"""
         try:
-            cfg_path = Path(self._user_data_dir).parent.parent / "data" / "cmd_config.json"
-            if not cfg_path.exists():
+            cfg_path = None
+            for ancestor in Path(self._user_data_dir).resolve().parents:
+                cand = ancestor / "data" / "cmd_config.json"
+                if cand.exists():
+                    cfg_path = cand
+                    break
+            if cfg_path is None:
                 cfg_path = Path("/root/AstrBot/data/cmd_config.json")
             if cfg_path.exists():
                 with open(str(cfg_path), 'r', encoding='utf-8') as f:
@@ -5768,8 +5883,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     # 从完整路径中提取 ComfyUI 子目录+文件名
                     # 例如 E:/AIwork/.../loras/ZImage/ZIT/name.safetensors → ZImage/ZIT/name.safetensors
                     normalized = fp.replace('\\', '/')
-                    if '/loras/' in normalized.lower():
-                        rel = normalized.split('/loras/', 1)[1] if '/loras/' in normalized else normalized.split('/loras/',1)[1]
+                    # 大小写不敏感匹配 /loras/ 分割，防止路径含 LORAS/Loras 等变体时 IndexError
+                    lc = normalized.lower()
+                    if '/loras/' in lc:
+                        idx = lc.index('/loras/')
+                        rel = normalized[idx + len('/loras/'):]
                     else:
                         rel = fn + '.safetensors' if fn else os.path.basename(fp)
                     self._lora_metadata_cache[rel] = {
@@ -6104,8 +6222,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             logger.warning(f"[ComfyUI] 补全提示词记录 dHash 失败: {e}")
 
     async def _download_image(self, url, save_path):
-        # 本地文件路径：直接复制
-        if url and (url.startswith(('/', 'C:', 'D:', 'E:', 'F:')) or url.startswith('\\')):
+        # 本地文件路径：直接复制（Windows 盘符路径 = 单个字母 + ':'，支持所有盘符）
+        _is_win_drive = (len(url) >= 2 and url[1] == ':' and url[0].isalpha()) if url else False
+        if url and (_is_win_drive or url.startswith(('/', '\\'))):
             src = Path(url)
             if src.exists():
                 # 本地路径安全限制：仅允许插件保存目录（output_dir/upload_dir）或临时目录下的图片，
@@ -6117,7 +6236,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                         allowed_dirs.append(str(d.resolve()))
                 in_allowed = any(str(src_r).startswith(d) for d in allowed_dirs if d)
                 src_s = str(src_r)
-                in_temp = ('data/temp' in src_s.replace('\\', '/') or '/temp/' in src_s.replace('\\', '/'))
+                # 用规范化路径比较，避免 'data/temp' 字符串包含被 ../ 绕过
+                in_temp = any(p.name == 'temp' for p in src_r.parents)
                 if not (in_allowed or in_temp):
                     logger.warning(f"[ComfyUI] 拒绝复制本地图片（不在允许目录）: {src}")
                     return False
@@ -6185,9 +6305,16 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 return "❌ 未选中反推工作流，请先通过 /工作流 切换到反推工作流"
             with open(self.workflow_path, 'r', encoding='utf-8') as f:
                 wf = json.load(f)
-            # 4. 替换 node 3 的图片
-            if "3" in wf and "inputs" in wf["3"]:
-                wf["3"]["inputs"]["image"] = input_name
+            # 4. 自动定位图片载入节点并替换图片（不再硬编码 node 3，兼容 UI 格式工作流）
+            image_nodes = self._find_image_input_nodes(wf)
+            if not image_nodes:
+                return "❌ 反推工作流中未找到图片载入节点（LoadImage），请检查工作流"
+            for nid in image_nodes:
+                node = wf.get(nid)
+                if isinstance(node, dict) and isinstance(node.get('inputs'), dict):
+                    node['inputs']['image'] = input_name
+            # 记录文本输出节点（ShowText 类），供完成后读取
+            show_nodes = self._find_show_text_nodes(wf)
             # 5. 提交到 ComfyUI
             import uuid
             cid = str(uuid.uuid4())
@@ -6207,8 +6334,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                             h = await hr.json()
                         if pid in h and h[pid].get('outputs'):
                             outputs = h[pid]['outputs']
-                            # 7. 从 node 2 (ShowText) 读取文本
-                            for node_id in ("2",):
+                            # 7. 从 ShowText 类节点读取文本（优先提交前定位到的节点，其次按类型兜底扫描）
+                            for node_id in (list(show_nodes) if show_nodes else self._find_show_text_nodes(wf)):
                                 if node_id in outputs:
                                     out = outputs[node_id]
                                     for key in ('text_0', 'text', 'string', 'output'):
@@ -7288,27 +7415,30 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     # multiple 保留工作流现有值，无则给 8
                     if 'multiple' not in inputs:
                         inputs['multiple'] = 8
-                    # AspectRatioNode：写插件格式比例 + 按比例重算宽高
-                    if aspect_ids and ':' in ratio:
-                        try:
-                            ra, rb = map(int, ratio.split(':'))
-                        except (ValueError, AttributeError):
-                            ra, rb = 9, 16
-                        total_pixels = (width * height)
-                        x = (total_pixels / (ra * rb)) ** 0.5
-                        for nid in aspect_ids:
-                            inputs = wf[nid].get('inputs', {})
-                            inputs['aspect_ratio'] = ratio
-                            div = 8
-                            dv = inputs.get('divisible_by', '8')
-                            if isinstance(dv, str) and dv.isdigit():
-                                div = int(dv)
-                            elif isinstance(dv, int):
-                                div = dv
-                            w = round(ra * x / div) * div
-                            h = round(rb * x / div) * div
-                            inputs['width'] = w
-                            inputs['height'] = h
+                # AspectRatioNode：写插件格式比例 + 按比例重算宽高
+                # ⚠️ 修复：原代码误将本块嵌套在 for nid in official_ids 循环内，
+                # 工作流无官方节点(official_ids=[])时循环体不执行 → 分辨率节点从未被写入，
+                # 表现为"WebUI 设置分辨率无效"。现移到官方循环外、if 块内，独立执行。
+                if aspect_ids and ':' in ratio:
+                    try:
+                        ra, rb = map(int, ratio.split(':'))
+                    except (ValueError, AttributeError):
+                        ra, rb = 9, 16
+                    total_pixels = (width * height)
+                    x = (total_pixels / (ra * rb)) ** 0.5
+                    for nid in aspect_ids:
+                        inputs = wf[nid].get('inputs', {})
+                        inputs['aspect_ratio'] = ratio
+                        div = 8
+                        dv = inputs.get('divisible_by', '8')
+                        if isinstance(dv, str) and dv.isdigit():
+                            div = int(dv)
+                        elif isinstance(dv, int):
+                            div = dv
+                        w = round(ra * x / div) * div
+                        h = round(rb * x / div) * div
+                        inputs['width'] = w
+                        inputs['height'] = h
                 self._atomic_write_workflow_json(wf, wf_path)
                 # 清理 saved_texts 中的旧分辨率值，防止 /api/workflow-params 用旧值覆盖显示
                 cleared = self._clear_saved_resolution_keys(official_ids + aspect_ids)
@@ -7679,27 +7809,30 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             count = 1
         # 先发提示（event.send 直发，不走 pipeline yield）
         self._pending_grimoire_tasks += count
-        total_q, running_q, pending_q = await self._get_queue_status()
-        pending_q += self._pending_grimoire_tasks
-        total_q += self._pending_grimoire_tasks
-        queue_info = f" | 运行:{running_q} 排队:{pending_q}"
-        await event.send(event.plain_result(f"🎲 开始随机出图 ({count}张)...{queue_info}"))
-        # 运行任务，收集结果，最后发送图片
-        import aiohttp
-        tasks = []
-        for i in range(count):
-            async with aiohttp.ClientSession() as s:
-                async with s.post(f"http://127.0.0.1:{self.webui_port}/api/grimoire/random-pick", json={}) as r:
-                    data = await r.json()
-            if not data.get("ok") or not data.get("tags"):
-                if i == 0:
-                    yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
-                break
-            status, text, path = await self._process_and_submit(data["tags"], None, user_id=event.get_sender_id(), skip_pin_merge=True)
-            self._pending_grimoire_tasks = max(0, self._pending_grimoire_tasks - 1)
-            tasks.append((status, text, path, data["tags"]))
-        if not tasks:
-            return
+        try:
+            total_q, running_q, pending_q = await self._get_queue_status()
+            pending_q += self._pending_grimoire_tasks
+            total_q += self._pending_grimoire_tasks
+            queue_info = f" | 运行:{running_q} 排队:{pending_q}"
+            await event.send(event.plain_result(f"🎲 开始随机出图 ({count}张)...{queue_info}"))
+            # 运行任务，收集结果，最后发送图片
+            import aiohttp
+            tasks = []
+            for i in range(count):
+                async with aiohttp.ClientSession() as s:
+                    async with s.post(f"http://127.0.0.1:{self.webui_port}/api/grimoire/random-pick", json={}) as r:
+                        data = await r.json()
+                if not data.get("ok") or not data.get("tags"):
+                    if i == 0:
+                        yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
+                    break
+                status, text, path = await self._process_and_submit(data["tags"], None, user_id=event.get_sender_id(), skip_pin_merge=True)
+                tasks.append((status, text, path, data["tags"]))
+            if not tasks:
+                return
+        finally:
+            # 无论循环正常结束还是提前 break/异常，都清零计数器，防止泄漏
+            self._pending_grimoire_tasks = 0
         success = 0
         for i, (status, text, path, prompt) in enumerate(tasks):
             if status == "ok":
@@ -7989,7 +8122,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 p = it.get("p", 1)
                 img_id = it.get("id", "")
                 if img_id:
-                    it["image_url"] = f"https://fastly.jsdelivr.net/gh/ThetaCursed/Anima-Assets@main/images/{p}/{img_id}.webp"
+                    it["image_url"] = f"https://anima.mooshieblob.com/images/{p}/{img_id}.webp"
             if not it.get("image_url") and it.get("name") and it.get("copyright"):
                 raw_name = f"{it['name']}, {it['copyright']}"
                 import urllib.parse
@@ -8078,6 +8211,21 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 await self._webui_runner.cleanup()
         except Exception as e:
             logger.warning(f"[ComfyUI] 停止 WebUI 服务时出错: {e}")
+        # 取消后台 while True 循环任务（清理循环 / WS 进度监听 / 缓存下载等）
+        for _t in list(getattr(self, '_background_tasks', None) or []):
+            try:
+                _t.cancel()
+            except Exception:
+                pass
+        self._background_tasks = []
+        # 取消正在进行的缓存下载任务
+        _cache_tasks = getattr(self, '_cache_tasks', None) or {}
+        for _t in list(_cache_tasks.values()):
+            try:
+                _t.cancel()
+            except Exception:
+                pass
+        _cache_tasks.clear()
         async with self._task_lock:
             self.task_map.clear()
             self._cancelled_pids.clear()
