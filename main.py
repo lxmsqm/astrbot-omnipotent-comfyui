@@ -38,8 +38,8 @@ class ComfyUIDrawTool(FunctionTool):
         "properties": {
             "prompt": {"type": "string", "description": "提示词（英文或中文），描述要生成的画面"},
             "workflow": {"type": "string", "description": "工作流名称关键词，例如'动漫'、'FLUX'、'真人'。不传则用当前工作流"},
-            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]},
-            "quality": {"type": "string", "description": "质量等级", "enum": ["480p", "720p", "1080p", "2K", "4K"]}
+            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]},
+            "quality": {"type": "string", "description": "质量等级", "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]}
         },
         "required": ["prompt"]
     })
@@ -134,7 +134,7 @@ class ComfyUIImg2ImgTool(FunctionTool):
             "image_urls": {"type": "string", "description": "1~10张输入图片的URL或本地文件路径，用英文逗号分隔"},
             "denoise": {"type": "number", "description": "降噪值 0.1~0.8，越低变化越小（仅单图时有效）"},
             "workflow": {"type": "string", "description": "工作流名称关键词，不传则用当前工作流"},
-            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]}
+            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]}
         }, "required": ["prompt", "image_urls"]
     })
 
@@ -575,9 +575,37 @@ class WorkflowMixin:
         self._refresh_workflow_list()
 
     def _refresh_workflow_list(self):
+        """扫描工作流：根目录 *.json + 各一级分类子目录 *.json。
+        文件可平铺在根目录（未分类 / 用户直接丢），也可在分类子目录（WebUI 设分类后自动归位）。
+        工作流以文件名(basename)为唯一标识，path 为实际磁盘位置。"""
+        # 首次扫描自动归位：把「已设分类但仍在根目录」的工作流移进对应分类子目录（幂等，仅进程内一次）
+        if not getattr(self, '_wf_cat_auto_synced', False):
+            self._wf_cat_auto_synced = True
+            try:
+                cats = self.workflow_config.get('__wf_categories__', {}) or {}
+                for wname, cat in list(cats.items()):
+                    if not cat:
+                        continue
+                    try:
+                        self._move_workflow_to_category(wname, cat)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
         wdir = self._get_workflow_dir(); wdir.mkdir(parents=True, exist_ok=True)
         files = list(wdir.glob("*.json"))
+        # 一级分类子目录（画/图生图/...）也纳入扫描，避免归位后文件不可见
+        for sub in sorted(wdir.glob("*/")):
+            if not sub.is_dir() or sub.name.startswith('.'):
+                continue
+            files.extend(sub.glob("*.json"))
         files = [f for f in files if not f.name.endswith('.groups.json') and not f.name.startswith('.')]
+        # 去重：同名文件若根与子目录并存，优先根（子目录是归位产物）
+        seen = {}
+        for f in files:
+            if f.name not in seen:
+                seen[f.name] = f
+        files = list(seen.values())
         hidden = self.workflow_config.get('__hidden_workflows__', [])
         aliases = self.workflow_config.get('__workflow_aliases__', {}) or {}
         all_files = []
@@ -623,6 +651,57 @@ class WorkflowMixin:
                 self.current_workflow_name = visible[0]["name"]
                 visible[0]["is_current"] = True
         return visible
+
+    def _find_workflow_file_path(self, name):
+        """按工作流文件名(basename)定位磁盘文件路径。先查根目录，再查一级分类子目录。找不到返回 None。"""
+        if not name:
+            return None
+        wdir = self._get_workflow_dir()
+        p = wdir / name
+        if p.is_file():
+            return p
+        for sub in sorted(wdir.glob("*/")):
+            if not sub.is_dir() or sub.name.startswith('.'):
+                continue
+            sp = sub / name
+            if sp.is_file():
+                return sp
+        return None
+
+    def _move_workflow_to_category(self, name, category):
+        """把工作流文件移动到分类子目录（category 非空 → 移入 <分类>/，为空 → 移回根）。
+        返回 (新path, ok, err)。文件不存在/已在目标处则返回当前 path+ok。"""
+        wdir = self._get_workflow_dir()
+        src = self._find_workflow_file_path(name)
+        if src is None:
+            return None, False, f"找不到工作流文件: {name}"
+        # 目标目录
+        if category:
+            # 去分隔符/非法路径成分，仅允许单层文件夹名
+            cat = category.replace('\\', '_').replace('/', '_').strip()
+            if not cat:
+                return src, False, "非法分类名"
+            dest_dir = wdir / cat
+        else:
+            dest_dir = wdir
+        # 已在目标处则无需移动
+        if src.parent == dest_dir:
+            return src, True, ""
+        try:
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest = dest_dir / name
+            if dest.exists():
+                return src, False, f"目标已存在同名文件: {dest.name}"
+            src.replace(dest)
+            # 若移动的是当前工作流，修正 self.workflow_path
+            if self.current_workflow_name == name:
+                self.workflow_path = dest
+            # 若移动的是绑定目标，修正 __bind_target__ 无需(仍按 name)
+            logger.info(f"[ComfyUI] 工作流归位: {src} → {dest} (分类={category or '未分类'})")
+            return dest, True, ""
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 工作流归位失败: {e}")
+            return src, False, str(e)
 
     def _get_display_name(self, fname):
         """获取工作流的显示名（别名优先，无别名返回原名）"""
@@ -1105,6 +1184,60 @@ class GenerateMixin:
 
             logger.info(f"[ComfyUI] 节点 #{node_id} 写入 {len(enabled)} 个 Lora 到输入")
 
+    def _apply_style_selector(self, workflow):
+        """将 easy stylesSelector 节点保存的风格选择写回节点。
+
+        easy stylesSelector 的风格由两个 widget 控制：
+          - widgets_values[0] = styles（风格库/大类，如 krea2_397styles-3d_render_3D渲染）
+          - widgets_values[1] = select_styles（具体风格名，逗号分隔，如 'Mixed Media'）
+        这些值在 UI 格式 JSON 里只存在于 widgets_values，未必进 inputs 字典，
+        因此不走 _apply_workflow_config 的通用 inputs 写回，这里单独处理。
+        同时补写 inputs['styles'] / inputs['select_styles']，保证 API 格式也能生效。
+        """
+        wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+        wf_cfg = wf_configs.get(self.current_workflow_name, {})
+        wf_saved = wf_cfg.get('__saved_texts__', {}) or {}
+        # 找到 easy stylesSelector 节点
+        style_nid = None
+        for nid, node in workflow.items():
+            if not isinstance(node, dict):
+                continue
+            ct = node.get('class_type', '')
+            title = (node.get('_meta', {}) or {}).get('title', '')
+            if 'stylesselector' in ct.lower().replace(' ', '') or 'stylesselector' in title.lower().replace(' ', ''):
+                style_nid = nid
+                break
+        if not style_nid:
+            return
+        # 从 saved_texts 取该节点的 styles / select_styles（键形如 {nid}_styles）
+        sn = str(style_nid)
+        lib = wf_saved.get(f"{sn}_styles")
+        sel = wf_saved.get(f"{sn}_select_styles")
+        node = workflow[style_nid]
+        wvn = node.get('widgets_values_named') or {}
+        if 'styles' in wvn or 'select_styles' in wvn:
+            # UI 格式：直接写 widgets_values_named
+            if lib is not None:
+                wvn['styles'] = lib
+            if sel is not None:
+                wvn['select_styles'] = sel
+            node['widgets_values_named'] = wvn
+        # 兜底：同时写 widgets_values 列表（按 index 0/1）
+        wv = node.get('widgets_values')
+        if isinstance(wv, list):
+            if lib is not None and len(wv) >= 1:
+                wv[0] = lib
+            if sel is not None and len(wv) >= 2:
+                wv[1] = sel
+        # 补写 inputs，确保 API 格式执行时也能读取
+        inputs = node.get('inputs')
+        if isinstance(inputs, dict):
+            if lib is not None:
+                inputs['styles'] = lib
+            if sel is not None:
+                inputs['select_styles'] = sel
+        logger.info(f"[ComfyUI] 风格预设已应用: node=#{style_nid} styles={lib!r} select_styles={sel!r}")
+
     def _inject_prompt(self, workflow, prompt, target_node=None, wf_name=None):
         nid = target_node or self._find_positive_prompt_node(workflow, wf_name=wf_name)
         if nid and nid in workflow:
@@ -1166,8 +1299,35 @@ class GenerateMixin:
 
     def _set_resolution(self, workflow, width, height):
         nid = self._find_resolution_node(workflow)
-        if nid: workflow[nid]['inputs']['width'] = width; workflow[nid]['inputs']['height'] = height; return True
-        return False
+        if not nid:
+            return False
+        inputs = workflow[nid]['inputs']
+        ct = workflow[nid].get('class_type', '')
+        # 官方 ResolutionSelector 没有 width/height 输入（宽高由 aspect_ratio+megapixels 算出并输出），
+        # 硬塞 width/height 无效还会导致 ComfyUI 报未知输入。这里改写 aspect_ratio + megapixels。
+        if ct == 'ResolutionSelector':
+            try:
+                ratio = self._closest_ratio(width, height)
+                official = self._ratio_to_official(ratio)
+                inputs['aspect_ratio'] = official
+                inputs['megapixels'] = round((width * height) / (1024 * 1024), 2)
+                if 'multiple' not in inputs:
+                    inputs['multiple'] = 8
+            except Exception:
+                pass
+            return True
+        # AspectRatioNode（比例锁定工具）同类处理：改写比例字段
+        if ct == 'AspectRatioNode':
+            try:
+                ratio = self._closest_ratio(width, height)
+                inputs['aspect_ratio'] = ratio
+            except Exception:
+                pass
+            return True
+        # 普通节点（easy-use 等）：直接写 width/height
+        inputs['width'] = width
+        inputs['height'] = height
+        return True
 
     async def _set_load_image(self, workflow, image_path):
         """设置工作流中的 LoadImage 节点。
@@ -1283,7 +1443,7 @@ class WebUIMixin:
     # WebUI 直连模式：不再 302 跳转到带 _v 版本参数的 URL，直接返回页面。
     # （原缓存熔断跳转会让 http://192.168.0.102:8898/ 变成 302 → /?_v=…，
     #   用户要求恢复直连地址。缓存仍由下方 Cache-Control 头控制。）
-    WEBUI_CACHE_TAG = "v3.8.1-r4.1"
+    WEBUI_CACHE_TAG = "v4.0.0"
 
     async def _serve_webui(self, r):
         resp = web.FileResponse(Path(__file__).parent / 'webui.html')
@@ -1295,10 +1455,129 @@ class WebUIMixin:
         resp.headers['Clear-Site-Data'] = '"cache"'
         return resp
 
+    async def _serve_favicon(self, r):
+        resp = web.FileResponse(Path(__file__).parent / 'favicon.svg', content_type='image/svg+xml')
+        resp.headers['Cache-Control'] = 'public, max-age=86400'
+        return resp
+
+    async def _webui_k2gen_data(self, request):
+        """返回 K2 完整词库数据块（k2gen/data.js 的 UTF-8 源码），供前端 new Function 构造后自动组句"""
+        # 优先读插件目录下 k2gen/data.js；不存在则退回 data/k2/ 数据（保证接口可用）
+        candidates = [
+            Path(__file__).resolve().parent / "k2gen" / "data.js",
+            Path(__file__).resolve().parent / "data" / "k2",
+        ]
+        for cand in candidates:
+            if cand.is_file():
+                try:
+                    src = cand.read_text(encoding='utf-8')
+                    return web.json_response({"ok": True, "source": src})
+                except Exception as e:
+                    return web.json_response({"ok": False, "error": f"读取词库失败: {e}"})
+        return web.json_response({"ok": False, "error": "k2gen/data.js 不存在"})
+
+    # =========================================================================
+    # 【K2 控制】WebUI/QQ 共享的 K2 字段锁定 + NSFW 开关
+    #   - __k2_locks__ : {fieldId: {mode:'random'|'fixed'|'off', value:''}}  字段锁定
+    #   - __k2_nsfw__  : bool                                             NSFW 开关
+    #   前端「魔导书 → K2 字段锁定」面板写入；QQ /随机图 组句(_k2_compose_prompt)读取。
+    #   对应路由：GET/POST /api/k2-locks 、 POST /api/k2-nsfw
+    # =========================================================================
+    async def _webui_get_k2_locks(self, request):
+        """返回当前 K2 字段锁定设定（前端面板初始化用）。"""
+        locks = self.workflow_config.get("__k2_locks__", {}) or {}
+        return web.json_response({"locks": locks})
+
+    async def _webui_save_k2_locks(self, request):
+        """保存 K2 字段锁定设定。body: {locks: {fieldId: {mode:'random'|'fixed'|'off', value:''}}}"""
+        try:
+            data = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
+        locks = data.get("locks", {})
+        if not isinstance(locks, dict):
+            return web.json_response({"ok": False, "error": "locks 必须为对象"})
+        async with self._config_lock:
+            self.workflow_config["__k2_locks__"] = locks
+        await self._save_workflow_config()
+        return web.json_response({"ok": True, "locks": locks})
+
+    async def _webui_save_k2_nsfw(self, request):
+        """保存 K2 NSFW 开关状态（前端切换时调用，QQ /随机图 组句遵循）。body: {"nsfw": true/false}"""
+        try:
+            data = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
+        on = bool(data.get("nsfw", False))
+        async with self._config_lock:
+            self.workflow_config["__k2_nsfw__"] = on
+        await self._save_workflow_config()
+        return web.json_response({"ok": True, "nsfw": on})
+
+    def _k2_compose_prompt(self, nsfw=False):
+        """【K2 控制】后端用 K2 引擎组中文成句（QQ /随机图 K2 模式）。
+        遵守 __k2_locks__（字段锁定/排除）与 __k2_nsfw__（NSFW），见上方 K2 控制分区头。
+        （复刻 webui k2Compose 的 SFW/NSFW 行为）。
+
+        引擎是纯 JS（k2gen/engine.js + data.js），在 proot 容器内 node 可用，
+        故通过 `node k2gen/cli.js --json` 子进程运行已验证引擎组句，
+        返回 {ok, text, mode, seed}；失败返回 {ok: False, error}。
+        """
+        import subprocess
+        base = Path(__file__).resolve().parent
+        k2_dir = base / "k2gen"
+        if not (k2_dir / "cli.js").is_file():
+            k2_dir = base / "data" / "k2"
+        cli = k2_dir / "cli.js"
+        if not cli.is_file():
+            return {"ok": False, "error": "K2 引擎不存在（缺 k2gen/cli.js 或 data/k2/cli.js）"}
+        # proot 容器内 /usr/bin/node 通常已在 PATH；兜底到手机 proot 绝对路径
+        node = shutil.which("node") or "/data/data/com.termux/files/usr/var/lib/proot-distro/containers/ubuntu/rootfs/usr/bin/node"
+        cmd = [node, str(cli), "--json"]
+        # NSFW：优先用持久化的 __k2_nsfw__（前端开关同步保存），保证 QQ /随机图 与 WebUI 一致；
+        # 调用方显式传 nsfw=True 仍可强制覆盖
+        k2_nsfw = self.workflow_config.get("__k2_nsfw__", False)
+        if nsfw or k2_nsfw:
+            cmd.append("--nsfw")
+        # K2 字段锁定设定：fixed → --set fieldId=value（锁定值）；off → --set fieldId=不启用（排除）
+        # random 模式的字段不传，保持引擎整体重掷
+        locks = self.workflow_config.get("__k2_locks__", {}) or {}
+        if isinstance(locks, dict):
+            for fid, cfg in locks.items():
+                if not isinstance(cfg, dict):
+                    continue
+                mode = cfg.get("mode")
+                if mode == "fixed":
+                    val = (cfg.get("value") or "").strip()
+                    if val:
+                        cmd += ["--set", f"{fid}={val}"]
+                elif mode == "off":
+                    cmd += ["--set", f"{fid}=不启用"]
+        try:
+            # 显式 utf-8：node 输出的中文成句是 UTF-8，系统 locale（如 Windows GBK）默认解码会崩
+            p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', timeout=30, cwd=str(k2_dir))
+            if p.returncode != 0:
+                return {"ok": False, "error": f"K2 引擎退出码 {p.returncode}: {(p.stderr or '')[-300:]}"}
+            out = json.loads(p.stdout)
+            if isinstance(out, list):
+                out = out[0] if out else {}
+            text = (out.get("text") or "").strip()
+            if not text:
+                return {"ok": False, "error": "K2 引擎组句为空"}
+            return {"ok": True, "text": text, "mode": out.get("mode", "SFW"), "seed": out.get("seed")}
+        except Exception as e:
+            return {"ok": False, "error": f"K2 引擎执行失败: {e}"}
+
     def _start_webui(self):
         app = web.Application(client_max_size=20 * 1024 * 1024)  # 20MB 限制，支持大背景图上传
         app.router.add_get('/', self._serve_webui)
-        app.router.add_get('/favicon.ico', lambda r: web.Response(status=204))  # 静默处理 favicon 请求
+        app.router.add_get('/api/k2gen/data', self._webui_k2gen_data)
+        # K2 字段锁定设定（前端面板保存，QQ /随机图 后端组句时遵守）
+        app.router.add_get('/api/k2-locks', self._webui_get_k2_locks)
+        app.router.add_post('/api/k2-locks', self._webui_save_k2_locks)
+        # K2 NSFW 开关（前端切换时同步保存，QQ /随机图 后端组句遵循）
+        app.router.add_post('/api/k2-nsfw', self._webui_save_k2_nsfw)
+        app.router.add_get('/favicon.ico', self._serve_favicon)  # 返回真正的图标文件
         app.router.add_get('/api/config', lambda r: web.json_response({
             "comfyui_url": self.comfyui_url,
             "workflow_dir": str(self.workflow_dir) if self.workflow_dir.parts else "",
@@ -1309,6 +1588,7 @@ class WebUIMixin:
             "show_prompt_on_image": self.show_prompt_on_image,
             "color_scheme": self._load_local_config().get("color_scheme", "cyberpunk-orange"),
             "random_pick_mode": self._load_local_config().get("random_pick_mode", "all"),
+            "k2_compose_mode": self._load_local_config().get("k2_compose_mode", "anima"),
             "deploy_mode": self._load_local_config().get("deploy_mode", "windows"),
             "target_qq": self._load_local_config().get("target_qq", ""),
         }))
@@ -1328,6 +1608,10 @@ class WebUIMixin:
         app.router.add_get('/api/lora-metadata', self._webui_get_lora_metadata)
         app.router.add_post('/api/lora-metadata/refresh', self._webui_refresh_lora_metadata)
         app.router.add_get('/api/lora-preview', self._webui_lora_preview)
+        # Krea / easy-use 风格预设接口（HTML 控制工作流的风格选择器）
+        app.router.add_get('/api/style-libs', self._webui_get_style_libs)
+        app.router.add_get('/api/style-list', self._webui_get_style_list)
+        app.router.add_get('/api/style-preview', self._webui_style_preview)
         app.router.add_get('/api/view-input', self._webui_view_input)
         app.router.add_get('/api/progress', self._webui_get_progress)
         app.router.add_post('/api/open-dir', self._webui_open_dir)
@@ -1504,6 +1788,12 @@ class WebUIMixin:
             updates["random_pick_mode"] = val
         if "target_qq" in d:
             updates["target_qq"] = str(d["target_qq"] or "").strip()
+        if "k2_compose_mode" in d:
+            val = d["k2_compose_mode"]
+            updates["k2_compose_mode"] = val
+            # 同步 __prompt_model__，使 QQ /随机图 命令与 WebUI 随机按钮行为一致
+            self.workflow_config["__prompt_model__"] = val
+            await self._save_workflow_config()
         if updates:
             self._save_local_config(updates)
         return web.json_response({"ok": True})
@@ -1774,13 +2064,21 @@ class WebUIMixin:
             return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_set_wf_category(self, r):
-        """设置工作流分类"""
+        """设置工作流分类。
+        设非空分类 → 把 .json 自动移动到 工作流目录/<分类>/ 子文件夹（没有则创建）；
+        设空(未分类) → 移回根目录。文件按 basename 仍被识别，配置不变。"""
         try:
             data = await r.json()
         except Exception:
             return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
         name = data.get('name', '')
         category = data.get('category', '')
+        if not name:
+            return web.json_response({"ok": False, "error": "缺少工作流名"})
+        # 先移动文件（分类 → 子夹 / 未分类 → 根）；失败则不改分类配置
+        path, ok, err = await asyncio.to_thread(self._move_workflow_to_category, name, category or '')
+        if not ok:
+            return web.json_response({"ok": False, "error": err or "移动工作流失败"})
         async with self._config_lock:
             cats = self.workflow_config.get('__wf_categories__', {}) or {}
             if category:
@@ -1789,7 +2087,8 @@ class WebUIMixin:
                 cats.pop(name, None)
             self.workflow_config['__wf_categories__'] = cats
         await self._save_workflow_config()
-        return web.json_response({"ok": True, "categories": cats})
+        self._refresh_workflow_list()
+        return web.json_response({"ok": True, "categories": cats, "path": str(path)})
 
     async def _webui_save_category_order(self, r):
         """保存分类排序"""
@@ -1812,8 +2111,8 @@ class WebUIMixin:
         if not name or '..' in name or '/' in name or '\\' in name:
             return web.json_response({"ok": False, "error": "非法文件名"})
         wdir = self._get_workflow_dir()
-        target = wdir / name
-        if not target.exists():
+        target = self._find_workflow_file_path(name)
+        if target is None or not target.exists():
             return web.json_response({"ok": False, "error": "文件不存在"})
         try:
             # 安全检查：确保在 workflow 目录内
@@ -2368,6 +2667,113 @@ class WebUIMixin:
             return web.Response(status=404, text='Preview not found')
         except Exception as e:
             logger.warning(f"[ComfyUI] Lora 预览图获取失败: {e}")
+            return web.Response(status=500, text=str(e))
+
+    # ===================== Krea / easy-use 风格预设 =====================
+    async def _webui_get_style_libs(self, request):
+        """返回所有风格大类（easy stylesSelector 的 styles 选项）。
+        直接从已缓存的 ComfyUI object_info 读取，无需额外请求。"""
+        try:
+            await self._ensure_object_info()
+            oi = self._object_info_cache or {}
+            # 兼容不同节点类名写法
+            ct = None
+            for k in ('easy stylesSelector', 'easy_stylesSelector', 'EasyStyleSelector'):
+                if k in oi:
+                    ct = oi[k]
+                    break
+            if not ct:
+                return web.json_response({"libs": []})
+            spec = ct.get('styles') or {}
+            libs = spec.get('options') or []
+            if isinstance(libs, list):
+                libs = [str(x) for x in libs]
+            return web.json_response({"libs": libs})
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 获取风格大类失败: {e}")
+            return web.json_response({"libs": [], "error": str(e)})
+
+    async def _webui_get_style_list(self, request):
+        """代理 easy-use 的 /easyuse/prompt/styles?name=<大类>，返回该大类下所有具体风格。
+        把 thumbnail 相对 URL 改写为本插件代理地址，便于前端（手机浏览器）跨网取图。"""
+        lib = request.query.get('lib', '')
+        if not lib:
+            return web.json_response({"error": "missing lib"}, status=400)
+        if not self.comfyui_url:
+            return web.json_response({"error": "comfyui 未连接"}, status=400)
+        try:
+            async with aiohttp.ClientSession() as s:
+                url = f"http://{self.comfyui_url}/easyuse/prompt/styles?name={aiohttp.helpers.quote(lib)}"
+                async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+                    if r.status != 200:
+                        return web.Response(status=r.status, text=await r.text() or 'styles fetch failed')
+                    data = await r.json()
+            # 改写 thumbnail 为本插件代理
+            for item in (data or []):
+                thumb = item.get('thumbnail')
+                if isinstance(thumb, str) and '/easyuse/prompt/styles/image' in thumb:
+                    # 原路径形如 /easyuse/prompt/styles/image?path=./samples/xxx.jpg
+                    rel = thumb.split('?', 1)[-1]
+                    item['thumbnail'] = f"/api/style-preview?{rel}"
+                elif isinstance(thumb, list):
+                    item['thumbnail'] = [
+                        f"/api/style-preview?{t.split('?', 1)[-1]}" if isinstance(t, str) and '/easyuse/prompt/styles/image' in t else t
+                        for t in thumb
+                    ]
+            return web.json_response({"styles": data or []})
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 获取风格列表失败: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
+    async def _webui_style_preview(self, request):
+        """代理 easy-use 风格预览图 /easyuse/prompt/styles/image?path=...
+        支持内存缓存 + content-type 修正，与 /api/lora-preview 一致。"""
+        path = request.query.get('path', '')
+        name = request.query.get('name', '')
+        styles_name = request.query.get('styles_name', '')
+        if not path and not (name and styles_name):
+            return web.Response(status=400, text='Missing path or name')
+        if not self.comfyui_url:
+            return web.Response(status=400, text='comfyui 未连接')
+        try:
+            # 构造 easy-use 原始 URL
+            if path:
+                eu_url = f"http://{self.comfyui_url}/easyuse/prompt/styles/image?path={aiohttp.helpers.quote(path, safe='')}"
+            else:
+                eu_url = f"http://{self.comfyui_url}/easyuse/prompt/styles/image?name={aiohttp.helpers.quote(name)}&styles_name={aiohttp.helpers.quote(styles_name)}"
+            cache_key = eu_url
+            if cache_key in self._style_preview_cache:
+                cached = self._style_preview_cache[cache_key]
+                return web.Response(body=cached['body'], content_type=cached['content_type'])
+            async with aiohttp.ClientSession() as s:
+                async with s.get(eu_url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+                    if r.status != 200:
+                        return web.Response(status=r.status, text='style preview not found')
+                    body = await r.read()
+                    ct = r.headers.get('Content-Type', 'image/jpeg')
+                    try:
+                        low = eu_url.lower()
+                        ext = low.rsplit('.', 1)[-1].split('?')[0] if '.' in low.rsplit('/', 1)[-1] else ''
+                        if ext == 'gif':
+                            ct = 'image/gif'
+                        elif ext == 'webp':
+                            ct = 'image/webp'
+                        elif ext == 'apng':
+                            ct = 'image/apng'
+                        elif ext == 'png':
+                            ct = 'image/png'
+                        elif ext in ('jpg', 'jpeg'):
+                            ct = 'image/jpeg'
+                        elif ext in ('mp4', 'webm', 'mov', 'm4v'):
+                            ct = 'video/mp4' if ext in ('mp4', 'm4v', 'mov') else 'video/webm'
+                    except Exception:
+                        pass
+                    if len(self._style_preview_cache) >= 256:
+                        self._style_preview_cache.pop(next(iter(self._style_preview_cache)), None)
+                    self._style_preview_cache[cache_key] = {'body': body, 'content_type': ct}
+                    return web.Response(body=body, content_type=ct)
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 风格预览图获取失败: {e}")
             return web.Response(status=500, text=str(e))
 
     async def _webui_view_input(self, request):
@@ -3187,6 +3593,13 @@ class GrimoireMixin:
                 ib = order_list.index(pb) if pb in order_list else len(order_list)
                 return ia - ib
             sources.sort(key=cmp_to_key(source_sort_key))
+
+        # 按当前数据集模型过滤：k2 只显示 data/k2/ 下的源；anima 屏蔽 data/k2/（两者互斥）
+        cur_model = self.workflow_config.get('__prompt_model__', 'anima')
+        if cur_model == 'k2':
+            sources = [s for s in sources if (s.get('path') or '').replace('\\', '/').startswith('k2/')]
+        else:
+            sources = [s for s in sources if not (s.get('path') or '').replace('\\', '/').startswith('k2/')]
 
         return web.json_response({"sources": sources})
 
@@ -4014,6 +4427,11 @@ class GrimoireMixin:
             return web.json_response({"ok": False, "error": f"不支持的模型: {model}"})
         self.workflow_config['__prompt_model__'] = model
         await self._save_workflow_config()
+        # 双向同步：魔导书切模型也写回设置面板的 k2_compose_mode，保证两处一致
+        local_cfg = self._load_local_config()
+        if local_cfg.get("k2_compose_mode") != model:
+            local_cfg["k2_compose_mode"] = model
+            self._save_local_config(local_cfg)
         return web.json_response({"ok": True, "model": model})
 
     async def _webui_grimoire_update(self, request):
@@ -4527,6 +4945,40 @@ class GrimoireMixin:
             return f"✅ 已更新「{name}」"
         else:
             return f"❌ 更新失败"
+
+    @filter.llm_tool(name="comfyui_set_prompt_model")
+    async def llm_set_prompt_model(self, event: AstrMessageEvent, model: str):
+        """切换随机图/魔导书的提示词生成引擎（anima 或 k2）。
+        切换后 WebUI 设置面板、魔导书模型下拉、QQ /随机图 命令三方均同步生效。
+
+        Args:
+            model (string): 引擎名称，可选 "anima"（原有随机池抽标签方式）或 "k2"（K2 引擎组中文成句）。
+                不区分大小写，支持中文别名："anima"/"原有"/"原版"/"随机池"/"默认" → anima；"k2"/"引擎"/"组句" → k2。
+        """
+        raw = (model or "").strip().lower()
+        # 中文别名归一
+        if raw in ("k2", "引擎", "组句"):
+            target = "k2"
+        elif raw in ("anima", "原有", "原版", "随机池", "默认", ""):
+            target = "anima"
+        else:
+            return f"❌ 不支持的引擎「{model}」，仅支持 anima 或 k2"
+
+        from .random_prompt import PROMPT_SECTION_ORDER
+        if target not in PROMPT_SECTION_ORDER:
+            return f"❌ 不支持的引擎「{target}」"
+
+        # 写 workflow_config.__prompt_model__（QQ /随机图 命令与 WebUI 随机按钮读取此值）
+        self.workflow_config['__prompt_model__'] = target
+        await self._save_workflow_config()
+        # 写 local_config.k2_compose_mode（设置面板显示值，保证两处一致）
+        local_cfg = self._load_local_config()
+        if local_cfg.get("k2_compose_mode") != target:
+            local_cfg["k2_compose_mode"] = target
+            self._save_local_config(local_cfg)
+
+        label = "K2 · 引擎组中文成句" if target == "k2" else "Anima · 原有随机池抽标签"
+        return f"✅ 已切换提示词生成引擎为：{label}（WebUI 设置、魔导书、QQ /随机图 已同步）"
 
     async def _webui_grimoire_cache_status(self, request):
         """查询某个数据源的图片缓存状态（含总大小）"""
@@ -5051,6 +5503,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._object_info_ts = 0
         # Lora 预览图内存缓存：避免每次请求都穿透到 ComfyUI
         self._lora_preview_cache = {}        # key: lora_name, value: {body, content_type}
+        self._style_preview_cache = {}       # key: easy-use 预览图 URL, value: {body, content_type}
 
         # 迁移旧版配置 → data/user/config.json
         old_config = _plugin_root / "plugin_config.json"
@@ -5132,6 +5585,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self.quality_presets = {
             "480p": {"name": "SD", "pixels": 399_360},
             "720p": {"name": "标清", "pixels": 921_600},
+            "960p": {"name": "高清+", "pixels": 1_638_400},  # 短边≈960（9:16/16:9 下 960/1707）；介于 720p 与 1080p 之间
             "1080p": {"name": "高清", "pixels": 2_073_600},
             "2K": {"name": "超清", "pixels": 3_686_400},
             "4K": {"name": "原画", "pixels": 8_294_400},
@@ -5142,8 +5596,13 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # 随机图抽取模式
         rp_mode = local_cfg.get("random_pick_mode", "all") or self.workflow_config.get("random_pick_mode", "all")
         self.workflow_config["random_pick_mode"] = rp_mode
+        # 启动时同步：设置面板 k2_compose_mode → __prompt_model__（修复历史遗留不一致）
+        # 仅设内存值，后续任意 _save_workflow_config 调用会自然落盘
+        k2_mode = local_cfg.get("k2_compose_mode", "anima")
+        if k2_mode != self.workflow_config.get("__prompt_model__", "anima"):
+            self.workflow_config["__prompt_model__"] = k2_mode
         # 比例列表（纯字符串，宽高由质量动态计算）
-        self.aspect_ratios = ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"]
+        self.aspect_ratios = ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]
         # ComfyUI 官方 ResolutionSelector 节点：插件比例 → 官方选项
         self.official_ratio_map = {
             "1:1": "1:1 (Square)",
@@ -5652,7 +6111,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             bot = self._bot_ref
             if bot:
                 try:
-                    cq_text = (f"✨ 生成完成: {prompt[:30]}" if prompt else "")
+                    cq_text = (f"✨ 生成完成: {prompt[:2000]}" if prompt else "")
                     for p in paths[:10]:
                         if not Path(p).exists():
                             continue
@@ -5668,7 +6127,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 方式二：回退 context.send_message（chain.file_image → base64://）
             chain = MessageChain()
             if prompt:
-                chain.message(f"✨ 生成完成: {prompt[:30]}")
+                chain.message(f"✨ 生成完成: {prompt[:2000]}")
             from astrbot.api.message_components import Video, File, Record
             for p in paths[:10]:
                 if not Path(p).exists():
@@ -5848,6 +6307,15 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     if f in meta:
                         p[f] = meta[f]
                 params.append(p)
+            # easy stylesSelector 的 select_styles 在 UI 格式里只存在于 widgets_values_named，
+            # 不在 inputs 中，这里补暴露出来，让前端能读到当前选择
+            if 'stylesselector' in ct.lower().replace(' ', ''):
+                wvn = node.get('widgets_values_named') or {}
+                for sk in ('styles', 'select_styles'):
+                    if sk in wvn and not any(p['key'] == sk for p in params):
+                        sv = wvn[sk]
+                        if isinstance(sv, (str, int, float, bool)):
+                            params.append({"key": sk, "value": sv, "type": 'string' if isinstance(sv, str) else 'number'})
             nodes.append({"id": nid, "title": title, "class_type": ct, "params": params})
         return {"nodes": nodes, "workflow_name": self.current_workflow_name}
 
@@ -6807,6 +7275,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 self._apply_loras(wf)
             except Exception as e:
                 logger.warning(f"[ComfyUI] Lora 应用失败（已跳过）: {e}")
+            try:
+                self._apply_style_selector(wf)
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 风格预设应用失败（已跳过）: {e}")
             disabled_groups = self.workflow_config.get('__disabled_groups__', {})
             groups_data = self.workflow_config.get('__groups_data__', [])
             bind_target = self.workflow_config.get('__bind_target__', '')
@@ -7189,15 +7661,16 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         ctx = self._get_context_key(event)
         ctx_wf = self._context_workflows.get(ctx, self.current_workflow_name) if ctx else self.current_workflow_name
         m = f"当前工作流: {self._get_display_name(ctx_wf)}\n\n"
-        m += "  /画 [比例] 提示词 - 文生图（发文字即可）\n"
-        m += "  /随机图 [数量] - 从随机池抽取标签出图（默认1张，最多10张）\n"
-        m += "  /图生图 [降噪值] 提示词 - 图生图/编辑图片（直接传图、引用图片 或 @用户获取头像，最多10张）\n"
-        m += "  /图生视频 - 图生视频（引用图片 或 @用户获取头像）\n"
+        m += "  /画 [比例] 提示词 - 文生图（发文字即可，自动追加固定标签）\n"
+        m += "  /随机图 [数量] - 随机出图（默认1张，最多10张）：K2 模式排中文成句，anima 模式从随机池抽标签\n"
+        m += "  /图生图 [降噪值] 提示词 - 图生图（直接传图、引用图片 或 @用户获取头像，最多10张；也可仅靠图片生成）\n"
+        m += "  /图生视频 - 图生视频（引用图片 或 @用户获取头像，可仅靠图片生成）\n"
         m += "  /执行 提示词 - 执行当前工作流（不限分类，未分类工作流专用）\n"
         m += "  /工作流 [编号/关键词] - 查看/切换工作流\n"
         m += "  /切换 [编号/关键词] - 快速切换工作流\n"
         m += "  /比例 [编号/比例名] - 查看/切换比例\n"
-        m += "  /分辨率 [等级] - 设置质量等级（480p/720p/1080p/2K/4K）\n"
+        m += "  /分辨率 [等级] - 设置质量等级（480p/720p/960p/1080p/2K/4K）\n"
+        m += "  /提示词 - 引用 bot 发过的图片查询生图提示词\n"
         m += "  /队列 - 查看 ComfyUI 队列状态\n"
         m += "  /停止 - 停止当前生成\n"
         m += "  /撤回 - 撤回最后一张生成的图片/视频\n"
@@ -7818,16 +8291,28 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 运行任务，收集结果，最后发送图片
             import aiohttp
             tasks = []
+            # 提示词模型切到 K2 时，QQ 随机图也改走 K2 引擎组中文成句（与 webui 随机按钮一致，不走 anima random-pick）
+            use_k2 = (self.workflow_config.get('__prompt_model__', 'anima') == 'k2')
             for i in range(count):
-                async with aiohttp.ClientSession() as s:
-                    async with s.post(f"http://127.0.0.1:{self.webui_port}/api/grimoire/random-pick", json={}) as r:
-                        data = await r.json()
-                if not data.get("ok") or not data.get("tags"):
-                    if i == 0:
-                        yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
-                    break
-                status, text, path = await self._process_and_submit(data["tags"], None, user_id=event.get_sender_id(), skip_pin_merge=True)
-                tasks.append((status, text, path, data["tags"]))
+                if use_k2:
+                    # K2 组句为同步 subprocess 调用，放线程池避免阻塞事件循环
+                    kres = await asyncio.to_thread(self._k2_compose_prompt)
+                    if not kres.get("ok"):
+                        if i == 0:
+                            yield event.plain_result("❌ " + kres.get("error", "K2 组句失败"))
+                        break
+                    prompt = kres["text"]
+                else:
+                    async with aiohttp.ClientSession() as s:
+                        async with s.post(f"http://127.0.0.1:{self.webui_port}/api/grimoire/random-pick", json={}) as r:
+                            data = await r.json()
+                    if not data.get("ok") or not data.get("tags"):
+                        if i == 0:
+                            yield event.plain_result("随机池为空，请先在魔导书中添加随机池子分类")
+                        break
+                    prompt = data["tags"]
+                status, text, path = await self._process_and_submit(prompt, None, user_id=event.get_sender_id(), skip_pin_merge=True)
+                tasks.append((status, text, path, prompt))
             if not tasks:
                 return
         finally:

@@ -7,7 +7,8 @@
 <meta name="theme-color" content="#faf0f5" media="(prefers-color-scheme:light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>魔导书 — AStrBot ComfyUI [v3.8.2]</title>
+<title>魔导书 — AStrBot ComfyUI [v4.0.0]</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -919,6 +920,46 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 .lora-panel-node-card .lora-item .btn-danger{opacity:0!important;transition:opacity .15s;pointer-events:none}
 .lora-panel-node-card .lora-item:hover .btn-danger{opacity:1!important;pointer-events:auto}
 .lora-panel-node-card .lora-item .btn-danger:focus{opacity:1!important;pointer-events:auto}
+/* 风格预设面板 */
+.style-lib-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.style-lib-row label{font-size:11px;color:var(--text-sub);flex-shrink:0}
+.style-lib-row select{flex:1;padding:5px 8px;border:1px solid var(--card-border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:12px}
+.style-mode-row{display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--text-sub)}
+.style-mode-row label{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+.style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;max-height:430px;overflow-y:auto;padding-right:4px}
+.style-card{border:1px solid var(--card-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--input-bg);cursor:pointer;transition:all .18s;position:relative;display:flex;flex-direction:column}
+.style-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.style-card.selected{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary),0 0 12px var(--primary-glow)}
+.style-card .style-thumb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--bg-elevated)}
+.style-card .style-thumb-placeholder{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.3;background:var(--bg-elevated)}
+.style-card .style-name{padding:3px 5px;font-size:10px;line-height:1.3;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.style-card.selected .style-name{color:var(--primary);font-weight:600}
+.style-card .style-check{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.style-card.selected .style-check{display:flex}
+.style-empty{padding:14px;text-align:center;color:var(--text-sub2);font-size:11px}
+/* K2 字段锁定面板 */
+.k2sec{border:1px solid var(--card-border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;background:var(--input-bg)}
+.k2sec-head{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-elevated);cursor:pointer;font-size:12px;font-weight:600;color:var(--text);user-select:none}
+.k2sec-head:hover{background:var(--card-hover)}
+.k2sec-arrow{transition:transform .15s;font-size:10px;margin-left:auto}
+.k2sec-arrow.collapsed{transform:rotate(-90deg)}
+.k2sec-body{padding:6px 10px}
+.k2sec-body.collapsed{display:none}
+.k2fld{display:flex;align-items:center;gap:6px;padding:3px 0;flex-wrap:wrap}
+.k2fld-label{flex:0 0 110px;font-size:11px;color:var(--text-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k2fld-modes{display:flex;gap:2px;flex:0 0 auto}
+.k2fld-modes button{font-size:10px;padding:2px 7px;border:1px solid var(--card-border);background:var(--bg-elevated);color:var(--text-sub);border-radius:3px;cursor:pointer;line-height:1.5}
+.k2fld-modes button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.k2fld-val{flex:1;min-width:90px;padding:3px 6px;border:1px solid var(--card-border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:11px;display:none}
+.k2fld-val.show{display:inline-block}
+.k2fld-lockbtn{flex:0 0 auto;font-size:10px;padding:2px 7px;border:1px solid var(--card-border);border-radius:3px;cursor:pointer;background:var(--bg-elevated);color:var(--text-sub)}
+.k2fld-lockbtn.on{background:var(--success,#4caf50);color:#fff;border-color:var(--success,#4caf50)}
+.k2-locks-tip{font-size:10px;color:var(--text-sub2);padding:2px 0 6px}
+/* 魔导书内 K2 专属控制面板 */
+.grimoire-k2-panel{padding:12px 0;height:100%;overflow:auto}
+.grm-k2-toolbar{display:flex;align-items:center;gap:10px;padding:4px 12px 10px}
+.grm-k2-title{font-size:13px;font-weight:600;color:var(--text);display:inline-flex;align-items:center;gap:6px}
+
 .node-card{
   border:1px solid var(--card-border);border-radius:var(--radius-sm);
   padding:12px 14px;cursor:pointer;min-height:90px;
@@ -4325,6 +4366,10 @@ textarea:focus-visible,
     <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
     <!-- Lora -->
     <symbol id="icon-lora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
+    <!-- 风格预设 -->
+    <symbol id="icon-style" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></symbol>
+    <!-- K2 字段锁定 -->
+    <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
     <!-- Plus -->
     <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
     <!-- Save / Floppy -->
@@ -4646,6 +4691,13 @@ textarea:focus-visible,
               </select>
             </div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">提示词随机输出方式</span>
+              <select id="k2_compose_mode" style="flex:1;min-width:120px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer" title="选择随机生成提示词的输出方式">
+                <option value="anima">Anima · 原有方式</option>
+                <option value="k2">K2 · 引擎组句</option>
+              </select>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">生成发送 QQ</span>
               <input type="text" id="cfg_target_qq" class="settings-input" placeholder="填写QQ号，生成结果私聊发送到此号（留空不发送）" style="flex:1;min-width:150px"
                 onchange="saveTargetQq()">
@@ -4768,6 +4820,7 @@ textarea:focus-visible,
             <div class="res-presets" id="res_presets" role="group" aria-label="分辨率预设">
               <button class="res-preset-btn preset-480p" data-action="setRes480p">480p SD</button>
               <button class="res-preset-btn preset-720p active" data-action="setRes720p">720p 标清</button>
+              <button class="res-preset-btn preset-960p" data-action="setRes960p">960p 高清+</button>
               <button class="res-preset-btn preset-1080p" data-action="setRes1080p">1080p 高清</button>
               <button class="res-preset-btn preset-2K" data-action="setRes2K">2K 超清</button>
               <button class="res-preset-btn preset-4K" data-action="setRes4K">4K 原画</button>
@@ -4777,6 +4830,7 @@ textarea:focus-visible,
               <button class="ratio-btn" data-r="9:16" data-action="setRatio">9:16</button>
               <button class="ratio-btn active" data-r="1:1" data-action="setRatio">1:1</button>
               <button class="ratio-btn" data-r="16:9" data-action="setRatio">16:9</button>
+              <button class="ratio-btn" data-r="21:9" data-action="setRatio">21:9</button>
               <button class="ratio-btn" data-r="3:4" data-action="setRatio">3:4</button>
               <button class="ratio-btn" data-r="4:3" data-action="setRatio">4:3</button>
               <button class="ratio-btn" data-r="2:3" data-action="setRatio">2:3</button>
@@ -4815,6 +4869,11 @@ textarea:focus-visible,
         <div class="prep-section" id="prep_loras" style="display:none">
           <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 管理 <span class="section-badge" id="prep_lora_node_badge">节点: 自动</span></div>
           <div id="lora_panel_content"></div>
+        </div>
+
+        <div class="prep-section" id="prep_styles" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-style"/></svg> 风格预设 <span class="section-badge" id="prep_style_node_badge">节点: 自动</span></div>
+          <div id="style_panel_content"></div>
         </div>
 
         <div class="prep-section" id="prep_expanded_text" style="display:none">
@@ -4992,6 +5051,24 @@ textarea:focus-visible,
         <button class="btn btn-xs btn-secondary" onclick="jumpGrimoirePage()">跳转</button>
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_next" onclick="grimoirePage(1)">下一页 →</button>
       </div>
+    </div>
+    <!-- 【K2 控制】K2 模式专属控制面板（替代 anima 标签浏览，仅 K2 模式显示；对应 JS 见【K2 控制 · 前端】） -->
+    <div class="grimoire-k2-panel" id="grimoire_k2_panel" style="display:none">
+      <div class="grm-k2-toolbar" style="flex-wrap:wrap">
+        <span class="grm-k2-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lock"/></svg> K2 字段锁定 <span class="section-badge" id="grimoire_k2_badge">随机</span></span>
+        <button class="btn btn-xs btn-secondary" id="grm_k2_nsfw_btn" onclick="toggleK2Nsfw()" title="K2 随机是否允许 NSFW（交合/裸露强化）">🔞 <span id="grm_k2_nsfw_text">NSFW关</span></button>
+        <span style="display:inline-flex;gap:4px;margin-left:2px">
+          <button class="btn btn-xs btn-secondary" id="grm_k2_all_toggle" onclick="toggleAllK2Locks()" title="一键全选(全部随机) / 反选(全部排除)"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_k2_all_text">全选随机</span></button>
+          <button class="btn btn-xs btn-secondary" id="grm_k2_collapse_all" onclick="toggleAllK2SecCollapse()" title="展开/收起全部分类"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder"/></svg> <span id="grm_k2_collapse_text">收起全部</span></button>
+        </span>
+        <span style="display:inline-flex;gap:4px;align-items:center;position:relative">
+          <button id="grm_k2_preset_btn" onclick="showK2PresetDropdown()" style="font-size:10px;padding:3px 8px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit"><svg class="icon-xs" aria-hidden="true"><use href="#icon-bookmark"/></svg> <span id="grm_k2_preset_label">预设</span></button>
+          <button class="btn btn-xs btn-secondary" onclick="deleteK2Preset()" title="删除当前选中的 K2 预设" style="font-size:9px;padding:0 4px;min-height:18px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--card-border);color:var(--text-sub);cursor:pointer">✕</button>
+          <div id="grm_k2_preset_menu" style="display:none;position:absolute;top:100%;left:0;min-width:150px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-xs);box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;padding:4px 0;margin-top:4px"></div>
+        </span>
+      </div>
+      <div class="param-row" style="padding:6px 12px;font-size:11px;color:var(--text-sub)">固定想锁定的字段（如年龄=18岁）、或关闭不想出现的分类；其余字段每次随机重掷。设置同时作用于 WebUI 与 QQ /随机图。</div>
+      <div id="k2_locks_panel" style="padding:0 12px 12px"></div>
     </div>
   </div>
   <!-- PC 右下角缩放手柄（拖动自由调整大小） -->
@@ -5476,6 +5553,7 @@ function $id(id) {
       'setThemeDark': function() { setTheme('dark'); },
       'setRes480p': function() { setResPreset('480p', el); },
       'setRes720p': function() { setResPreset('720p', el); },
+      'setRes960p': function() { setResPreset('960p', el); },
       'setRes1080p': function() { setResPreset('1080p', el); },
       'setRes2K': function() { setResPreset('2K', el); },
       'setRes4K': function() { setResPreset('4K', el); },
@@ -6162,6 +6240,12 @@ function loadCfg() {
     // 加载随机图抽取模式
     const modeSel = document.getElementById('random_pick_mode');
     if (modeSel && c && c.random_pick_mode) modeSel.value = c.random_pick_mode;
+    const k2Sel = document.getElementById('k2_compose_mode');
+    if (k2Sel && c && c.k2_compose_mode) k2Sel.value = c.k2_compose_mode;
+    _k2ComposeMode = (c && c.k2_compose_mode) || 'anima';
+    // K2 字段锁定面板：仅 K2 模式显示于魔导书内（grimoire_k2_panel）
+    syncGrimoireK2UI();
+    if (_k2ComposeMode === 'k2') renderK2LocksPanel();
     // 加载生成结果发送 QQ
     const tqq = document.getElementById('cfg_target_qq');
     if (tqq && c && c.target_qq) tqq.value = c.target_qq;
@@ -6211,7 +6295,18 @@ async function webuiGenerate(isRandom) {
     if (otherBtn) { otherBtn.disabled = false; otherBtn.style.opacity = ''; }
   };
   const posTa = document.getElementById('prompt_textarea');
-  const prompt = posTa ? posTa.value.trim() : '';
+  // 提示词来源分流：
+  //  - K2 随机：由 K2 引擎组临时中文词，不回填输入框，直接提交（random=false，避免后端走 anima random-pick 丢弃 K2 词）
+  //  - 生成 / 非K2随机：用输入框当前内容，不触发 K2 重排
+  let prompt;
+  if (isRandom && _k2ComposeMode === 'k2') {
+    prompt = await k2Compose();
+    if (!prompt) { prompt = posTa ? posTa.value.trim() : ''; }
+  } else {
+    prompt = posTa ? posTa.value.trim() : '';
+  }
+  // 后端 random 标志：K2 随机已在前端组词，后端直接按普通 prompt 处理（避免 anima random-pick 丢弃 K2 词）
+  const randomFlag = (isRandom && _k2ComposeMode === 'k2') ? false : !!isRandom;
   // 数量输入框（1~10）
   const cntEl = document.getElementById('gen_count');
   let count = 1;
@@ -6220,13 +6315,26 @@ async function webuiGenerate(isRandom) {
     if (!isNaN(v) && v >= 1 && v <= 10) count = v;
   }
   if (!isRandom && !prompt) { /* 图生视频/图生图允许空提示词，直接提交 */ }
+  const k2MultiRandom = (isRandom && _k2ComposeMode === 'k2' && count > 1);
   try {
-    const r = await apiFetch('/api/generate', { method:'POST', body:JSON.stringify({prompt, count, random: !!isRandom}) }, true);
-    if (r && r.ok) {
-      const sentTxt = r.sent ? ` ✅ 已发送到QQ ${r.target_qq}` : (r.target_qq ? ' ⚠️ 发送失败，仅本地生成' : '（未配置发送QQ）');
-      toast(`✅ 生成完成 ${r.count || count} 张` + sentTxt);
+    if (k2MultiRandom) {
+      // K2 随机多张：每张都重新组一次词（独立随机），逐张提交，避免同词出多张
+      let total = 0, lastErr = '';
+      for (let i = 0; i < count; i++) {
+        const p2 = await k2Compose() || '';
+        const r2 = await apiFetch('/api/generate', { method:'POST', body:JSON.stringify({prompt:p2, count:1, random:false}) }, true);
+        if (r2 && r2.ok) { total += (r2.count || 1); }
+        else { lastErr = r2?.error || '生成失败'; break; }
+      }
+      toast(total > 0 ? `✅ K2 随机生成完成 ${total} 张` : ('❌ ' + lastErr), total > 0 ? '' : 'error');
     } else {
-      toast('❌ ' + (r?.error || '生成失败'), 'error');
+      const r = await apiFetch('/api/generate', { method:'POST', body:JSON.stringify({prompt, count, random: randomFlag}) }, true);
+      if (r && r.ok) {
+        const sentTxt = r.sent ? ` ✅ 已发送到QQ ${r.target_qq}` : (r.target_qq ? ' ⚠️ 发送失败，仅本地生成' : '（未配置发送QQ）');
+        toast(`✅ 生成完成 ${r.count || count} 张` + sentTxt);
+      } else {
+        toast('❌ ' + (r?.error || '生成失败'), 'error');
+      }
     }
   } catch (e) {
     toast('请求失败: ' + e, 'error');
@@ -6514,6 +6622,11 @@ function loadColorScheme() {
     if (sel) sel.value = scheme;
     const modeSel = document.getElementById('random_pick_mode');
     if (modeSel && c && c.random_pick_mode) modeSel.value = c.random_pick_mode;
+    const k2Sel = document.getElementById('k2_compose_mode');
+    if (k2Sel && c && c.k2_compose_mode) k2Sel.value = c.k2_compose_mode;
+    _k2ComposeMode = (c && c.k2_compose_mode) || 'anima';
+    syncGrimoireK2UI();
+    if (_k2ComposeMode === 'k2') renderK2LocksPanel();
   }).catch(() => {});
 }
 
@@ -6875,6 +6988,13 @@ document.addEventListener('change', function(e) {
   if (e.target.id === 'random_pick_mode') {
     const val = e.target.value;
     apiFetch('/api/config', { method:'POST', body:JSON.stringify({random_pick_mode: val}) });
+  }
+  if (e.target.id === 'k2_compose_mode') {
+    const val = e.target.value;
+    _k2ComposeMode = val; // 同步前端变量，NSFW 开关显示随模式切换
+    apiFetch('/api/config', { method:'POST', body:JSON.stringify({k2_compose_mode: val}) });
+    // NSFW 开关只对 K2 引擎有意义（anima 提示词词缀无 NSFW 约束）；K2 面板统一在魔导书内切换显示
+    syncGrimoireK2UI();
   }
 });
 
@@ -7467,6 +7587,10 @@ function updateNodeDisplay() {
   const hasLora = _hasLoraNodes();
   document.getElementById('prep_loras').style.display = hasLora ? 'block' : 'none';
   if (hasLora) { try { renderLoraPanel(); } catch (e) { console.error('lora panel err:', e); } }
+  // 风格预设面板：检测工作流中是否有 easy stylesSelector 节点
+  const hasStyle = _hasStyleNodes();
+  document.getElementById('prep_styles').style.display = hasStyle ? 'block' : 'none';
+  if (hasStyle) { try { renderStylePanel(); } catch (e) { console.error('style panel err:', e); } }
   // UNet 模型面板：独立显隐（有 UNETLoader 节点才显示，不再依赖 Lora 面板）
   try { renderUnetPanel(); } catch (e) { console.error('unet panel err:', e); }
   document.getElementById('prep_upload_image').style.display = hasImg ? 'block' : 'none';
@@ -7562,6 +7686,152 @@ function _hasLoraNodes() {
 /** 获取 Lora 节点的显示名称 */
 function _getLoraNodeLabel(node) {
   return node.title || node.class_type || 'Power Lora Loader';
+}
+
+// ===================== 风格预设面板（easy stylesSelector） =====================
+let styleNodeId = '';          // easy stylesSelector 节点 id
+let styleLibs = [];            // 风格大类列表
+let styleLibCurrent = '';      // 当前选中的大类
+let styleItems = [];           // 当前大类下的具体风格
+let selectedStyles = [];       // 已选风格 name（逗号分隔存回 select_styles）
+let styleMultiSelect = false;  // 多选叠加模式
+
+function _hasStyleNodes() {
+  if (!allParamsData || !allParamsData.nodes) return false;
+  const n = allParamsData.nodes.find(n => /easy\s*styles?selector/i.test(n.class_type) || /styles?selector/i.test(n.title));
+  if (!n) return false;
+  styleNodeId = n.id;
+  return true;
+}
+
+/** 取当前 easy stylesSelector 节点某参数值 */
+function _getStyleNodeParam(key) {
+  if (!styleNodeId || !allParamsData || !allParamsData.nodes) return '';
+  const node = allParamsData.nodes.find(n => String(n.id) === String(styleNodeId));
+  if (!node) return '';
+  const p = (node.params || []).find(p => p.key === key);
+  return p ? (p.value || '') : '';
+}
+
+/** 保存 styles + select_styles 到后端（复用现有 workflow-params 通道） */
+function _saveStyleParams() {
+  if (!styleNodeId) return;
+  const data = {};
+  data[`${styleNodeId}_styles`] = styleLibCurrent;
+  data[`${styleNodeId}_select_styles`] = selectedStyles.join(',');
+  apiFetch('/api/workflow-params', { method: 'POST', body: JSON.stringify(data) }, true)
+    .then(() => {
+      // 同步回 allParamsData，避免刷新前显示错位
+      const node = allParamsData.nodes.find(n => String(n.id) === String(styleNodeId));
+      if (node) {
+        const ps = node.params || [];
+        const setP = (k, v) => { const p = ps.find(p => p.key === k); if (p) p.value = v; };
+        setP('styles', styleLibCurrent);
+        setP('select_styles', selectedStyles.join(','));
+      }
+    })
+    .catch(() => {});
+}
+
+function renderStylePanel() {
+  if (!styleNodeId) return;
+  const container = document.getElementById('style_panel_content');
+  const badge = document.getElementById('prep_style_node_badge');
+  if (badge) badge.textContent = `节点: #${styleNodeId}`;
+  if (!container) return;
+  // 从工作流当前值初始化
+  const curLib = _getStyleNodeParam('styles') || '';
+  const curSel = (_getStyleNodeParam('select_styles') || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (curLib && (!styleLibCurrent || styleLibCurrent !== curLib)) styleLibCurrent = curLib;
+  // 多选判定：当前已有多个则用多选模式展示
+  if (curSel.length > 1) styleMultiSelect = true;
+  selectedStyles = curSel;
+
+  container.innerHTML = '<div class="style-lib-row"><label>库</label><select id="style_lib_sel"></select></div>' +
+    '<div class="style-mode-row"><label><input type="checkbox" id="style_multi" ' + (styleMultiSelect ? 'checked' : '') + '> 多选叠加</label><span style="color:var(--text-muted)">已选: <span id="style_sel_count">' + selectedStyles.length + '</span></span></div>' +
+    '<div class="style-grid" id="style_grid"><div class="style-empty">加载中…</div></div>';
+
+  const sel = document.getElementById('style_lib_sel');
+  sel.onchange = () => { styleLibCurrent = sel.value; loadStyleItems(); };
+  document.getElementById('style_multi').onchange = (e) => {
+    styleMultiSelect = e.target.checked;
+    if (!styleMultiSelect && selectedStyles.length > 1) selectedStyles = selectedStyles.slice(0, 1);
+    refreshStyleCards();
+    _saveStyleParams();
+  };
+
+  // 大类列表（优先用缓存，否则拉取）
+  if (styleLibs.length) {
+    fillStyleLibOptions(sel, styleLibCurrent);
+    if (styleLibCurrent) loadStyleItems(); else container.querySelector('#style_grid').innerHTML = '<div class="style-empty">请选择风格库</div>';
+  } else {
+    apiFetch('/api/style-libs', {}, true).then(d => {
+      styleLibs = (d && d.libs) || [];
+      fillStyleLibOptions(sel, styleLibCurrent);
+      styleLibCurrent = styleLibCurrent || styleLibs[0] || '';
+      sel.value = styleLibCurrent;
+      if (styleLibCurrent) loadStyleItems(); else container.querySelector('#style_grid').innerHTML = '<div class="style-empty">无风格库</div>';
+    }).catch(() => { container.querySelector('#style_grid').innerHTML = '<div class="style-empty">风格库加载失败</div>'; });
+  }
+}
+
+function fillStyleLibOptions(sel, current) {
+  sel.innerHTML = styleLibs.map(l => `<option value="${esc(l)}"${l === current ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+
+function loadStyleItems() {
+  const grid = document.getElementById('style_grid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="style-empty">加载中…</div>';
+  apiFetch('/api/style-list?lib=' + encodeURIComponent(styleLibCurrent), {}, true).then(d => {
+    styleItems = (d && d.styles) || [];
+    refreshStyleCards();
+  }).catch(() => { grid.innerHTML = '<div class="style-empty">风格列表加载失败</div>'; });
+}
+
+function refreshStyleCards() {
+  const grid = document.getElementById('style_grid');
+  if (!grid) return;
+  if (!styleItems.length) { grid.innerHTML = '<div class="style-empty">该库无具体风格</div>'; return; }
+  // 重排：已选风格排到最前（与 ComfyUI 原生一致），未选的按原序跟在后面
+  const ordered = [];
+  const rest = [];
+  styleItems.forEach((it, i) => {
+    const name = it.name || '';
+    if (selectedStyles.includes(name)) ordered.push({ it, i });
+    else rest.push({ it, i });
+  });
+  const renderList = ordered.concat(rest);
+  grid.innerHTML = renderList.map(({ it, i }) => {
+    const name = it.name || '';
+    const cn = it.name_cn || name;
+    const active = selectedStyles.includes(name);
+    const thumb = it.thumbnail || '';
+    const imgHtml = thumb
+      ? `<img class="style-thumb" src="${esc(thumb)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="style-thumb-placeholder" style="display:none">🎨</span>`
+      : `<span class="style-thumb-placeholder">🎨</span>`;
+    return `<div class="style-card${active ? ' selected' : ''}" data-idx="${i}" onclick="toggleStyleCard(${i})">
+      ${imgHtml}
+      <div class="style-check">✓</div>
+      <div class="style-name" title="${esc(cn)}">${esc(cn)}</div>
+    </div>`;
+  }).join('');
+  const cnt = document.getElementById('style_sel_count');
+  if (cnt) cnt.textContent = selectedStyles.length;
+}
+
+function toggleStyleCard(idx) {
+  const it = styleItems[idx];
+  if (!it) return;
+  const name = it.name;
+  const pos = selectedStyles.indexOf(name);
+  if (styleMultiSelect) {
+    if (pos >= 0) selectedStyles.splice(pos, 1); else selectedStyles.push(name);
+  } else {
+    selectedStyles = (pos >= 0) ? [] : [name];
+  }
+  refreshStyleCards();
+  _saveStyleParams();
 }
 
 /** 渲染 UNet 模型名列表（显示在 Lora 管理上方，点击可切换模型） */
@@ -11176,6 +11446,7 @@ const GRIMOIRE_CN_NAMES = {
   'pose_action/Normal posture': '常规姿势',
   'pose_action/Sex positions': '特殊姿势',
   'custom': '自定义',
+  'k2': 'K2 词库',
 };
 
 function toggleGrimoire() {
@@ -11195,6 +11466,7 @@ function showGrimoire() {
   backdrop.classList.add('show');
   document.body.style.overflow = 'hidden';
   loadGrimoireData();
+  syncGrimoireK2UI(); // 按当前模式切换：K2 显示字段锁定面板，anima 显示标签浏览
   updateActiveNav('bn_grimoire');
   loadGrimoirePresets();
 }
@@ -11258,7 +11530,8 @@ async function loadGrimoireData() {
       for (const m of modelData.models) {
         const opt = document.createElement('option');
         opt.value = m.id;
-        opt.textContent = m.name;
+        // 模型显示名：k2 → K2（其余保持原名）
+        opt.textContent = (m.id === 'k2') ? 'K2' : (m.name || m.id);
         if (current && current.model === m.id) opt.selected = true;
         sel.appendChild(opt);
       }
@@ -11349,11 +11622,364 @@ async function changeGrimoireModel(model) {
       const srcData = await apiFetch('/api/grimoire/sources', {}, true);
       if (srcData && srcData.sources) {
         _grimoireSources = srcData.sources;
+        _k2ComposeMode = (model === 'k2') ? 'k2' : 'anima'; // 同步组句模式，NSFW 开关随模型切换显示
+        // 双向同步：魔导书切模型也回写设置面板下拉框，保证两处视觉一致
+        const k2Sel = document.getElementById('k2_compose_mode');
+        if (k2Sel) k2Sel.value = _k2ComposeMode;
         renderGrimoireSources();
+        syncGrimoireK2UI(); // 切换模型后立即同步魔导书 UI（K2 面板 / anima 浏览）
       }
     }
   } catch (e) {}
 }
+
+// =========================================================================
+// 【K2 控制 · 前端】魔导书内 K2 字段锁定面板 + NSFW 开关
+//   功能区边界：本注释 ↓ 到 applyK2LocksToEngine()（k2Compose 里调用）为止。
+//   涉及 UI：魔导书 Bottom Sheet 内 #grimoire_k2_panel（搜 <!--【K2】-->
+//   涉及函数：syncGrimoireK2UI / toggleK2Nsfw / 字段锁定全家（见下）
+//   后端接口：GET/POST /api/k2-locks 、 POST /api/k2-nsfw（存 __k2_locks__/__k2_nsfw__）
+//   跨模式切换统一入口 = syncGrimoireK2UI()：K2 显字段锁定+隐藏 anima 浏览，anima 反之。
+// =========================================================================
+// K2 模式下的魔导书 UI 同步：K2 模式显示专属控制面板（字段锁定+NSFW），隐藏 anima 标签浏览；
+// anima 模式反之。统一入口，避免多处重复控制。
+function syncGrimoireK2UI() {
+  const isK2 = (_k2ComposeMode === 'k2');
+  const k2Panel = document.getElementById('grimoire_k2_panel');
+  if (k2Panel) k2Panel.style.display = isK2 ? 'block' : 'none';
+  // anima 标签浏览区：K2 模式隐藏（K2 自带组句，无需标签源/随机池）
+  const srcArea = document.querySelector('.grimoire-sources');
+  const detailArea = document.querySelector('.grimoire-detail');
+  if (srcArea) srcArea.style.display = isK2 ? 'none' : '';
+  if (detailArea) detailArea.style.display = isK2 ? 'none' : '';
+  // NSFW 按钮迁入 K2 面板：初始/切换时同步其 class 与文本（避免静态 HTML 残留未插值占位）
+  const nsfwBtn = document.getElementById('grm_k2_nsfw_btn');
+  const nsfwText = document.getElementById('grm_k2_nsfw_text');
+  if (nsfwBtn) nsfwBtn.className = 'btn btn-xs ' + (window._k2NsfwOn ? 'btn-primary' : 'btn-secondary');
+  if (nsfwText) nsfwText.textContent = window._k2NsfwOn ? 'NSFW开' : 'NSFW关';
+  if (isK2) renderK2LocksPanel();
+  // 同步模型选择器视觉（若魔导书开着）
+  const sel = document.getElementById('grm_model_selector');
+  if (sel) sel.value = isK2 ? 'k2' : 'anima';
+}
+
+// K2 NSFW 开关状态（window 全局，跨脚本共享：工具栏切换 + k2Compose 读取）
+if (typeof window._k2NsfwOn === 'undefined') {
+  try { window._k2NsfwOn = localStorage.getItem('k2_nsfw_on') === '1'; } catch (e) { window._k2NsfwOn = false; }
+}
+function toggleK2Nsfw() {
+  window._k2NsfwOn = !window._k2NsfwOn;
+  try { localStorage.setItem('k2_nsfw_on', window._k2NsfwOn ? '1' : '0'); } catch (e) {}
+  const bt = document.getElementById('grm_k2_nsfw_text');
+  if (bt) bt.textContent = window._k2NsfwOn ? 'NSFW开' : 'NSFW关';
+  const bc = document.getElementById('grm_k2_nsfw_btn');
+  if (bc) bc.className = 'btn btn-xs ' + (window._k2NsfwOn ? 'btn-primary' : 'btn-secondary');
+  toast(window._k2NsfwOn ? '🔞 K2 随机已开启 NSFW（交合/裸露强化）' : 'K2 随机已关闭 NSFW，仅出 SFW 人像描述');
+  // 同步到后端：QQ /随机图 组句遵循同一 NSFW 开关
+  apiFetch('/api/k2-nsfw', { method: 'POST', body: JSON.stringify({ nsfw: window._k2NsfwOn }) }, true).catch(() => {});
+}
+
+// ===================== K2 字段锁定面板 =====================
+// 状态：{ fieldId: { mode:'random'|'fixed'|'off', value:'' } }
+let _k2Locks = {};
+let _k2LocksLoaded = false;
+let _k2SecCollapsed = {}; // 各 section 折叠态（序号→bool），render 重建后恢复
+
+// 从引擎数据构建「分类 → 字段」结构；缓存供渲染使用
+let _k2FieldMeta = null; // { sections:[{title, fields:[{id,label,opts:[{v,t}],text}]}] }
+function _getK2FieldMeta() {
+  if (_k2FieldMeta) return _k2FieldMeta;
+  try {
+    const mod = window.__k2Mod;
+    if (!mod || !mod.D) return null;
+    const D = mod.D;
+    const sections = [];
+    (D.SECTIONS || []).forEach(sec => {
+      const fields = (sec.fields || []).map(f => {
+        let opts = [], rawOpts = [];
+        if (f.list && D.OPT && D.OPT[f.list]) rawOpts = (D.OPT[f.list] || []).map(o => (typeof o === 'string' ? { v: o, t: o } : { v: o.v, t: o.t }));
+        // 必选判定：选项池若含「不启用」→ 该字段可排除(可 off)；不含 → 必选，前端不提供「不选」。
+        const canOff = rawOpts.some(o => o.v === '不启用');
+        // 过滤掉「不启用」占位项（不选模式用单独按钮表达）
+        opts = rawOpts.filter(o => o.v !== '不启用');
+        return { id: f.id, label: f.label || f.id, opts, text: !!f.text, canOff };
+      }).filter(f => f.opts.length || f.text);
+      if (fields.length) sections.push({ title: sec.title || sec.name || '其他', fields });
+    });
+    _k2FieldMeta = { sections };
+    return _k2FieldMeta;
+  } catch (e) { console.warn('K2 field meta build failed', e); return null; }
+}
+
+async function renderK2LocksPanel() {
+  if (_k2ComposeMode !== 'k2') return;
+  const panel = document.getElementById('k2_locks_panel');
+  if (!panel) return;
+  // 确保引擎模块已加载（buildK2Engine 全局），以便读取 D.SECTIONS/OPT
+  if (!window.__k2Mod) {
+    try {
+      const res = await fetch('/api/k2gen/data').then(r => r.json());
+      if (res && res.ok) window.__k2Mod = buildK2Engine(res.source);
+    } catch (e) {}
+  }
+  const meta = _getK2FieldMeta();
+  if (!meta) { panel.innerHTML = '<div class="style-empty">K2 引擎未加载，无法列出字段</div>'; return; }
+  // 初始化本地存储
+  if (!_k2LocksLoaded) {
+    try { _k2Locks = JSON.parse(localStorage.getItem('k2_locks') || '{}') || {}; } catch (e) { _k2Locks = {}; }
+    _k2LocksLoaded = true;
+  }
+  let html = '';
+  meta.sections.forEach((sec, si) => {
+    const flds = sec.fields.map(f => {
+      // 必选字段(canOff=false)不可排除：若历史状态残留 off 则强制回 random
+      let st = _k2Locks[f.id] || { mode: 'random', value: '' };
+      if (!f.canOff && st.mode === 'off') st = { mode: 'random', value: '' };
+      const canOff = f.canOff;
+      const modes = canOff ? ['random', 'fixed', 'off'] : ['random', 'fixed'];
+      const modeLabels = { random: '随机', fixed: '固定', off: '不选' };
+      const fidJs = escJsStr(f.id); // onclick JS 字符串参数：escJsStr 转义单引号/反斜杠，防破坏 JS 字符串
+      const modeBtns = modes.map(m => `<button class="${st.mode === m ? 'active' : ''}" data-f="${esc(f.id)}" data-m="${m}" onclick="setK2LockMode('${fidJs}','${m}')">${modeLabels[m]}</button>`).join('');
+      // 固定值控件：有 opts 用下拉，text 字段允许手输
+      let valCtrl = '';
+      if (st.mode === 'fixed') {
+        if (f.opts.length) {
+          const optsHtml = ['<option value="">— 选值 —</option>'].concat(
+            // 宽松比较：st.value 来自 select 必为 string，option 值可能为 number，用 String() 归一避免 reload 后选中态丢失
+            f.opts.map(o => `<option value="${esc(o.v)}"${String(o.v) === String(st.value) ? ' selected' : ''}>${esc(o.t || o.v)}</option>`)
+          ).join('');
+          // 移动端用原生 <select>（系统 picker），避免 <input list> 在 WebView 里被手势/搜索吞掉
+          valCtrl = `<select class="k2fld-val show" onchange="setK2LockValue('${fidJs}', this.value)" onclick="event.stopPropagation()">${optsHtml}</select>`;
+        } else if (f.text) {
+          valCtrl = `<input class="k2fld-val show" value="${esc(st.value)}" onchange="setK2LockValue('${fidJs}', this.value)" onclick="event.stopPropagation()" placeholder="手输值（如 18岁）">`;
+        } else {
+          valCtrl = `<input class="k2fld-val show" value="${esc(st.value)}" onchange="setK2LockValue('${fidJs}', this.value)" onclick="event.stopPropagation()" placeholder="固定值">`;
+        }
+      }
+      return `<div class="k2fld">
+        <span class="k2fld-label" title="${esc(f.id)}">${esc(f.label)}</span>
+        <span class="k2fld-modes">${modeBtns}</span>
+        ${valCtrl}
+      </div>`;
+    }).join('');
+    const secCollapsed = _k2SecCollapsed[si] === true ? ' collapsed' : '';
+    html += `<div class="k2sec">
+      <div class="k2sec-head" onclick="toggleK2Sec(${si})"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder-closed"/></svg> ${esc(sec.title)}<span class="k2sec-arrow${secCollapsed}" id="k2sec_arr_${si}">▼</span></div>
+      <div class="k2sec-body${secCollapsed}" id="k2sec_body_${si}">${flds}</div>
+    </div>`;
+  });
+  html += `<div class="k2-locks-tip">提示：固定「年龄」选 18岁少女（或手输 18岁），其余保持「随机」即可每次换其他特征。设置已自动保存，QQ /随机图 同样遵守。</div>`;
+  panel.innerHTML = html;
+  updateK2LocksBadge();
+  // 同步「收起/展开全部」按钮文字：任一 section 展开则显示「收起全部」，全收起则显示「展开全部」
+  const ctxt = document.getElementById('grm_k2_collapse_text');
+  if (ctxt) {
+    let allCollapsed = true;
+    for (let si = 0; si < meta.sections.length; si++) { if (!_k2SecCollapsed[si]) { allCollapsed = false; break; } }
+    ctxt.textContent = allCollapsed ? '展开全部' : '收起全部';
+  }
+  if (typeof updateK2AllToggleBtn === 'function') updateK2AllToggleBtn();
+}
+
+function _k2FieldCanOff(fid) {
+  const m = _getK2FieldMeta();
+  if (!m) return true;
+  for (const s of m.sections) { const f = s.fields.find(x => x.id === fid); if (f) return f.canOff; }
+  return true;
+}
+function setK2LockMode(fid, mode) {
+  // 必选字段不允许「不选(off)」→ 强制回到 random
+  if (mode === 'off' && !_k2FieldCanOff(fid)) mode = 'random';
+  if (!_k2Locks[fid]) _k2Locks[fid] = { mode: 'random', value: '' };
+  _k2Locks[fid].mode = mode;
+  // 非 fixed 时清空 value，避免 off→fixed 或 random→fixed 残留旧固定值
+  if (mode !== 'fixed') _k2Locks[fid].value = '';
+  persistK2Locks();
+  renderK2LocksPanel();
+}
+function setK2LockValue(fid, val) {
+  if (!_k2Locks[fid]) _k2Locks[fid] = { mode: 'fixed', value: '' };
+  _k2Locks[fid].mode = 'fixed';
+  _k2Locks[fid].value = val;
+  persistK2Locks();
+  renderK2LocksPanel();
+}
+function toggleK2Sec(si) {
+  const body = document.getElementById('k2sec_body_' + si);
+  const arr = document.getElementById('k2sec_arr_' + si);
+  if (!body) return;
+  body.classList.toggle('collapsed');
+  if (arr) arr.classList.toggle('collapsed');
+  // 记录折叠态，供 renderK2LocksPanel 重建后恢复（避免每次切 mode/选值丢折叠）
+  _k2SecCollapsed[si] = body.classList.contains('collapsed');
+}
+function persistK2Locks() {
+  try { localStorage.setItem('k2_locks', JSON.stringify(_k2Locks)); } catch (e) {}
+  // 同步到后端（QQ /随机图 遵守）
+  apiFetch('/api/k2-locks', { method: 'POST', body: JSON.stringify({ locks: _k2Locks }) }, true).catch(() => {});
+}
+function updateK2LocksBadge() {
+  const badge = document.getElementById('grimoire_k2_badge');
+  if (!badge) return;
+  const nLock = Object.values(_k2Locks).filter(s => s.mode === 'fixed').length;
+  const nOff = Object.values(_k2Locks).filter(s => s.mode === 'off').length;
+  badge.textContent = (nLock || nOff) ? `固定${nLock}/不选${nOff}` : '随机';
+}
+
+// 在 k2Compose 生成前按锁定设定 configure 引擎：fixed→setVal+lockField；off→setVal('不启用')
+function applyK2LocksToEngine(eng) {
+  if (!eng) return;
+  const locks = _k2Locks || {};
+  Object.keys(locks).forEach(fid => {
+    const st = locks[fid];
+    if (!st) return;
+    try {
+      if (st.mode === 'fixed') {
+        const v = (st.value || '').trim();
+        if (v) { eng.set(fid, v); eng.lockField(fid, true); }
+      } else if (st.mode === 'off') {
+        // off=排除：设「不启用」后必须 lockField，否则 generate({randomize:true}) 会把它当
+        // 未锁字段重新随机覆盖（引擎端实测：无 lock 时排除失效）。与 fixed 及后端 --set 语义一致。
+        eng.set(fid, '不启用');
+        eng.lockField(fid, true);
+      }
+    } catch (e) {}
+  });
+}
+
+// ===================== 【K2】批量操作 + 预设 =====================
+function _k2AllFieldIds(){
+  const m = _getK2FieldMeta();
+  if (!m) return [];
+  return m.sections.reduce((acc, s) => acc.concat(s.fields.map(f => f.id)), []);
+}
+// 双功能单按钮（同 anima）：当前若所有「可选(可排除)」字段都在随机(无锁定/排除) → 显示并执行「全部排除」；
+// 否则 → 显示并执行「全选随机」。必选字段(canOff=false)不参与「排除」，始终走随机。
+function _k2CanOffMap() {
+  const m = _getK2FieldMeta();
+  const map = {};
+  if (m) m.sections.forEach(s => s.fields.forEach(f => { if (f.canOff) map[f.id] = true; }));
+  return map;
+}
+function _k2AllRandomNow() {
+  if (!_k2Locks) return true;
+  return !Object.values(_k2Locks).some(s => s && (s.mode === 'fixed' || s.mode === 'off'));
+}
+function toggleAllK2Locks() {
+  if (!_k2LocksLoaded) {
+    try { _k2Locks = JSON.parse(localStorage.getItem('k2_locks') || '{}') || {}; } catch (e) { _k2Locks = {}; }
+    _k2LocksLoaded = true;
+  }
+  const ids = _k2AllFieldIds();
+  if (!ids.length) { toast('K2 字段未加载', 'error'); return; }
+  const goRandom = !_k2AllRandomNow(); // 当前非全随机 → 这次全选随机；当前已全随机 → 反选排除
+  const canOffMap = _k2CanOffMap();
+  ids.forEach(id => {
+    if (goRandom) delete _k2Locks[id];
+    else if (canOffMap[id]) _k2Locks[id] = { mode: 'off', value: '' };
+    // 必选字段：不排除，保持随机
+  });
+  persistK2Locks();
+  renderK2LocksPanel();
+  updateK2AllToggleBtn();
+  toast(goRandom ? '🎲 已全部设为随机' : '🚫 已反选：全部设为排除（必选分类除外）');
+}
+function updateK2AllToggleBtn() {
+  const txt = document.getElementById('grm_k2_all_text');
+  const btn = document.getElementById('grm_k2_all_toggle');
+  if (!txt && !btn) return;
+  const allRandom = _k2AllRandomNow();
+  if (txt) txt.textContent = allRandom ? '全部排除' : '全选随机';
+  if (btn) { btn.classList.toggle('btn-primary', !allRandom); btn.classList.toggle('btn-secondary', allRandom); }
+}
+// 展开/收起全部 section
+function toggleAllK2SecCollapse() {
+  const m = _getK2FieldMeta();
+  if (!m) return;
+  const n = m.sections.length;
+  // 判断当前是否"全收起" → 切换
+  let allCollapsed = true;
+  for (let si = 0; si < n; si++) { if (!_k2SecCollapsed[si]) { allCollapsed = false; break; } }
+  const collapse = !allCollapsed; // 当前非全收起则去收起；已全收起则全展开
+  for (let si = 0; si < n; si++) {
+    const body = document.getElementById('k2sec_body_' + si);
+    const arr = document.getElementById('k2sec_arr_' + si);
+    if (body) body.classList.toggle('collapsed', collapse);
+    if (arr) arr.classList.toggle('collapsed', collapse);
+    _k2SecCollapsed[si] = collapse;
+  }
+  const txt = document.getElementById('grm_k2_collapse_text');
+  if (txt) txt.textContent = collapse ? '展开全部' : '收起全部';
+}
+// ---- K2 预设：存 localStorage {name: {locks, nsfw}} ----
+function _k2Presets(){ try { return JSON.parse(localStorage.getItem('k2_locks_presets') || '{}') || {}; } catch(e){ return {}; } }
+function _saveK2Presets(obj){ try { localStorage.setItem('k2_locks_presets', JSON.stringify(obj)); } catch(e){} }
+function showK2PresetDropdown() {
+  const menu = document.getElementById('grm_k2_preset_menu');
+  if (!menu) return;
+  const presets = _k2Presets();
+  const names = Object.keys(presets);
+  let items = names.length
+    ? names.map(n => `<div onclick="applyK2Preset('${escJsStr(n)}')" style="padding:5px 10px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='var(--card-hover)'" onmouseout="this.style.background=''">📌 ${esc(n)}</div>`).join('')
+    : '<div style="padding:6px 10px;font-size:11px;color:var(--text-sub2)">暂无预设</div>';
+  items += '<div style="border-top:1px solid var(--card-border);margin:3px 0"></div>';
+  items += `<div onclick="saveK2Preset()" style="padding:5px 10px;font-size:11px;cursor:pointer" onmouseover="this.style.background='var(--card-hover)'" onmouseout="this.style.background=''">＋ 保存当前为预设</div>`;
+  menu.innerHTML = items;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+function saveK2Preset() {
+  const name = (prompt('预设名称：') || '').trim();
+  if (!name) return;
+  const presets = _k2Presets();
+  presets[name] = { locks: JSON.parse(JSON.stringify(_k2Locks || {})), nsfw: !!window._k2NsfwOn };
+  _saveK2Presets(presets);
+  setK2PresetLabel(name);
+  const menu = document.getElementById('grm_k2_preset_menu');
+  if (menu) menu.style.display = 'none';
+  toast(`✅ K2 预设「${name}」已保存`);
+}
+function applyK2Preset(name) {
+  const presets = _k2Presets();
+  const p = presets[name];
+  if (!p) return;
+  _k2Locks = JSON.parse(JSON.stringify(p.locks || {}));
+  _k2LocksLoaded = true;
+  try { localStorage.setItem('k2_locks', JSON.stringify(_k2Locks)); } catch (e) {}
+  // NSFW 一并应用
+  if (p.nsfw !== undefined && !!p.nsfw !== !!window._k2NsfwOn) {
+    window._k2NsfwOn = !!p.nsfw;
+    try { localStorage.setItem('k2_nsfw_on', window._k2NsfwOn ? '1' : '0'); } catch (e) {}
+    const bt = document.getElementById('grm_k2_nsfw_text');
+    if (bt) bt.textContent = window._k2NsfwOn ? 'NSFW开' : 'NSFW关';
+    const bc = document.getElementById('grm_k2_nsfw_btn');
+    if (bc) bc.className = 'btn btn-xs ' + (window._k2NsfwOn ? 'btn-primary' : 'btn-secondary');
+    apiFetch('/api/k2-nsfw', { method: 'POST', body: JSON.stringify({ nsfw: window._k2NsfwOn }) }, true).catch(() => {});
+  }
+  persistK2Locks();
+  renderK2LocksPanel();
+  setK2PresetLabel(name);
+  const menu = document.getElementById('grm_k2_preset_menu');
+  if (menu) menu.style.display = 'none';
+  toast(`📌 已应用 K2 预设「${name}」`);
+}
+function deleteK2Preset() {
+  const label = document.getElementById('grm_k2_preset_label');
+  const name = label ? label.textContent : '';
+  if (!name || name === '预设') { toast('请先选择一个预设', 'error'); return; }
+  if (!confirm(`确定删除预设「${name}」？`)) return;
+  const presets = _k2Presets();
+  delete presets[name];
+  _saveK2Presets(presets);
+  setK2PresetLabel('');
+  const menu = document.getElementById('grm_k2_preset_menu');
+  if (menu) menu.style.display = 'none';
+  toast(`已删除 K2 预设「${name}」`);
+}
+function setK2PresetLabel(name) {
+  const lb = document.getElementById('grm_k2_preset_label');
+  if (lb) lb.textContent = name || '预设';
+}
+
 
 function renderGrimoireSources() {
   const list = document.getElementById('grimoire_source_list');
@@ -13142,6 +13768,47 @@ function updateActiveNav(id) {
 </script>
 
 </div>
+
+
+<script>
+/* __K2_INJECTED__ */
+/* ================= K2 引擎组句（k2Compose）：K2 模式随机/生成时排成中文成句 ================= */
+/* 当前 K2 组句输出方式（anima=原有 / k2=引擎组句）。
+   注意：这是顶层 let（非 window 属性），靠「所有 script 共享全局词法环境」被主块函数在运行时读到。
+   ⚠️ 勿在主块顶层同步访问 _k2ComposeMode（会触发暂时性死区 ReferenceError）；
+   只能在函数体 / 异步 .then / 事件回调里读写。 */
+let _k2ComposeMode = 'anima';
+var __K2_ENGINE__ = "/* =====================================================================\n * k2gen · K2 人像提示词生成器 v12 —— 随机组合引擎（无 DOM 纯逻辑版）\n *\n * 来源：E:/AIwork/插件/K2/K2人像提示词生成器v12.html\n *   data.js   词库数据块（HTML 行 790–4344 原样复制，零改写）\n *   engine.js 本文件：状态模型 + 可播种 RNG + 随机/补全/锁定/风格预设/\n *             智能匹配/提示词组装(buildPrompt)/自检(S1–S17, F1–F10)\n *\n * 与 HTML 的行为差异：\n *   1. 无界面：字段值存于 engine.val（'' = 未选·随机补全；自定义文本在 engine.custom）\n *   2. Math.random → mulberry32(seed)：同一 seed 的完整调用序列可逐字复现\n *   3. generate({randomize:true}) 等价 HTML「生成提示词」按钮\n *      （先解锁未锁字段整体重掷 → 补全 → 组装 → 自检 → 超 700 字按 TRIM_ORDER 精简）\n *   4. 调用顺序与 HTML 一致（buildPrompt 内部智能匹配、S2 自检的随机抽条\n *      都会消耗 RNG），因此复现粒度 = 整个 generate() 序列\n * ===================================================================== */\n/* ---- 载入原始数据块（data.js 为 HTML 词库区原样文本） ---- */\nfunction loadData(){\n  const src = __K2_SRC__;\n  const factory = new Function(src +\n    '\\n;return {norm,OPT,CLOTH,SHOE_POOL,LINGERIE_ITEMS,POSES,POSE_HAND,HAND_POOLS,EMOTION_EYE,' +\n    'SIM_POSES,SIM_CATS,SIM_COUNT,SFW_POSES,SFW_CATS,SFW_COUNT,SCENE_ENV,SECTIONS,CLOTH_FIELDS,POSE_FIELDS,' +\n    'STYLE_PRESETS,STYLE_POOLS,STYLE_COLOR_POOLS,SFW_CLOTH_IDS,LINGERIE_IDS,PANTY_IDS};');\n  return factory();\n}\nconst D = loadData();\n\n/* ---- 可播种 RNG（mulberry32，确定性） ---- */\nfunction mulberry32(a){\n  return function(){\n    a |= 0; a = a + 0x6D2B79F5 | 0;\n    let t = Math.imul(a ^ a >>> 15, 1 | a);\n    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;\n    return ((t ^ t >>> 14) >>> 0) / 4294967296;\n  };\n}\n\n/* ---- 字段常量（位于 HTML 数据块之外：行 4369/5313/4214/4970/5450/5718/6152） ---- */\nconst CUSTOM_FIELD_IDS = ['personCustom', 'nsfwCustom1', 'nsfwCustom2'];\nconst NEG_EFFECT_IDS = ['smudge', 'styleTag', 'film', 'cine', 'imperf1', 'imperf2', 'tattoo', 'tattooPos'];\nconst SPLIT_FIELDS = ['outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor'];\nconst STYLE_CTRL_IDS = ['clothMat', 'clothPattern', 'clothDeco', 'bottomLength', 'outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor'];\nconst TRIM_ORDER = ['styleTag', 'cine', 'film', 'imperf2', 'imperf1', 'weather', 'prop',\n  'nsfwChain',\n  'hairAccSide', 'hairAccBack', 'hairAccFront', 'poseExtra', 'makeupDetail', 'nails', 'smudge',\n  'clothDeco', 'collarStyle', 'topLength', 'bottomStyle', 'bottomLength', 'outerwear', 'clothPattern', 'ambient', 'device', 'tattoo',\n  'clothLayer', 'clothMat', 'accessory', 'sockType', 'shoes'];\nconst RANGE_FIELDS = {};\nD.SECTIONS.forEach(sec => (sec.fields || []).forEach(f => { if (f.range) RANGE_FIELDS[f.id] = f; }));\n\n/* 半裸态上身裸露部位池（NSFW 强化且非全裸时随机取一组置于最开头） */\nconst UPPER_NUDE_PARTS = [\n  '双乳与乳头大片裸露，胸口肌肤完全袒露',\n  '乳房与乳头完全裸露，胸口肌肤无遮',\n  '双乳与乳头裸露，胸口肌肤完全裸露',\n  '双乳与乳头大片裸露，胸口肌肤一览无遗',\n  '双乳与乳头裸露，胸口肌肤尽露'\n];\n/* 禁令总表（SFW 全扫；NSFW 按授权完全放行） */\nconst BAN_A = ['汗湿', '湿润', '油光', '水雾', '水珠', '湿身', '油亮肌肤', '陶瓷水嫩', '细腻如瓷', '通透光泽', '婴儿肌'];\nconst BAN_B = ['倾泻', '流淌', '如流水般', '如水流般', '如霜雾般', '如雾', '如露珠', '水波般', '涟漪般', '浸润', '泼洒', '飞溅', '水汽', '雾化', '弥漫如雾'];\nconst BAN_D = ['nipple', 'pussy', 'vagina', 'vulva', 'penis', 'cock', 'dick', 'anus', 'asshole', 'clitoris', 'labia', 'scrotum', 'testicles', 'areola'];\n\nclass Engine {\n  constructor(opts = {}){\n    /* ---- 字段注册（等价 HTML collectFieldIds） ---- */\n    this.allFieldIds = [];\n    this.FIELD_LABEL = {};\n    const reg = f => { if (f && f.id) { this.allFieldIds.push(f.id); if (f.label) this.FIELD_LABEL[f.id] = f.label; } };\n    D.SECTIONS.forEach(sec => (sec.fields || []).forEach(reg));\n    D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(reg);\n    D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(reg);\n    this.FIELD_SEC = {};\n    D.SECTIONS.forEach(sec => this.sectionFieldIds(sec).forEach(fid => { this.FIELD_SEC[fid] = sec.id; }));\n\n    /* ---- 状态模型（'' = 未选·随机补全；滑条默认 1） ---- */\n    this.val = {};\n    this.allFieldIds.forEach(id => {\n      this.val[id] = RANGE_FIELDS[id] ? String(RANGE_FIELDS[id].def !== undefined ? RANGE_FIELDS[id].def : '1') : '';\n    });\n    /* 负面效果字段初始默认「不启用」（等价 HTML makeSelect：NEG 字段建表即置不启用） */\n    NEG_EFFECT_IDS.forEach(id => { this.val[id] = '不启用'; });\n    this.custom = { personCustom: '', nsfwCustom1: '', nsfwCustom2: '' };\n    this.customEnabled = { personCustom: true, nsfwCustom1: true, nsfwCustom2: true };\n    this.userPicked = {};\n    this.locked = {};\n    this.secOff = {};\n    this.secOffBackup = {};\n    this.poseMode = 'SFW';\n    this.nsfwClothOn = false;\n    this.lingerieOn = false;\n    this.nudeOn = false;\n    this.sfwExposureOn = false;\n    this.personNsfwOn = false;\n    this.sockUnlock = false;\n    this.lastMode = 'SFW';\n    this.pantyBackup = {};\n    this.autoTrim = opts.autoTrim !== false; /* HTML 复选框默认勾选 */\n\n    /* ---- 可播种 RNG ---- */\n    this.seed = (opts.seed !== undefined && opts.seed !== null) ? (opts.seed >>> 0) : null;\n    if (this.seed === null) this.seed = (Date.now() ^ ((Math.random() * 0x7fffffff) | 0)) >>> 0;\n    this.rng = mulberry32(this.seed);\n  }\n\n  /* ================= 随机基础 ================= */\n  rand(){ return this.rng(); }\n  randOf(arr){ return arr[Math.floor(this.rand() * arr.length)]; }\n  v(id){ return this.val[id] || ''; }\n\n  /* 用户设值（等价 UI 下拉 change，含 onFieldChange 联动） */\n  set(id, val){\n    if (CUSTOM_FIELD_IDS.indexOf(id) >= 0) { this.custom[id] = val == null ? '' : String(val); return; }\n    if (val == null) val = '';\n    if ((this.val[id] || '') === val) return;\n    this.val[id] = val;\n    this.userPicked[id] = true;\n    this.onFieldChange(id);\n  }\n  setCustom(id, text){ this.custom[id] = text == null ? '' : String(text); }\n  customEnable(id, on){ this.customEnabled[id] = !!on; }\n\n  /* ================= 锁定机制 ================= */\n  isLocked(id){ return !!this.locked[id]; }\n  lockField(id, on){ this.locked[id] = !!on; }\n  lockSection(secId, on){\n    const sec = D.SECTIONS.find(s => s.id === secId);\n    if (!sec) return;\n    this.sectionFieldIds(sec).forEach(id => { this.locked[id] = !!on; });\n  }\n  allLockedNow(){\n    return this.allFieldIds.every(id => CUSTOM_FIELD_IDS.indexOf(id) >= 0 || !!this.locked[id]);\n  }\n\n  /* ================= 段落 ================= */\n  secActive(id){ return !this.secOff[id]; }\n  fieldSection(id){ return this.FIELD_SEC[id]; }\n  sectionFieldIds(sec){\n    const ids = [];\n    (sec.fields || []).forEach(f => { ids.push(f.id); });\n    if (sec.id === 'cloth') D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => { ids.push(f.id); });\n    if (sec.id === 'pose') D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => { ids.push(f.id); });\n    return ids.filter(id => CUSTOM_FIELD_IDS.indexOf(id) < 0);\n  }\n  /* 本段不启用：整段排除于生成（服装⑦/姿态⑧ 不允许整段停用，与 HTML 一致） */\n  sectionOff(secId, on){\n    const sec = D.SECTIONS.find(s => s.id === secId);\n    if (!sec || sec.id === 'cloth' || sec.id === 'pose') return;\n    if (on === undefined) on = !this.secOff[secId];\n    this.secOff[secId] = !!on;\n    if (on) {\n      const bak = {};\n      (sec.fields || []).forEach(f => {\n        if (f.custom || CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n        if (f.range) return;\n        bak[f.id] = { v: this.val[f.id] || '', p: !!this.userPicked[f.id] };\n        const list = f.list ? (D.OPT[f.list] || []) : [];\n        const hasNone = list.some(x => (x && x.v) === '不启用');\n        if (hasNone) this.val[f.id] = '不启用';\n        else if (this.val[f.id] !== '') this.val[f.id] = '';\n        this.userPicked[f.id] = false;\n      });\n      this.secOffBackup[secId] = bak;\n    } else {\n      const bak = this.secOffBackup[secId] || {};\n      (sec.fields || []).forEach(f => {\n        if (f.custom || CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n        if (f.range) return;\n        if (f.id in bak) { this.val[f.id] = bak[f.id].v; this.userPicked[f.id] = bak[f.id].p; }\n      });\n      delete this.secOffBackup[secId];\n      if (secId === 'expression') this.syncEye();\n    }\n  }\n\n  /* ================= NSFW 开关体系（等价 HTML 各 toggle） ================= */\n  nsfwClothEnabled(){ return this.nsfwClothOn; }\n  personNsfwEnabled(){ return this.personNsfwOn; }\n  nsfwAnyActive(){ return this.poseMode === 'NSFW' || this.nsfwClothOn || this.personNsfwOn; }\n  setPoseMode(m){\n    this.poseMode = (m === 'NSFW') ? 'NSFW' : 'SFW';\n    this.lastMode = '';\n  }\n  /* 服装 NSFW 强化开关（含安全内裤备份/还原，等价 syncClothModeUI 的取值侧） */\n  setNsfwCloth(on){\n    const was = this.nsfwClothOn;\n    this.nsfwClothOn = !!on;\n    if (!this.nsfwClothOn) { this.lingerieOn = false; this.nudeOn = false; }\n    const PANTY = D.PANTY_IDS;\n    if (this.nsfwClothOn && !was) {\n      PANTY.forEach(id => {\n        if (this.val[id] && this.val[id] !== '不启用') {\n          if (this.pantyBackup[id] === undefined) this.pantyBackup[id] = this.val[id];\n          this.val[id] = '不启用'; this.userPicked[id] = false;\n        }\n      });\n    } else if (!this.nsfwClothOn && was) {\n      PANTY.forEach(id => {\n        if (this.pantyBackup[id] !== undefined) {\n          this.val[id] = this.pantyBackup[id];\n          if (this.val[id]) this.userPicked[id] = true;\n          this.pantyBackup[id] = undefined;\n        }\n      });\n    }\n    this.lastMode = '';\n  }\n  setLingerieMode(on){\n    if (!this.nsfwClothOn) return;\n    this.lingerieOn = !!on;\n    if (this.lingerieOn) this.nudeOn = false;\n    this.lastMode = '';\n  }\n  setNudeMode(on){\n    if (!this.nsfwClothOn) return;\n    this.nudeOn = !!on;\n    if (this.nudeOn) this.lingerieOn = false;\n    this.lastMode = '';\n  }\n  setSfwExposure(on){\n    this.sfwExposureOn = !!on;\n    if (!on) ['sfwExposure', 'clothTransparency'].forEach(id => { this.val[id] = ''; this.userPicked[id] = false; });\n    this.lastMode = '';\n  }\n  setPersonNsfw(on){ this.personNsfwOn = !!on; this.lastMode = ''; }\n  setSockUnlock(on){ this.sockUnlock = !!on; }\n  /* 总开关：一键联动 姿态二选一 + 服装强化 + 人物强化 */\n  toggleNsfwMaster(){\n    if (this.nsfwAnyActive()) {\n      this.setPoseMode('SFW');\n      this.setNsfwCloth(false);\n      this.personNsfwOn = false;\n    } else {\n      this.setNsfwCloth(true);\n      this.setPoseMode('NSFW');\n      this.personNsfwOn = true;\n    }\n  }\n\n  /* ================= 模式判定 ================= */\n  detectMode(){\n    if (this.poseMode === 'NSFW') return 'NSFW';\n    if (this.nsfwClothEnabled()) {\n      if (this.lingerieOn || this.nudeOn) return 'NSFW';\n      const s1 = this.v('nsfwState');\n      if (s1 && s1 !== '不启用') return 'NSFW';\n      const c1 = this.custom.nsfwCustom1, c2 = this.custom.nsfwCustom2;\n      if ((c1 && this.customEnabled.nsfwCustom1 !== false) || (c2 && this.customEnabled.nsfwCustom2 !== false)) return 'NSFW';\n    }\n    return 'SFW';\n  }\n  isNSFW(){ return this.detectMode() === 'NSFW'; }\n  /* 模式切换后重校验 NSFW 标记字段（等价 refreshModeUI 的取值侧） */\n  syncModeDeps(){\n    const m = this.detectMode();\n    if (m !== this.lastMode) {\n      this.lastMode = m;\n      ['mouth', 'prop', 'styleTag', 'imperf1', 'imperf2'].forEach(id => {\n        const list = D.OPT[id.replace(/\\d+$/, '')] || D.OPT[id] || [];\n        const cur = this.val[id] || '';\n        if (cur && !list.some(o => o.v === cur && (m === 'NSFW' || !o.nsfw))) {\n          this.val[id] = ''; this.userPicked[id] = false;\n        }\n      });\n    }\n  }\n\n  /* ================= 字段参与判定 ================= */\n  fieldActive(id){\n    if (id === 'sfwSimMode') return this.poseMode === 'SFW';\n    if (id === 'sfwSimCoreCat') return this.poseMode === 'SFW' && this.v('sfwSimMode') === '智能匹配';\n    if (id === 'sfwSimCat' || id === 'sfwSimPick') return this.poseMode === 'SFW' && this.v('sfwSimMode') === '手动选类';\n    if (id === 'simMode') return this.poseMode === 'NSFW';\n    if (id === 'simCoreCat') return this.poseMode === 'NSFW' && this.v('simMode') === '智能匹配';\n    if (id === 'simCat' || id === 'simPick') return this.poseMode === 'NSFW' && this.v('simMode') === '手动选类';\n    if (id === 'nsfwChain') return this.poseMode === 'NSFW';\n    if (id === 'nsfwState') return this.nsfwClothEnabled() && !this.nudeOn;\n    if (id === 'nsfwLowerBody') return this.personNsfwEnabled();\n    if (id === 'nsfwBreastDetail') return this.personNsfwEnabled();\n    if (id === 'nsfwCustom1' || id === 'nsfwCustom2') return this.nsfwClothEnabled();\n    if (D.LINGERIE_IDS.indexOf(id) >= 0) return this.nsfwClothEnabled() && this.lingerieOn;\n    if (id === 'nsfwExposure') return this.nsfwClothEnabled() && !(this.lingerieOn || this.nudeOn);\n    if (id === 'sfwExposure') return this.sfwExposureOn && !this.nsfwClothEnabled();\n    if (id === 'clothTransparency') return this.sfwExposureOn && !this.nsfwClothEnabled();\n    if (D.SFW_CLOTH_IDS.indexOf(id) >= 0) return !(this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn));\n    return true;\n  }\n\n  /* ================= 词库反查 ================= */\n  optT(list, val){\n    if (!list) return val;\n    for (let i = 0; i < list.length; i++) if (list[i].v === val) return list[i].t || list[i].v;\n    return val;\n  }\n  flatClothItems(cat){ return D.CLOTH[cat].map(x => ({ v: cat + '｜' + x[0], t: x[1] })); }\n  clothItemT(val){\n    if (!val || val.indexOf('｜') < 0) return val;\n    const cut = val.split('｜'); const cat = cut[0]; const name = cut.slice(1).join('｜');\n    const arr = D.CLOTH[cat]; if (!arr) return val;\n    for (let i = 0; i < arr.length; i++) if (arr[i][0] === name) return arr[i][1];\n    return val;\n  }\n  findPose(name){\n    for (const c in D.POSES) {\n      for (let i = 0; i < D.POSES[c].length; i++)\n        if (D.POSES[c][i][0] === name) return { cat: c, t: D.POSES[c][i][1], risk: !!D.POSES[c][i][2] };\n    }\n    return { cat: '', t: name, risk: false };\n  }\n}\n\n/* =====================================================================\n * 联动池 / 过滤器 / 智能匹配 / 随机 / 补全\n * ===================================================================== */\nObject.assign(Engine.prototype, {\n\n  /* ---- 鞋履适配池（随主件类别，恒含「不启用」「赤脚」逃生口） ---- */\n  shoePoolFor(cat){\n    const names = D.SHOE_POOL[cat];\n    if (!names) return D.OPT.shoes.slice();\n    const pool = [{ v: '不启用', t: '' }];\n    names.forEach(n => {\n      const o = D.OPT.shoes.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    if (!names.some(n => n === '赤脚')) {\n      const bf = D.OPT.shoes.filter(x => x.v === '赤脚')[0];\n      if (bf) pool.push({ v: bf.v, t: bf.t });\n    }\n    return pool;\n  },\n  isSplitCat(){ return this.v('clothCat') === '上下装'; },\n\n  /* ---- 手部细节适配池（旧姿态体系残留接口；擦边动作库下恒全池） ---- */\n  handPoolFor(pose){\n    const tag = pose ? D.POSE_HAND[pose] : null;\n    if (!tag || !D.HAND_POOLS[tag]) return D.OPT.poseExtra.slice();\n    const pool = [{ v: '不启用', t: '' }];\n    D.HAND_POOLS[tag].forEach(n => {\n      const o = D.OPT.poseExtra.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    return pool;\n  },\n\n  /* ---- 情绪×眼神 串联池 ---- */\n  eyePoolFor(emotion){\n    const names = emotion ? D.EMOTION_EYE[emotion] : null;\n    if (!names || !names.length) return D.OPT.eye.slice();\n    const pool = [];\n    names.forEach(n => {\n      const o = D.OPT.eye.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    return pool;\n  },\n  /* 选情绪后：当前眼神不适配则回落池内第一项（眼神必选不留空） */\n  syncEye(){\n    const pool = this.eyePoolFor(this.v('emotion'));\n    const cur = this.v('eye');\n    if (cur && pool.some(o => o.v === cur)) return;\n    this.val['eye'] = pool.length ? pool[0].v : '';\n    this.userPicked['eye'] = true;\n  },\n\n  /* ---- 风格驱动池过滤（§7.5-F） ---- */\n  currentStyle(){\n    const s = this.v('stylePreset');\n    return (s && s !== '不启用' && D.STYLE_POOLS[s]) ? s : null;\n  },\n  styleActive(){ return this.currentStyle() !== null; },\n  randomClothCatPool(){\n    const st = this.currentStyle();\n    if (st) { const c = D.STYLE_POOLS[st].cat || []; if (c.length) return c; }\n    return D.OPT.clothCat.map(o => o.v);\n  },\n  stylePoolFor(id){\n    const st = this.currentStyle();\n    if (!st) return null;\n    if (id === 'splitColor') return D.STYLE_COLOR_POOLS[st] || null;\n    if (id === 'sockType' || id === 'sockLen' || id === 'sockColor' || id === 'sockOpacity') {\n      if (this.sockUnlock) return null;\n      const k = (id === 'sockType') ? 'sock' : id;\n      return D.STYLE_POOLS[st][k] || null;\n    }\n    const key = D_STYLE_FIELD_KEY[id]; if (!key) return null;\n    return D.STYLE_POOLS[st][key] || null;\n  },\n  filterStylePool(list, id){\n    const allow = this.stylePoolFor(id);\n    if (!allow) return list;\n    return list.filter(o => allow.indexOf(o.v) >= 0);\n  },\n\n  /* ---- 情趣内衣 ---- */\n  lingerieCatKey(val){\n    for (let i = 0; i < D.OPT.lingerieCat.length; i++) if (D.OPT.lingerieCat[i].v === val) return D.OPT.lingerieCat[i].t || val;\n    return val;\n  },\n\n  /* ---- 智能匹配（动作库）：剔除核心同类 → 各类抽 1 → 场景环境关键词打分 → 取最高（平局随机）；全 0 分兜底含「地」 ---- */\n  simModeActive(){ const m = this.v('simMode'); return m && m !== '' && m !== '不启用'; },\n  coreSimCat(){\n    const sc = this.v('simCoreCat'); if (!sc || sc === '不启用') return null;\n    return sc.charAt(0);\n  },\n  simPickText(){\n    const p = this.v('simPick'); if (!p) return '';\n    const item = (D.SIM_POSES[p.charAt(0)] || []).filter(x => x.id === p)[0];\n    return item ? item.t : '';\n  },\n  smartSimPick(){\n    const env = D.SCENE_ENV[this.v('scene')] || D.SCENE_ENV['__default'];\n    const core = this.coreSimCat();\n    const cats = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].filter(c => c !== core);\n    const cands = cats.map(c => {\n      const arr = D.SIM_POSES[c] || [];\n      return arr[Math.floor(this.rand() * arr.length)];\n    }).filter(Boolean);\n    cands.forEach(it => { it._score = env.filter(kw => it.t.indexOf(kw) >= 0).length; });\n    cands.sort((a, b) => b._score - a._score);\n    if (cands[0]._score > 0) {\n      const best = cands.filter(it => it._score === cands[0]._score);\n      return best[Math.floor(this.rand() * best.length)].t;\n    }\n    const ground = cands.filter(it => it.t.indexOf('地') >= 0);\n    if (ground.length) return ground[Math.floor(this.rand() * ground.length)].t;\n    return cands[Math.floor(this.rand() * cands.length)].t;\n  },\n\n  /* ---- SFW 擦边动作库（同构） ---- */\n  sfwSimModeActive(){ const m = this.v('sfwSimMode'); return m && m !== '' && m !== '不启用'; },\n  sfwCoreSimCat(){\n    const sc = this.v('sfwSimCoreCat'); if (!sc || sc === '不启用') return null;\n    return sc.charAt(0);\n  },\n  sfwSimPickText(){\n    const p = this.v('sfwSimPick'); if (!p) return '';\n    const item = (D.SFW_POSES[p.charAt(0)] || []).filter(x => x.id === p)[0];\n    return item ? item.t : '';\n  },\n  smartSfwPick(){\n    const env = D.SCENE_ENV[this.v('scene')] || D.SCENE_ENV['__default'];\n    const core = this.sfwCoreSimCat();\n    const cats = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].filter(c => c !== core);\n    const cands = cats.map(c => {\n      const arr = D.SFW_POSES[c] || [];\n      return arr[Math.floor(this.rand() * arr.length)];\n    }).filter(Boolean);\n    cands.forEach(it => { it._score = env.filter(kw => it.t.indexOf(kw) >= 0).length; });\n    cands.sort((a, b) => b._score - a._score);\n    if (cands[0]._score > 0) {\n      const best = cands.filter(it => it._score === cands[0]._score);\n      return best[Math.floor(this.rand() * best.length)].t;\n    }\n    const ground = cands.filter(it => it.t.indexOf('地') >= 0);\n    if (ground.length) return ground[Math.floor(this.rand() * ground.length)].t;\n    return cands[Math.floor(this.rand() * cands.length)].t;\n  },\n\n  /* ---- S12 服装细节连贯（颜色/材质族归一；随机规避与自检共用） ---- */\n  itemColorFam12(it){ for (const k in D_ITEM_C12) { if (it.indexOf(k) >= 0) return D_ITEM_C12[k]; } return null; },\n  itemMatFam12(it){ for (const k in D_MAT_FAM12) { if (it.indexOf(k) >= 0) return D_MAT_FAM12[k]; } return null; },\n  matFam12(mt){ for (const k in D_MAT_FAM12) { if (mt.indexOf(k) >= 0) return D_MAT_FAM12[k]; } return null; },\n  itemEmbedsMainMat(it){ return !this.itemMatFam12(it) && EMBED_MAIN_MAT_RE.test(this.clothItemT(it) || ''); },\n  splitTopColor12(sc){ const seg = (sc || '').split('·').pop() || sc; return seg.split('下')[0].replace('上', ''); },\n  s12FilterList(fid, arr){\n    if (fid !== 'clothMat' && fid !== 'splitColor') return arr;\n    const it = this.v('clothItem') || '';\n    if (fid === 'clothMat' && this.itemEmbedsMainMat(it)) return [{ v: '不启用', t: '不启用' }];\n    if (!this.isSplitCat()) return arr;\n    let out;\n    if (fid === 'clothMat') {\n      const mFam = this.itemMatFam12(it);\n      if (!mFam) return arr;\n      out = arr.filter(o => { const mf = this.matFam12(o.v); return !mf || mf === mFam; });\n    } else {\n      const cFam = this.itemColorFam12(it);\n      if (!cFam) return arr;\n      out = arr.filter(o => { const tc = this.splitTopColor12(o.v); return !tc || tc.indexOf(cFam) >= 0; });\n    }\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n\n  /* ---- 色调×天气 / 场景×色调 / 妆容×糊妆 / 袜子 / 情绪×口型 兼容过滤 ---- */\n  weatherToneFilter(list){\n    const bad = D_WEATHER_TONE_FILTER[this.v('colorTone')];\n    if (!bad) return list;\n    return list.filter(o => !bad[o.v]);\n  },\n  weatherToneConflict(){\n    const tn = this.v('colorTone'), we = this.v('weather');\n    return (tn && we && we !== '不启用' && D_WEATHER_TONE_FILTER[tn] && D_WEATHER_TONE_FILTER[tn][we]) ? we : null;\n  },\n  sceneToneFilter(list){\n    const bad = D_SCENE_TONE_FILTER[this.v('colorTone')];\n    if (!bad) return list;\n    return list.filter(o => !bad[o.v]);\n  },\n  sceneToneConflict(){\n    const tn = this.v('colorTone'), sc = this.v('scene');\n    return (tn && sc && sc !== '不启用' && D_SCENE_TONE_FILTER[tn] && D_SCENE_TONE_FILTER[tn][sc]) ? sc : null;\n  },\n  smudgeFilter(list){\n    if (this.v('makeup') === '素颜') return [{ v: '不启用', t: '不启用' }];\n    return list;\n  },\n  sockLenFilter(list){\n    if (D_SOCK_LEN_FIX[this.v('sockType')]) return [{ v: '不启用', t: '不启用' }];\n    return list;\n  },\n  sockTypeFilter(list){\n    if (this.v('sockLen') !== '连裤') return list;\n    const out = list.filter(o => !D_SOCK_LONG_FOOT_TYPES[o.v]);\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n  sockLenTypeConflict(){\n    const st = this.v('sockType'), sl = this.v('sockLen');\n    if (!st || st === '不启用' || !sl || sl === '不启用') return null;\n    if (D_SOCK_LEN_FIX[st]) return '类型「' + st + '」已自带长度语义，长度字段应置「不启用」';\n    if (sl === '连裤' && D_SOCK_LONG_FOOT_TYPES[st]) return '长度「连裤」为整腿袜，与分段袜「' + st + '」不同类';\n    return null;\n  },\n  mouthFilter(list){\n    const ban = D_EMOTION_MOUTH_BAN[this.v('emotion')];\n    if (!ban) return list;\n    const out = list.filter(o => !ban[o.v]);\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n  mouthEmotionConflict(){\n    const ban = D_EMOTION_MOUTH_BAN[this.v('emotion')], mt = this.v('mouth');\n    if (!ban || !mt || mt === '不启用') return null;\n    return ban[mt] ? '情绪「' + this.v('emotion') + '」与口型「' + mt + '」矛盾' : null;\n  },\n\n  /* ---- 字段联动（等价 onFieldChange 取值侧） ---- */\n  onFieldChange(id){\n    if (id === 'clothCat') this.userPicked['clothItem'] = false;\n    if (id === 'sfwSimMode') { /* 隐藏侧字段值保留，fieldActive 判定即可 */ }\n    if (id === 'sfwSimCat') this.userPicked['sfwSimPick'] = false;\n    if (id === 'emotion') this.syncEye();\n    if (id === 'lingerieCat') this.userPicked['lingerieItem'] = false;\n    if (id === 'simMode') { /* 同上 */ }\n    if (id === 'simCat') this.userPicked['simPick'] = false;\n    if (id === 'stylePreset') {\n      const p = D.STYLE_PRESETS[this.v('stylePreset')];\n      if (p) {\n        /* 上下连贯：先清空预设未覆盖的服装字段旧值（保留锁定与自定义），再整体填入预设 */\n        D.SFW_CLOTH_IDS.forEach(fid => {\n          if (fid === 'stylePreset' || (fid in p)) return;\n          if (!this.locked[fid]) { this.val[fid] = ''; this.userPicked[fid] = false; }\n        });\n        Object.keys(p).forEach(k => {\n          if (this.allFieldIds.indexOf(k) >= 0) { this.val[k] = p[k]; this.userPicked[k] = true; }\n        });\n      }\n    }\n  },\n\n  /* ---- 单字段随机（等价 randomizeField；''=未选 由 fillBlanks 补全，这里直接掷值） ---- */\n  randomizeField(f){\n    if (CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n    if (this.locked[f.id]) return;\n    if (this.secOff[this.fieldSection(f.id)]) return;\n    if (!this.fieldActive(f.id)) return;\n    if (SPLIT_FIELDS.indexOf(f.id) >= 0 && !this.isSplitCat()) return;\n    if (f.id === 'bottomLength' && !this.isSplitCat()) return;\n    if (NEG_EFFECT_IDS.indexOf(f.id) >= 0) {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (f.id === 'simCoreCat') {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (this.nsfwClothEnabled() && D.PANTY_IDS.indexOf(f.id) >= 0) {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (f.range) {\n      const rmin = parseFloat(f.min || 1), rmax = parseFloat(f.max || 2), rstep = parseFloat(f.step || 0.05);\n      const rk = Math.floor(this.rand() * (Math.round((rmax - rmin) / rstep) + 1));\n      this.val[f.id] = (rmin + rk * rstep).toFixed(2);\n      this.userPicked[f.id] = true;\n      return;\n    }\n    let list = D.OPT[f.list] || [];\n    if (f.list === 'clothItem') { const cat = this.v('clothCat') || '上下装'; list = this.flatClothItems(cat); }\n    if (f.list === 'shoes') { list = this.shoePoolFor(this.v('clothCat') || '上下装'); }\n    if (f.list === 'poseExtra') { list = this.handPoolFor(this.v('pose')); }\n    if (f.list === 'eye') { list = this.eyePoolFor(this.v('emotion')); }\n    if (f.list === 'pose') { const pc = this.v('poseCat') || '静态姿势'; list = D.POSES[pc].map(x => ({ v: x[0], t: x[1] })); }\n    if (f.list === 'lingerieItem') { const lck = this.lingerieCatKey(this.v('lingerieCat')); list = (D.LINGERIE_ITEMS[lck] || []).map(x => ({ v: x[1], t: x[1] })); }\n    if (f.list === 'simPick') { const sc = this.v('simCat') || ''; const key = sc ? sc.charAt(0) : ''; list = (D.SIM_POSES[key] || []).map(x => ({ v: x.id, t: x.t })); }\n    if (f.list === 'sfwSimPick') { const ssc = this.v('sfwSimCat') || ''; const skey = ssc ? ssc.charAt(0) : ''; list = (D.SFW_POSES[skey] || []).map(x => ({ v: x.id, t: x.t })); }\n    if (f.id === 'sfwSimCoreCat') { this.val[f.id] = '不启用'; this.userPicked[f.id] = false; return; }\n    if (f.list === 'clothCat' || f.list === 'poseCat') return; /* 主类别由主项随机带动 */\n    if (f.list === 'weather') list = this.weatherToneFilter(list);\n    if (f.list === 'scene') list = this.sceneToneFilter(list);\n    list = this.filterStylePool(list, f.id);\n    let arr = list.filter(o => (this.isNSFW() || !o.nsfw) && o.v !== '不启用');\n    if (f.id === 'smudge') arr = this.smudgeFilter(arr);\n    arr = this.s12FilterList(f.id, arr);\n    if (f.id === 'sockLen') arr = this.sockLenFilter(arr);\n    if (f.id === 'sockType') arr = this.sockTypeFilter(arr);\n    if (f.id === 'mouth') arr = this.mouthFilter(arr);\n    if (!arr.length) return;\n    this.val[f.id] = arr[Math.floor(this.rand() * arr.length)].v;\n    this.userPicked[f.id] = true;\n  },\n\n  /* ---- 整段随机 / 全部随机 ---- */\n  randomizeSection(sec){\n    if (sec.id === 'cloth') {\n      const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n      if (!clothHidden && !this.locked['clothCat']) {\n        const cats = this.randomClothCatPool();\n        this.val['clothCat'] = cats[Math.floor(this.rand() * cats.length)];\n        this.userPicked['clothCat'] = true;\n      }\n      D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n    } else if (sec.id === 'pose') {\n      if (this.poseMode === 'SFW' && !this.locked['sfwSimMode']) {\n        const pcs = D.OPT.sfwSimMode;\n        this.val['sfwSimMode'] = pcs[Math.floor(this.rand() * pcs.length)].v;\n        this.userPicked['sfwSimMode'] = true;\n      }\n      D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n    } else {\n      sec.fields.forEach(f => this.randomizeField(f));\n    }\n  },\n  randomizeAll(){\n    D.SECTIONS.forEach(sec => {\n      if (sec.id === 'cloth') {\n        const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n        if (!clothHidden && !this.locked['clothCat']) {\n          const cats = this.randomClothCatPool();\n          this.val['clothCat'] = cats[Math.floor(this.rand() * cats.length)];\n          this.userPicked['clothCat'] = true;\n        }\n        D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n      } else if (sec.id === 'pose') {\n        if (this.poseMode === 'SFW' && !this.locked['sfwSimMode']) {\n          const pcs = D.OPT.sfwSimMode;\n          this.val['sfwSimMode'] = pcs[Math.floor(this.rand() * pcs.length)].v;\n          this.userPicked['sfwSimMode'] = true;\n        }\n        D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n      } else {\n        sec.fields.forEach(f => this.randomizeField(f));\n      }\n    });\n  },\n  /* 解锁并全部随机（页头按钮） */\n  unlockAndRandomizeAll(){\n    this.allFieldIds.forEach(id => { if (CUSTOM_FIELD_IDS.indexOf(id) < 0) this.locked[id] = false; });\n    this.randomizeAll();\n  },\n\n  /* ---- 补全（fillBlanks）：只补空未选项，已选值即事实来源 ---- */\n  randomValueFor(id){\n    if (NEG_EFFECT_IDS.indexOf(id) >= 0) return '不启用';\n    if (id === 'simCoreCat') return '不启用';\n    if (this.nsfwClothEnabled() && D.PANTY_IDS.indexOf(id) >= 0) return '不启用';\n    if (id === 'clothItem') {\n      const cat = this.v('clothCat') || '上下装';\n      return this.randOf(this.flatClothItems(cat)).v;\n    }\n    if (id === 'pose') {\n      const pc = this.v('poseCat') || '静态姿势';\n      return this.randOf(D.POSES[pc].map(x => ({ v: x[0], t: x[1] }))).v;\n    }\n    if (id === 'sfwSimPick') {\n      const ssck = this.v('sfwSimCat') || ''; const sskey = ssck ? ssck.charAt(0) : '';\n      const ssl = (D.SFW_POSES[sskey] || []).map(x => ({ v: x.id, t: x.t }));\n      if (!ssl.length) return '';\n      return this.randOf(ssl).v;\n    }\n    if (id === 'sfwSimCoreCat') return '不启用';\n    if (id === 'shoes') {\n      const sp = this.filterStylePool(this.shoePoolFor(this.v('clothCat') || '上下装'), 'shoes').filter(o => o.v !== '');\n      if (!sp.length) return '';\n      return this.randOf(sp).v;\n    }\n    if (id === 'poseExtra') {\n      const hp = this.handPoolFor(this.v('pose')).filter(o => o.v !== '');\n      if (!hp.length) return '';\n      return this.randOf(hp).v;\n    }\n    if (id === 'eye') {\n      const ep = this.eyePoolFor(this.v('emotion'));\n      if (!ep.length) return '';\n      return this.randOf(ep).v;\n    }\n    if (id === 'lingerieItem') {\n      const llck = this.lingerieCatKey(this.v('lingerieCat'));\n      const ll = (D.LINGERIE_ITEMS[llck] || []).map(x => ({ v: x[1], t: x[1] }));\n      if (!ll.length) return '';\n      return this.randOf(ll).v;\n    }\n    if (id === 'simPick') {\n      const sck = this.v('simCat') || ''; const skey = sck ? sck.charAt(0) : '';\n      const sl = (D.SIM_POSES[skey] || []).map(x => ({ v: x.id, t: x.t }));\n      if (!sl.length) return '';\n      return this.randOf(sl).v;\n    }\n    let list = (D.OPT[id] || []);\n    if (id === 'smudge') list = this.smudgeFilter(list);\n    if (id === 'weather') list = this.weatherToneFilter(list);\n    if (id === 'scene') list = this.sceneToneFilter(list);\n    list = this.filterStylePool(list, id);\n    list = list.filter(o => (this.isNSFW() || !o.nsfw) && o.v !== '' && o.v !== '不启用');\n    list = this.s12FilterList(id, list);\n    if (id === 'sockLen') list = this.sockLenFilter(list);\n    if (id === 'sockType') list = this.sockTypeFilter(list);\n    if (id === 'mouth') list = this.mouthFilter(list);\n    if (!list.length) return '';\n    return this.randOf(list).v;\n  },\n  fillBlanks(){\n    let filled = 0;\n    const inferCat = id => {\n      if ((this.val[id] || '') === '' && !this.locked[id]) {\n        const itemSel = (id === 'clothCat') ? this.v('clothItem') : this.v('pose');\n        if (itemSel && itemSel !== '不启用') {\n          if (id === 'clothCat') this.val[id] = itemSel.split('｜')[0];\n          else { const po = this.findPose(itemSel); if (po.cat) this.val[id] = po.cat; }\n        }\n        if (this.val[id] === '') this.val[id] = this.randOf(D.OPT[id]).v;\n        this.userPicked[id] = true;\n        filled++;\n      }\n    };\n    const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n    if (!clothHidden) inferCat('clothCat');\n    this.allFieldIds.forEach(id => {\n      if (id === 'clothCat' || id === 'poseCat') return;\n      if (CUSTOM_FIELD_IDS.indexOf(id) >= 0) return;\n      if (id === 'stylePreset') return;\n      if (this.secOff[this.fieldSection(id)]) return;\n      if (this.locked[id]) return;\n      if (SPLIT_FIELDS.indexOf(id) >= 0 && !this.isSplitCat()) return;\n      if (id === 'bottomLength' && !this.isSplitCat()) return;\n      if (!this.fieldActive(id)) return;\n      if ((this.val[id] || '') !== '') return;\n      const rv = this.randomValueFor(id);\n      if (rv !== '' && rv !== undefined) { this.val[id] = rv; filled++; }\n    });\n    return filled;\n  },\n\n  /* ---- 清空（等价 clearAll 取值侧） ---- */\n  clearAll(){\n    this.allFieldIds.forEach(id => {\n      this.val[id] = RANGE_FIELDS[id] ? String(RANGE_FIELDS[id].def !== undefined ? RANGE_FIELDS[id].def : '1') : '';\n    });\n    Object.keys(this.userPicked).forEach(k => { this.userPicked[k] = false; });\n    this.nsfwClothOn = false; this.lingerieOn = false; this.nudeOn = false;\n    this.pantyBackup = {};\n    this.personNsfwOn = false;\n    this.sfwExposureOn = false;\n    this.poseMode = 'SFW';\n    this.allFieldIds.forEach(id => { if (CUSTOM_FIELD_IDS.indexOf(id) < 0) this.locked[id] = false; });\n    CUSTOM_FIELD_IDS.forEach(id => { this.custom[id] = ''; this.customEnabled[id] = true; });\n    this.secOff = {}; this.secOffBackup = {};\n    this.lastMode = 'SFW';\n    ['mouth', 'prop'].concat(NEG_EFFECT_IDS).forEach(id => { this.val[id] = ''; this.userPicked[id] = false; });\n    NEG_EFFECT_IDS.forEach(id => { this.val[id] = '不启用'; this.userPicked[id] = false; });\n    this.syncEye();\n  },\n\n  /* ---- 设定导入/导出（JSON 序列化，跨会话复用同一份「配方」） ---- */\n  dumpSettingsObj(){\n    return {\n      val: Object.assign({}, this.val),\n      custom: Object.assign({}, this.custom),\n      customEnabled: Object.assign({}, this.customEnabled),\n      locked: Object.assign({}, this.locked),\n      secOff: Object.assign({}, this.secOff),\n      poseMode: this.poseMode,\n      nsfwClothOn: this.nsfwClothOn,\n      lingerieOn: this.lingerieOn,\n      nudeOn: this.nudeOn,\n      sfwExposureOn: this.sfwExposureOn,\n      personNsfwOn: this.personNsfwOn,\n      sockUnlock: this.sockUnlock,\n      autoTrim: this.autoTrim,\n      seed: this.seed\n    };\n  },\n  loadSettingsObj(o){\n    if (!o) return;\n    if (o.val) Object.keys(o.val).forEach(id => { if (id in this.val) this.val[id] = o.val[id]; });\n    if (o.custom) Object.keys(o.custom).forEach(id => { if (id in this.custom) this.custom[id] = o.custom[id]; });\n    if (o.customEnabled) Object.keys(o.customEnabled).forEach(id => { if (id in this.customEnabled) this.customEnabled[id] = o.customEnabled[id]; });\n    if (o.locked) this.locked = Object.assign({}, o.locked);\n    if (o.secOff) this.secOff = Object.assign({}, o.secOff);\n    if (o.poseMode) this.poseMode = o.poseMode;\n    this.nsfwClothOn = !!o.nsfwClothOn;\n    this.lingerieOn = !!o.lingerieOn;\n    this.nudeOn = !!o.nudeOn;\n    this.sfwExposureOn = !!o.sfwExposureOn;\n    this.personNsfwOn = !!o.personNsfwOn;\n    this.sockUnlock = !!o.sockUnlock;\n    if (o.autoTrim !== undefined) this.autoTrim = o.autoTrim;\n    if (o.seed !== undefined && o.seed !== null) this.seed = o.seed >>> 0;\n    this.rng = mulberry32(this.seed);\n    /* lastMode 取当前模式：设定是「求解完的状态」，再跑时不应触发模式切换回落\n       （HTML 里 lastMode 是常驻内存状态，等价于已稳定） */\n    this.lastMode = this.detectMode();\n    /* 联动一致性：换风格/类别后回落不适配值由下次 generate 的 fillBlanks 兜底 */\n  },\n  dumpSettingsLines(){\n    const lines = [];\n    D.SECTIONS.forEach(sec => {\n      if (this.secOff[sec.id]) return;\n      const sub = [];\n      this.sectionFieldIds(sec).concat(\n        sec.id === 'cloth' ? [] : sec.id === 'pose' ? [] : []\n      ).forEach(id => {\n        const val = (this.val[id] || '').trim();\n        if (!val || val === '不启用') return;\n        if (!this.fieldActive(id)) return;\n        if (SPLIT_FIELDS.indexOf(id) >= 0 && !this.isSplitCat()) return;\n        sub.push((this.FIELD_LABEL[id] || id) + '：' + val);\n      });\n      if (sub.length) lines.push('· ' + (sec.title || sec.id) + '：' + sub.join('；'));\n    });\n    CUSTOM_FIELD_IDS.forEach(id => {\n      if (this.customEnabled[id] === false) return;\n      const val = (this.custom[id] || '').trim(); if (!val) return;\n      lines.push('· 自定义补充（' + (this.FIELD_LABEL[id] || id) + '）：' + val);\n    });\n    return lines;\n  }\n});\n\n/* ---- 过滤器常量（HTML 行 5190–5298，与 S12/S13/S15/S16 自检共用同一口径） ---- */\nconst D_ITEM_C12 = { '象牙白': '白', '白色': '白', '奶白': '白', '奶色': '白', '雪白': '白', '黑色': '黑', '墨黑': '黑', '深蓝': '蓝', '驼色': '驼', '淡粉': '粉', '浅卡其': '卡其', '复古波点': '白', '灰色': '灰', '深灰': '灰',\n  '米白': '白', '米色': '白', '奶油白': '白', '素白': '白', '月白': '白', '月白色': '白',\n  '浅粉': '粉', '粉色': '粉',\n  '浅蓝': '蓝', '蓝色': '蓝', '藏青': '蓝', '藏青色': '蓝',\n  '浅绿': '绿', '淡绿': '绿', '墨绿': '绿',\n  '红色': '红', '酒红': '红', '正红': '红', '绯红': '红', '大红': '红',\n  '浅紫': '紫', '紫色': '紫', '绛紫': '紫',\n  '香槟': '香槟', '银灰': '灰', '银色': '银' };\nconst D_MAT_FAM12 = { '棉质': '棉', '罗纹': '针织', '针织': '针织', '丝绒': '丝绒', '缎面': '丝', '丝质': '丝', '真丝': '丝', '雪纺': '雪纺', '羊绒': '羊绒', '蕾丝': '蕾丝', '镂空针织': '针织', '牛仔': '牛仔', '皮革': '皮革', '乳胶': '乳胶', '织锦缎': '织锦', '织锦': '织锦', '提花': '提花', '厚实': '棉', '薄纱': '纱', '欧根纱': '纱', '香云纱': '香云纱' };\nconst EMBED_MAIN_MAT_RE = /棉质|针织|罗纹|牛仔|雪纺|真丝|丝质|缎面|蕾丝|薄纱|丝绒|皮革|羊绒|乳胶|织锦|织金|提花|欧根纱|香云纱|厚实|纱/;\nconst D_WEATHER_TONE_FILTER = { '日光清新': { '夜色深沉': 1, '黄昏暮色': 1 }, '阴天柔灰': { '夜色深沉': 1, '黄昏暮色': 1 }, '中性白': { '夜色深沉': 1 } };\nconst D_NIGHT_SCENES = { '情人旅馆': 1, '酒店套房': 1, '电车': 1, '车内': 1, '便利店': 1, '点歌厅': 1, '夜店': 1, '天台': 1, '夜晚公园': 1, '后巷': 1, '监禁密室': 1 };\nconst D_SCENE_TONE_FILTER = { '日光清新': D_NIGHT_SCENES, '阴天柔灰': D_NIGHT_SCENES, '中性白': D_NIGHT_SCENES };\nconst D_SOCK_LEN_FIX = { '过膝长筒袜': ['过膝', '大腿'], '吊带袜': ['大腿', '过膝'], '毛绒长袜': ['过膝', '大腿', '小腿'], '泡泡袜': ['及踝', '短袜'], '足袋': ['及踝'] };\nconst D_SOCK_LONG_FOOT_TYPES = { '吊带袜': 1, '过膝长筒袜': 1, '毛绒长袜': 1, '泡泡袜': 1, '足袋': 1 };\nconst D_EMOTION_MOUTH_BAN = {\n  '隐忍': { '大笑': 1, '微张': 1, '吐舌': 1, '舔唇': 1, '唾液': 1 },\n  '痛苦': { '大笑': 1, '微张': 1, '吐舌': 1, '舔唇': 1, '唾液': 1 },\n  '愉悦': { '闭合': 1, '大笑': 1 },\n  '惊恐': { '闭合': 1, '大笑': 1 },\n  '害羞': { '大笑': 1 }\n};\nconst D_STYLE_FIELD_KEY = { clothMat: 'mat', clothPattern: 'pattern', clothDeco: 'deco',\n  bottomLength: 'bottomLen', outerwear: 'outerwear', collarStyle: 'collar', topLength: 'topLen',\n  bottomStyle: 'bottom', sockType: 'sock', shoes: 'shoe' };\n\n/* =====================================================================\n * 提示词组装（buildPrompt）—— 与 HTML 行 5458–5715 逐段一致\n * ===================================================================== */\nEngine.prototype.countChars = function(s){\n  const cjk = (s.match(/[\\u4e00-\\u9fff]/g) || []).length;\n  const lat = (s.match(/[a-zA-Z]+/g) || []).length;\n  return cjk + lat;\n};\n\nEngine.prototype.buildPrompt = function(skip){\n  skip = skip || {};\n  const e = this;\n  const parts = [];\n  const v = e.v.bind(e);\n  const optT = e.optT.bind(e);\n  const OPT = D.OPT;\n  const poseNSFW = (e.poseMode === 'NSFW') && e.simModeActive();\n  const clothNSFW = e.nsfwClothEnabled() && (function(){\n    let s = v('nsfwState'); if (e.nudeOn) s = '';\n    if (s && s !== '不启用') return true;\n    return !!((e.custom.nsfwCustom1 && e.customEnabled.nsfwCustom1 !== false) || (e.custom.nsfwCustom2 && e.customEnabled.nsfwCustom2 !== false));\n  })();\n\n  /* 0. 衣着状态前置句（NSFW 强化：全裸=赤裸描述；否则半裸+随机上身部位） */\n  if (e.nsfwClothEnabled()) {\n    parts.push(e.nudeOn ? '全身赤裸，肌肤完全裸露。' : '人物半裸，' + e.randOf(UPPER_NUDE_PARTS) + '。');\n  }\n\n  /* ① 拍摄角度 */\n  if (!e.secOff.camera) {\n    let s1 = optT(OPT.lens, v('lens')) + '，' + optT(OPT.viewpoint, v('viewpoint'));\n    const ss = v('shotSize'); if (ss && ss !== '不启用') s1 += '，取' + ss + '景别';\n    const df = v('dof'); if (df && df !== '不启用') s1 += '，' + optT(OPT.dof, df);\n    const dev = v('device'); if (dev && dev !== '不启用' && !skip.device) s1 += '，画面以' + optT(OPT.device, dev) + '呈现';\n    parts.push(s1 + '。');\n  }\n\n  /* ② 光影 · 色调 · 氛围 */\n  let s2 = '';\n  if (!e.secOff.light) {\n    const ml = v('mainLight'); if (ml && ml !== '不启用' && !skip.mainLight) s2 += optT(OPT.mainLight, ml) + '。';\n    const amb = v('ambient'); if (amb && amb !== '不启用' && !skip.ambient) s2 += optT(OPT.ambient, amb) + '。';\n    s2 += optT(OPT.colorTone, v('colorTone')) + '。';\n  }\n  if (!e.secOff.extra) {\n    const film = v('film'); if (film && film !== '不启用' && !skip.film) s2 += optT(OPT.film, film) + '。';\n    const cine = v('cine'); if (cine && cine !== '不启用' && !skip.cine) s2 += optT(OPT.cine, cine) + '。';\n  }\n  if (s2) parts.push(s2);\n\n  /* ③ 人物维度 */\n  function pval(id){ const x = v(id); return (x && x !== '不启用') ? x : ''; }\n  let s3 = '';\n  if (!e.secOff.person) {\n    const pGroups = [];\n    const ptm = pval('temperament'), pag = pval('age');\n    if (ptm && pag) pGroups.push(ptm + '的' + pag); else if (ptm || pag) pGroups.push(ptm || pag);\n    if (pval('race')) pGroups.push(pval('race'));\n    const psk = pval('skin'), ptx = pval('texture');\n    if (psk && ptx) pGroups.push(psk + ptx); else if (psk || ptx) pGroups.push(psk || ptx);\n    if (pval('face')) pGroups.push(pval('face'));\n    const pbl = [pval('body'), pval('leg') ? optT(OPT.leg, pval('leg')) : ''].filter(Boolean).join('、');\n    if (pbl) pGroups.push(pbl);\n    const lrv = parseFloat(v('legRatio')) || 1;\n    if (lrv > 1) {\n      let lrd;\n      if (lrv >= 1.9) lrd = '双腿极其修长，腿长接近上半身两倍，九头身超模比例，满屏长腿';\n      else if (lrv >= 1.7) lrd = '双腿极为修长，腿长约为上半身的' + lrv.toFixed(1) + '倍，逆天长腿，九头身比例';\n      else if (lrv >= 1.45) lrd = '双腿修长挺拔，腿长约为上半身的' + lrv.toFixed(1) + '倍，高挑显腿长';\n      else if (lrv >= 1.2) lrd = '双腿修长匀称，腿长约为上半身的' + lrv.toFixed(1) + '倍，身形比例极佳';\n      else lrd = '双腿比例自然修长，腿长略长于上半身';\n      pGroups.push(lrd);\n    }\n    const bsxv = pval('breastSize'), bshv = pval('breastShape');\n    const pbx = [bsxv ? optT(OPT.breastSize, bsxv) : '', bshv ? optT(OPT.breastShape, bshv) : ''].filter(Boolean).join('，');\n    if (pbx) pGroups.push(pbx);\n    const bodyPart = [pval('shoulder') ? optT(OPT.shoulder, pval('shoulder')) : '',\n      pval('chestPos') ? optT(OPT.chestPos, pval('chestPos')) : '',\n      pval('waist') ? optT(OPT.waist, pval('waist')) : '',\n      pval('hip') ? optT(OPT.hip, pval('hip')) : '',\n      pval('arm') ? optT(OPT.arm, pval('arm')) : ''].filter(Boolean).join('，');\n    if (bodyPart) pGroups.push(bodyPart);\n    const nlb = pval('nsfwLowerBody');\n    if (nlb && e.personNsfwEnabled() && !skip.nsfwLowerBody) pGroups.push(optT(OPT.nsfwLowerBody, nlb));\n    const nbd = pval('nsfwBreastDetail');\n    if (nbd && e.personNsfwEnabled() && !skip.nsfwBreastDetail) pGroups.push(optT(OPT.nsfwBreastDetail, nbd));\n    if (pval('firstImp')) pGroups.push(pval('firstImp'));\n    let pcx = (e.custom.personCustom || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (pcx && e.customEnabled.personCustom !== false && !skip.personCustom) pGroups.push(pcx);\n    s3 = pGroups.length ? pGroups.join('，') + '。' : '';\n  }\n  if (!e.secOff.extra) {\n    const tatt = v('tattoo'), tpos = v('tattooPos');\n    if (tatt && tatt !== '不启用' && tpos && tpos !== '不启用' && !skip.tattoo) s3 += tpos + '有一枚' + tatt + '纹身，墨色贴合皮肤轮廓自然晕染，边缘微微褪色，如同渗入皮肤下层的真墨。';\n  }\n  if (s3) parts.push(s3);\n\n  /* ④ 发型 */\n  if (!e.secOff.hair) {\n    const hairCore = [v('hairLen'), v('hairColor'), v('hairCurl')].filter(x => x && x !== '不启用').join('');\n    const hairParts = [];\n    if (hairCore) hairParts.push(hairCore);\n    const hte = v('hairTie'); if (hte && hte !== '不启用') hairParts.push(hte);\n    const hbn = v('hairBangs'); if (hbn && hbn !== '不启用') hairParts.push(hbn);\n    const hst = v('hairState'); if (hst && hst !== '不启用') hairParts.push(hst);\n    let s4 = hairParts.join('，');\n    const haf = v('hairAccFront'); if (haf && haf !== '不启用' && !skip.hairAccFront) s4 += (s4 ? '，' : '') + optT(OPT.hairAccFront, haf);\n    const hab = v('hairAccBack'); if (hab && hab !== '不启用' && !skip.hairAccBack) s4 += (s4 ? '，' : '') + optT(OPT.hairAccBack, hab);\n    const has = v('hairAccSide'); if (has && has !== '不启用' && !skip.hairAccSide) s4 += (s4 ? '，' : '') + optT(OPT.hairAccSide, has);\n    if (s4) parts.push(s4 + '。');\n  }\n\n  /* ⑤ 妆容 */\n  let s5 = '';\n  if (!e.secOff.makeup) {\n    s5 = '妆容为' + optT(OPT.makeup, v('makeup'));\n    const md = v('makeupDetail'); if (md && md !== '不启用' && !skip.makeupDetail) s5 += '，' + md;\n    const sm = v('smudge'); if (sm && sm !== '不启用' && !skip.smudge) s5 += '，' + optT(OPT.smudge, sm);\n    const na = v('nails'); if (na && na !== '不启用' && !skip.nails) s5 += '，' + optT(OPT.nails, na);\n  }\n  if (s5) parts.push(s5 + '。');\n\n  /* ⑥ 表情 */\n  let s6 = '';\n  if (!e.secOff.expression) {\n    s6 = optT(OPT.emotion, v('emotion')) + '，' + optT(OPT.eye, v('eye')) + '，' + optT(OPT.mouth, v('mouth')) + '。';\n  }\n  if (!e.secOff.extra) {\n    const ims = [v('imperf1'), v('imperf2')].filter((x, idx) => x && x !== '不启用' && !skip['imperf' + (idx + 1)]);\n    if (ims.length) { s6 += ims.map(x => optT(OPT.imperf, x)).join('，') + '。'; }\n  }\n  if (s6) parts.push(s6);\n\n  /* ⑧ 姿态（先算，供服装段判断安全内裤） */\n  let s8 = '';\n  if (poseNSFW) {\n    const simT = (v('simMode') === '手动选类') ? e.simPickText() : e.smartSimPick();\n    if (simT) s8 = simT;\n    const ch = v('nsfwChain');\n    if (ch && ch !== '不启用' && !skip.nsfwChain) {\n      const chTxt = optT(OPT.nsfwChain, ch).replace(/^,/, '');\n      s8 = s8.replace(/[。，\\s]+$/, '') + '，' + chTxt + '。';\n    }\n  } else {\n    let simT2 = '';\n    if (e.sfwSimModeActive()) simT2 = (v('sfwSimMode') === '手动选类') ? e.sfwSimPickText() : e.smartSfwPick();\n    if (simT2) s8 = simT2;\n  }\n\n  /* ⑦ 服装（SFW 主体；NSFW 强化叠加；全裸/情趣衣柜替换） */\n  let s7 = '';\n  const clothModeHide = e.nsfwClothEnabled() && (e.lingerieOn || e.nudeOn);\n  let nstHead = '';\n  if (clothNSFW) { let nst = v('nsfwState'); if (e.nudeOn) nst = ''; if (nst && nst !== '不启用') nstHead = optT(OPT.nsfwState, nst); }\n  const dims = [];\n  if (!clothModeHide) {\n    const it = v('clothItem'); if (it && it !== '不启用') dims.push((e.isSplitCat() ? '上身穿着' : '') + e.clothItemT(it));\n    if (nstHead) dims.push(nstHead);\n    const mt = v('clothMat'); if (mt && mt !== '不启用' && !skip.clothMat) dims.push(optT(OPT.clothMat, mt));\n    const pa = v('clothPattern'); if (pa && pa !== '不启用' && !skip.clothPattern) dims.push(optT(OPT.clothPattern, pa));\n    const dc = v('clothDeco'); if (dc && dc !== '不启用' && !skip.clothDeco) dims.push(dc + '装饰细节');\n    if (e.isSplitCat()) {\n      const ow = v('outerwear'); if (ow && ow !== '不启用' && !skip.outerwear) dims.push('外面' + optT(OPT.outerwear, ow));\n      const cs = v('collarStyle'); if (cs && cs !== '不启用' && !skip.collarStyle) dims.push(optT(OPT.collarStyle, cs));\n      const tl = v('topLength'); if (tl && tl !== '不启用' && !skip.topLength) dims.push(optT(OPT.topLength, tl));\n      const ly = v('clothLayer'); if (ly && ly !== '不启用' && !skip.clothLayer) dims.push(optT(OPT.clothLayer, ly));\n      const bs = v('bottomStyle'); if (bs && bs !== '不启用' && !skip.bottomStyle) dims.push('下身穿着' + optT(OPT.bottomStyle, bs));\n      const bl = v('bottomLength'); if (bl && bl !== '不启用' && !skip.bottomLength) dims.push(optT(OPT.bottomLength, bl));\n      const sc2 = v('splitColor'); if (sc2 && sc2 !== '不启用' && !skip.splitColor) dims.push(optT(OPT.splitColor, sc2));\n    } else {\n      const ly2 = v('clothLayer'); if (ly2 && ly2 !== '不启用' && !skip.clothLayer) dims.push(optT(OPT.clothLayer, ly2));\n      const bl2 = v('bottomLength'); if (bl2 && bl2 !== '不启用' && !skip.bottomLength) dims.push(optT(OPT.bottomLength, bl2));\n    }\n    const sh = v('shoes'); if (sh && sh !== '不启用' && !skip.shoes) dims.push('脚踩' + optT(OPT.shoes, sh));\n    const st = v('sockType');\n    if (st && st !== '不启用' && !skip.sockType) {\n      const sl = v('sockLen'), sc = v('sockColor'), so = v('sockOpacity');\n      const slTxt = (sl && sl !== '不启用' && !D_SOCK_LEN_FIX[st]) ? sl : '';\n      const sn = (sc && sc !== '不启用' ? sc : '') + slTxt + st;\n      const sd = [optT(OPT.sockType, st)];\n      if (so && so !== '不启用' && !skip.sockOpacity) { const sod = optT(OPT.sockOpacity, so); if (sod) sd.push(sod); }\n      dims.push('双腿穿着' + sn + (sd.length ? ('，' + sd.join('，')) : ''));\n    }\n    const ac = v('accessory'); if (ac && ac !== '不启用' && !skip.accessory) dims.push(optT(OPT.accessory, ac));\n    const pc = v('pantyColor'), ps = v('pantyStyle');\n    if ((pc && pc !== '不启用') || (ps && ps !== '不启用')) {\n      dims.push('下身' + (pc && pc !== '不启用' ? pc : '') + (ps && ps !== '不启用' ? ps : '') + '内裤完整覆盖私处，面料厚实不透明');\n    }\n    const exv = v('sfwExposure'); if (e.sfwExposureOn && !e.nsfwClothEnabled() && exv && exv !== '不启用' && !skip.sfwExposure) dims.push(optT(OPT.exposure, exv));\n    const ctt = v('clothTransparency'); if (e.sfwExposureOn && !e.nsfwClothEnabled() && ctt && ctt !== '不启用' && !skip.clothTransparency) dims.push(optT(OPT.clothTransparency, ctt));\n  }\n  s7 = dims.length ? dims.join('，') + '。' : '';\n  /* 中文接中文不加空格，跨语种以空格分隔 */\n  const cjkJoin = function(base, add){\n    if (!add) return base;\n    if (!base) return add;\n    if (/[\\u4e00-\\u9fff。！？，、；：]/.test(base.charAt(base.length - 1)) && /^[\\u4e00-\\u9fff]/.test(add)) return base + add;\n    return base + ' ' + add;\n  };\n  if (clothNSFW) {\n    let nc1 = (e.custom.nsfwCustom1 || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (e.customEnabled.nsfwCustom1 === false) nc1 = '';\n    let nc2 = (e.custom.nsfwCustom2 || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (e.customEnabled.nsfwCustom2 === false) nc2 = '';\n    const nstTail = cjkJoin(cjkJoin('', nc1), nc2);\n    if (nstHead && !dims.length) s7 = nstHead + '，' + s7;\n    s7 = cjkJoin(s7, nstTail);\n  }\n  if (e.nsfwClothEnabled() && e.lingerieOn) {\n    const lgi = [];\n    const lck = e.lingerieCatKey(v('lingerieCat'));\n    if (lck && lck !== '不启用') lgi.push('身着' + lck + '情趣内衣');\n    const li = v('lingerieItem');\n    if (li && li !== '不启用') lgi.push(li);\n    const lc1 = v('lingerieColor1'); if (lc1 && lc1 !== '不启用') lgi.push('主色调为' + lc1);\n    const lc2 = v('lingerieColor2'); if (lc2 && lc2 !== '不启用') lgi.push('辅色调为' + lc2);\n    if (lgi.length) s7 = cjkJoin(s7, lgi.join('，') + '。');\n  }\n  if (e.nsfwClothEnabled() && !(e.lingerieOn || e.nudeOn)) {\n    const nx = v('nsfwExposure');\n    if (nx && nx !== '不启用' && !skip.nsfwExposure) { s7 = cjkJoin(s7, optT(OPT.exposureNsfw, nx) + '。'); }\n  }\n\n  /* 装配姿态 + 服装 */\n  if (s8) parts.push(s8 + (poseNSFW ? '' : '。'));\n  if (s7) parts.push(s7);\n\n  /* ⑨ 背景 · 道具 · 天气 */\n  if (!e.secOff.bg) {\n    let s9 = optT(OPT.scene, v('scene')) + '。';\n    const pr = v('prop'); if (pr && pr !== '不启用' && !skip.prop) s9 += optT(OPT.prop, pr) + '。';\n    const we = v('weather'); if (we && we !== '不启用' && !skip.weather) s9 += optT(OPT.weather, we) + '。';\n    if (s9) parts.push(s9);\n  }\n\n  /* ⑩ 构图 */\n  let s10 = '';\n  if (!e.secOff.comp) {\n    const cpv = v('compPos');\n    s10 = optT(OPT.comp, v('comp')) + (cpv && cpv !== '不启用' ? '，人物' + optT(OPT.compPos, cpv) : '') + '。';\n  }\n  if (!e.secOff.extra) {\n    const stt = v('styleTag'); if (stt && stt !== '不启用' && !skip.styleTag) s10 += '整体呈现' + stt + '风格。';\n  }\n  if (s10) parts.push(s10);\n\n  /* 段间拼接：跨语种补空格 */\n  function joinParts(arr){\n    let out = '';\n    arr.forEach(p => {\n      if (!p) return;\n      if (out) {\n        const a = out.charAt(out.length - 1), b = p.charAt(0);\n        if (!/[\\u4e00-\\u9fff\\u3000。！？，、；：]/.test(a) && /[\\u4e00-\\u9fff]/.test(b)) out += ' ';\n      }\n      out += p;\n    });\n    return out;\n  }\n  return { text: joinParts(parts), risk: { risky: false, poseName: '', poseCat: '' } };\n};\n\n/* =====================================================================\n * 自检（S1–S17 / F1–F10）+ 生成入口（generate）\n * —— 与 HTML 行 5724–5939 / 6158–6174 一致\n * ===================================================================== */\nEngine.prototype.sceneObj = function(){\n  const s = this.v('scene');\n  return D.OPT.scene.filter(o => o.v === s)[0] || {};\n};\n\nEngine.prototype.runSelfCheck = function(prompt, risk, skip){\n  skip = skip || {};\n  const e = this;\n  const v = e.v.bind(e);\n  const isNSFW = (v('nsfwState') !== '') || e.simModeActive();\n  const n = e.countChars(prompt);\n  const scene = e.sceneObj();\n  const water = !!scene.water;\n  const F = [], S = [];\n  const fn = isNSFW ? 'NSFW' : 'SFW';\n\n  /* F1 物理自洽 */\n  let f1ok = true, f1note = '光源方向与场景时间匹配';\n  if (e.secOff.bg || e.secOff.light) { f1note = '涉及段落已「本段不启用」，跳过自检'; }\n  else {\n    const NIGHT = { '情人旅馆': 1, '夜店': 1, '天台': 1, '夜晚公园': 1, '后巷': 1, '监禁密室': 1, '酒店套房': 1 };\n    if (NIGHT[scene.v] && (v('colorTone') === '日光清新')) { f1ok = false; f1note = '夜晚场景搭配了日光色调，光源矛盾'; }\n  }\n  F.push({ id: 'F1', name: '物理自洽', ok: f1ok, note: f1note });\n\n  /* F2 语言模式 */\n  let f2ok, f2note;\n  if (isNSFW) {\n    f2ok = true;\n    f2note = 'NSFW 姿态为中文模拟动作库描述（+可选英文反应链）';\n  } else {\n    f2ok = !/[a-zA-Z]{2,}/.test(prompt.replace(/JK|KC|Lolita|Blazer|JSK|OP|POLO|Polo|polo|babydoll|BabyDoll/g, ''));\n    f2note = f2ok ? '全文为中文叙事（V领/A字/JK 等形状与缩写字母不计）' : '发现成段英文，SFW 要求中文叙事';\n  }\n  F.push({ id: 'F2', name: '语言模式', ok: f2ok, note: f2note });\n\n  /* F3 禁令总表：SFW 全扫；NSFW 完全放行 */\n  const hit = [];\n  if (!isNSFW) {\n    BAN_A.concat(BAN_B).forEach(w => { if (prompt.indexOf(w) >= 0) hit.push(w); });\n    BAN_D.forEach(w => { if (prompt.toLowerCase().indexOf(w) >= 0) hit.push(w); });\n  }\n  const f3ok = hit.length === 0 || water;\n  const f3note = hit.length === 0 ? (isNSFW ? 'NSFW 模式完全放行（无限制，唯一底线：不涉未成年/真实人物·词库自律）' : '禁令词扫描通过')\n    : (water ? '命中词出现在含水场景，按豁免条款放行：' + hit.join('、')\n             : '命中禁令词：' + hit.join('、'));\n  F.push({ id: 'F3', name: '禁令总表', ok: f3ok, note: f3note });\n\n  /* F4 内裤锚定（手动可选） */\n  F.push({ id: 'F4', name: '内裤锚定', ok: true, note: '内裤颜色/款式为手动可选，不再自动锚定' });\n\n  /* F5 字数 */\n  const f5ok = n >= 300 && n <= 700;\n  F.push({ id: 'F5', name: '字数 300–700', ok: f5ok, note: '当前约 ' + n + ' 字' + (n < 300 ? '（略少，可补充细节）' : n > 700 ? '（超出上限，建议精简）' : '') });\n\n  /* F6 无违禁格式 */\n  const f6ok = !/\\([^)]*:\\s*[\\d.]+\\)/.test(prompt) && !/masterpiece|best quality/i.test(prompt);\n  F.push({ id: 'F6', name: '无违禁格式', ok: f6ok, note: '无权重语法/质量标签/标签串' });\n\n  /* F7 视角冲击力 */\n  F.push({ id: 'F7', name: '视角冲击力', ok: true, note: '已选明确视角 + 明确镜头类型' });\n\n  /* F8 服装维度 */\n  if (!isNSFW) {\n    let dimCount = 0;\n    ['clothLayer', 'clothItem', 'outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor', 'bottomLength', 'clothMat', 'clothPattern', 'clothDeco', 'shoes', 'sockType', 'accessory'].forEach(id => {\n      const val = v(id); if (val && val !== '不启用' && !skip[id]) dimCount++;\n    });\n    const f8Split = e.isSplitCat();\n    const f8ok = f8Split ? (dimCount >= 7 && dimCount <= 14) : (dimCount >= 6 && dimCount <= 10);\n    F.push({ id: 'F8', name: '服装维度', ok: f8ok, note: '当前 ' + dimCount + ' 维' + (f8Split ? '（上下装全字段 7–14）' : '（常规类别 6–10）') });\n  } else {\n    F.push({ id: 'F8', name: '服装维度', ok: true, note: 'NSFW 免检' });\n  }\n\n  /* F9 服装来源 */\n  const item = v('clothItem') || '';\n  const demoHit = item.indexOf('深蓝灰缎面吊带裙') >= 0 || (item.indexOf('白色丝质衬衫') >= 0 && /紧身短裙|包臀/.test(item));\n  F.push({ id: 'F9', name: '服装来源', ok: true, note: demoHit ? '主件与文档示范主件接近（用户指定除外）' : '主件来自款式子表' });\n\n  /* F10 NSFW 模拟动作库 */\n  if (isNSFW) {\n    F.push({ id: 'F10', name: 'NSFW 模拟动作库', ok: true, note: '姿态为交合模拟动作库描述' });\n  }\n\n  /* S1 情绪→光影 */\n  const emo = v('emotion'), light = v('mainLight');\n  if (/慵懒|温柔/.test(emo) && light === '硬光') S.push({ id: 'S1', ok: false, note: '慵懒温柔的情绪配硬光直射，建议换柔光' });\n  else S.push({ id: 'S1', ok: true, note: '情绪与光影协调' });\n\n  /* S2 身份→姿态（手动选类取所选；智能匹配现抽一条判定——与 HTML 一致消耗 RNG） */\n  if (v('firstImp') === '楚楚可怜' && !isNSFW) {\n    const s2pose = (v('sfwSimMode') === '手动选类') ? e.sfwSimPickText() : (v('sfwSimMode') === '智能匹配' ? e.smartSfwPick() : '');\n    if (/直立|叉腰|背手/.test(s2pose))\n      S.push({ id: 'S2', ok: false, note: '楚楚可怜配霸气站姿，气质撕裂（反差设定除外）' });\n    else S.push({ id: 'S2', ok: true, note: '身份与姿态协调' });\n  } else S.push({ id: 'S2', ok: true, note: '身份与姿态协调' });\n\n  /* S3 色调→情绪 */\n  if (e.secOff.light || e.secOff.expression) { S.push({ id: 'S3', ok: true, note: '色调/情绪段落已「本段不启用」，跳过' }); }\n  else {\n    const tone = v('colorTone');\n    if (/霓虹混合|冷白荧光/.test(tone) && /冷淡|恍惚失神|宁静/.test(emo))\n      S.push({ id: 'S3', ok: false, note: '霓虹/冷荧光撞情绪主调，注意色彩情绪一致' });\n    else S.push({ id: 'S3', ok: true, note: '色调与情绪一致' });\n  }\n\n  /* S4 配饰→世界观 */\n  S.push({ id: 'S4', ok: true, note: '无跨世界观配饰冲突' });\n\n  /* S5 设备→画质 */\n  if (e.secOff.camera) { S.push({ id: 'S5', ok: true, note: '拍摄角度段已「本段不启用」，跳过' }); }\n  else {\n    const dev = v('device'), lens = v('lens'), dof = v('dof');\n    if ((dev === '手机自拍' && /长焦|中焦/.test(lens)) || (dev === '监控摄像头' && dof === '浅景深'))\n      S.push({ id: 'S5', ok: false, note: '设备与画质自洽性存疑（手机不加焦段、监控不配浅景深）' });\n    else S.push({ id: 'S5', ok: true, note: '设备与画质自洽' });\n  }\n\n  /* S6 裸露→场景 */\n  if (e.secOff.bg) { S.push({ id: 'S6', ok: true, note: '背景段已「本段不启用」，跳过' }); }\n  else if (isNSFW) { S.push({ id: 'S6', ok: true, note: 'NSFW 场景×裸露禁忌已按授权无限制放行' }); }\n  else S.push({ id: 'S6', ok: true, note: 'SFW 免检' });\n\n  /* S7 纹身融合 */\n  if (e.secOff.extra) S.push({ id: 'S7', ok: true, note: '附加段已「本段不启用」，跳过' });\n  else if (v('tattoo') !== '不启用') S.push({ id: 'S7', ok: true, note: '纹身已带皮肤融合描述，避免贴纸感' });\n  else S.push({ id: 'S7', ok: true, note: '未使用纹身' });\n\n  /* S8 道具位置 */\n  if (e.secOff.bg) S.push({ id: 'S8', ok: true, note: '背景段已「本段不启用」，跳过' });\n  else if (v('prop') !== '不启用') S.push({ id: 'S8', ok: true, note: '道具已交代位置关系' });\n  else S.push({ id: 'S8', ok: true, note: '未使用道具' });\n\n  /* S9 眼神→角度 */\n  if (e.secOff.camera || e.secOff.expression) { S.push({ id: 'S9', ok: true, note: '机位/表情段已「本段不启用」，跳过' }); }\n  else {\n    const vp = v('viewpoint'), eye = v('eye');\n    if (/俯拍|鸟瞰/.test(vp) && eye === '挑逗')\n      S.push({ id: 'S9', ok: false, note: '俯拍机位配「挑逗注视」存在视线方向矛盾' });\n    else if (/仰拍|虫视/.test(vp) && eye === '乞求哀怨')\n      S.push({ id: 'S9', ok: false, note: '仰拍机位配「向上望的哀求」存在视线方向矛盾' });\n    else S.push({ id: 'S9', ok: true, note: '眼神方向与机位匹配' });\n  }\n\n  /* S10 鞋履 × 主件类别适配 */\n  const shv = v('shoes'), cc = v('clothCat');\n  if (shv && shv !== '不启用' && shv !== '赤脚' && D.SHOE_POOL[cc] && D.SHOE_POOL[cc].indexOf(shv) < 0)\n    S.push({ id: 'S10', ok: false, note: '「' + shv + '」与主件类别「' + cc + '」适配度低，建议换适配鞋款或赤脚' });\n  else S.push({ id: 'S10', ok: true, note: '鞋履与主件类别适配（含赤脚/不启用）' });\n\n  /* S11 姿态 × 手部（擦边动作库后恒通过） */\n  S.push({ id: 'S11', ok: true, note: '动作描述已内含手部姿态（手部细节体系废弃）' });\n\n  /* S12 服装细节连贯 */\n  let S12ok = true, S12note = '服装细节连贯（颜色/材质与主件一致）';\n  const clothHideS12 = e.nsfwClothEnabled() && (e.lingerieOn || e.nudeOn);\n  if (e.secOff.cloth || clothHideS12) { S12note = '服装段已隐藏/停用，跳过'; }\n  else if (e.isSplitCat()) {\n    const it12 = v('clothItem') || '';\n    const c12 = e.itemColorFam12(it12), m12 = e.itemMatFam12(it12);\n    const sc12 = v('splitColor'), mt12 = v('clothMat');\n    if (c12 && sc12 && sc12 !== '不启用') {\n      const topC = e.splitTopColor12(sc12);\n      if (topC && topC.indexOf(c12) < 0) { S12ok = false; S12note = '主件为' + c12 + '色系，但上下装配色「' + sc12 + '」上衣为' + topC + '色系，颜色冲突，建议换色或「不启用」'; }\n    }\n    if (mt12 && mt12 !== '不启用') {\n      if (e.itemEmbedsMainMat(it12)) { S12ok = false; S12note = '主件描述已自带材质（厚实/纱/缎面等），但「材质·光效」仍选了' + mt12 + '，材质重复或冲突，建议「不启用」'; }\n      else if (m12) {\n        const mf12 = e.matFam12(mt12);\n        if (mf12 && mf12 !== m12) { S12ok = false; S12note = '主件材质为' + m12 + '，但「材质·光效」选了' + mt12 + '，材质冲突，建议一致或「不启用」'; }\n      }\n    }\n  } else {\n    const mt12b = v('clothMat');\n    S12note = '非上下装类别：主件词条自带颜色/材质，免检';\n    if (mt12b && mt12b !== '不启用' && e.itemEmbedsMainMat(v('clothItem') || '')) { S12ok = false; S12note = '主件描述已自带材质（厚实/纱/缎面等），但「材质·光效」仍选了' + mt12b + '，材质重复或冲突，建议「不启用」'; }\n  }\n  S.push({ id: 'S12', ok: S12ok, note: S12note });\n\n  /* S13 色调×天气 */\n  const S13conf = e.weatherToneConflict();\n  S.push({ id: 'S13', ok: !S13conf, note: S13conf ? '色调「' + v('colorTone') + '」与天气「' + S13conf + '」冲突（白昼/夜景矛盾），建议换其一' : '色调与天气一致' });\n\n  /* S14 妆容×糊妆 */\n  const S14bad = (v('makeup') === '素颜') && v('smudge') !== '' && v('smudge') !== '不启用';\n  S.push({ id: 'S14', ok: !S14bad, note: S14bad ? '妆容「素颜·裸妆感无妆」与糊妆「' + v('smudge') + '」矛盾（无妆可糊），建议糊妆置「不启用」' : '妆容与糊妆状态一致' });\n\n  /* S15 袜子长度×类型 */\n  const S15conf = e.sockLenTypeConflict();\n  S.push({ id: 'S15', ok: !S15conf, note: S15conf ? S15conf + '，建议长度与类型取其一' : '袜子长度与类型一致' });\n\n  /* S16 情绪×口型 */\n  const S16conf = e.mouthEmotionConflict();\n  S.push({ id: 'S16', ok: !S16conf, note: S16conf ? S16conf + '，建议换其一' : '情绪与口型一致' });\n\n  /* S17 模拟动作×环境适配 */\n  let S17ok = true, S17note = '模拟动作与环境适配';\n  if (e.simModeActive() && v('simMode') === '手动选类' && v('scene')) {\n    const env17 = D.SCENE_ENV[v('scene')] || D.SCENE_ENV['__default'];\n    const txt17 = e.simPickText();\n    if (txt17) {\n      const hits17 = env17.filter(kw => txt17.indexOf(kw) >= 0).length;\n      if (hits17 === 0) { S17ok = false; S17note = '模拟动作所需支撑物与场景「' + v('scene') + '」不匹配（该场景可用：' + env17.join('/') + '）'; }\n    }\n  } else if (e.simModeActive() && v('simMode') === '手动选类') {\n    S17note = '未选场景，跳过环境匹配';\n  } else if (e.simModeActive() && v('simMode') === '智能匹配') {\n    S17note = '智能匹配：已按场景环境自动适配';\n  }\n  S.push({ id: 'S17', ok: S17ok, note: S17note });\n\n  return { F, S, n, fn };\n};\n\n/* ---- 生成入口：等价 HTML「生成提示词」按钮 ----\n * randomize=true（默认）→ 先整体重掷（尊重🔒锁定）再补全\n * randomize=false       → 只补全未选项（幂等，重复调用输出稳定）\n * autoTrim=true（默认）  → 超 700 字按 TRIM_ORDER 顺序精简次要选项（HTML 复选框默认勾选） */\nEngine.prototype.generate = function(opts){\n  opts = opts || {};\n  const randomize = opts.randomize !== false;\n  if (randomize) this.randomizeAll();\n  this.syncModeDeps();\n  /* 注：不做「物化随机」——HTML 的 buildPrompt 在每次 trim 迭代都会重新抽\n     （nudePart/smartSim），runSelfCheck 的 S2 也会重掷；引擎保持同序调用，\n     同 seed 下 RNG 序列完全确定 → 输出逐字可复现且与 HTML 原版逐字一致 */\n  const filled = this.fillBlanks();\n  let skip = {};\n  let result = this.buildPrompt(skip);\n  let checks = this.runSelfCheck(result.text, result.risk, skip);\n  if (this.autoTrim !== false && opts.autoTrim !== false && checks.n > 700) {\n    for (let i = 0; i < TRIM_ORDER.length && checks.n > 700; i++) {\n      skip[TRIM_ORDER[i]] = true;\n      result = this.buildPrompt(skip);\n      checks = this.runSelfCheck(result.text, result.risk, skip);\n    }\n  }\n  result.trimmed = Object.keys(skip).length;\n  result.filled = filled;\n  result.mode = this.detectMode();\n  result.checks = checks;\n  result.seed = this.seed;\n  return result;\n};\n\nreturn { Engine, D, mulberry32, CUSTOM_FIELD_IDS, NEG_EFFECT_IDS, SPLIT_FIELDS, STYLE_CTRL_IDS, TRIM_ORDER, RANGE_FIELDS, UPPER_NUDE_PARTS, BAN_A, BAN_B, BAN_D };\n";
+function buildK2Engine(src){
+  return new Function(
+    'var __K2_SRC__ = ' + JSON.stringify(src) + ';\n' +
+    '__K2_SRC__ = __K2_SRC__.replace(/^\\uFEFF/, "");' +
+    'return new Function("__K2_SRC__", ' + JSON.stringify(__K2_ENGINE__) + ')(__K2_SRC__);'
+  )();
+}
+/* 用 K2 引擎随机组句，生成完整中文提示词；K2 随机模式下由 webuiGenerate 直接提交，不回填输入框 */
+async function k2Compose(){
+  try {
+    if (typeof buildK2Engine !== 'function') { toast('❌ K2 引擎未加载', 'error'); return ''; }
+    var res = await fetch('/api/k2gen/data').then(function(r){ return r.json(); }).catch(function(){ return null; });
+    if (!res || !res.ok) { toast('❌ K2 词库加载失败', 'error'); return ''; }
+    var mod = buildK2Engine(res.source);
+    window.__k2Mod = mod; // 供 K2 字段锁定面板复用，避免重复拉词库
+    var eng = new mod.Engine({ autoTrim: true });
+    /* K2 NSFW 开关：开启时切到交合/裸露强化模式（默认 SFW 人像细节描述） */
+    if (window._k2NsfwOn) { eng.toggleNsfwMaster(); }
+    /* 应用字段锁定：固定值锁定 / 不选排除，其余字段仍随机重掷 */
+    if (typeof applyK2LocksToEngine === 'function') applyK2LocksToEngine(eng);
+    var r = eng.generate({ randomize: true, autoTrim: true });
+    /* 不回填输入框：K2 随机词是临时通道，直接返回给调用方提交，不污染用户手动输入 */
+    toast('✅ K2 已组句（字数 ' + r.checks.n + '）');
+    return r.text;
+  } catch (e) {
+    toast('❌ K2 组句失败: ' + e.message, 'error');
+    return '';
+  }
+}
+</script>
 
 </body>
 </html>
