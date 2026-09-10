@@ -28,5 +28,11 @@
     "description": "每次生成的图片消息末尾自动附上最终提示词",
     "type": "bool",
     "default": false
+  },
+  "send_platform": {
+    "title": "结果发送平台",
+    "description": "生成结果发到哪个平台：auto=自动识别来源平台（推荐）；qq=固定发QQ；feishu=固定发飞书；both=两边都发。切换平台只改这里，各平台逻辑互不影响",
+    "type": "string",
+    "default": "auto"
   }
 }

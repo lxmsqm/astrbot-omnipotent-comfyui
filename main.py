@@ -1586,6 +1586,7 @@ class WebUIMixin:
             "webui_lan": self.webui_lan,
             "webui_ipv6": self.webui_ipv6,
             "show_prompt_on_image": self.show_prompt_on_image,
+            "send_platform": getattr(self, "send_platform", "auto"),
             "color_scheme": self._load_local_config().get("color_scheme", "cyberpunk-orange"),
             "random_pick_mode": self._load_local_config().get("random_pick_mode", "all"),
             "k2_compose_mode": self._load_local_config().get("k2_compose_mode", "anima"),
@@ -1780,6 +1781,12 @@ class WebUIMixin:
             val = d["show_prompt_on_image"]
             self.show_prompt_on_image = bool(val)
             updates["show_prompt_on_image"] = self.show_prompt_on_image
+        if "send_platform" in d:
+            val = str(d["send_platform"] or "auto").lower()
+            if val not in ("auto", "qq", "feishu", "both"):
+                val = "auto"
+            self.send_platform = val
+            updates["send_platform"] = val
         if "color_scheme" in d:
             updates["color_scheme"] = d["color_scheme"]
         if "random_pick_mode" in d:
@@ -5593,6 +5600,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self.default_quality = local_cfg.get("default_quality") or "720p"
         # 图片消息是否附带提示词
         self.show_prompt_on_image = bool(local_cfg.get("show_prompt_on_image", False))
+        # 生成结果发送平台: auto=自动识别来源平台(默认) / qq=强制QQ(OneBot) / feishu=强制飞书 / both=两边都发
+        self.send_platform = str(local_cfg.get("send_platform", "auto") or "auto").lower()
+        if self.send_platform not in ("auto", "qq", "feishu", "both"):
+            self.send_platform = "auto"
         # 随机图抽取模式
         rp_mode = local_cfg.get("random_pick_mode", "all") or self.workflow_config.get("random_pick_mode", "all")
         self.workflow_config["random_pick_mode"] = rp_mode
@@ -5764,10 +5775,16 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             abs_path = str(Path(paths[0]).resolve())
             msg_id = ''
             _onebot_ok = False
+            _feishu_ok = False
 
-            # 通过 event.bot 直接调用 OneBot API（可获取 message_id）
+            # 发送渠道决策：按配置(send_platform) + 来源平台决定走哪些渠道
+            _targets = self._resolve_send_targets(event)
+            _src_platform = self._detect_event_platform(event)
+            logger.info(f"[ComfyUI] 发送渠道: 配置={getattr(self,'send_platform','auto')} 来源={_src_platform} → 目标={sorted(_targets)}")
+
+            # 通过 event.bot 直接调用 OneBot API（可获取 message_id）—— 仅在需要发 QQ 时执行
             bot = getattr(event, 'bot', None)
-            if bot:
+            if bot and 'qq' in _targets:
                 self._bot_ref = bot  # 存引用，供后续撤回使用
                 try:
                     # 解析 UMO 获取消息类型和目标
@@ -5835,10 +5852,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     except Exception as e3:
                         logger.warning(f"[ComfyUI] 双号兜底枚举失败: {type(e3).__name__}: {e3}")
             else:
-                logger.info(f"[ComfyUI] event.bot 不存在（type(event)={type(event).__name__}），走 context.send_message")
+                logger.info(f"[ComfyUI] 跳过 OneBot 直连(来源={_src_platform}, 目标={sorted(_targets)})")
 
-            # 如果 OneBot 发送失败或不存在，用 AstrBot 标准方式发送
-            if not _onebot_ok:
+            # 走 AstrBot 标准消息链的场景：
+            #   1) 目标是飞书（QQ 的 CQ 码在飞书不可用，必须走标准链，适配器会做素材上传）
+            #   2) 需要发 QQ 但 OneBot 直连失败/不可用（保留原有兜底行为）
+            if ('feishu' in _targets) or (not _onebot_ok):
                 parts = []
                 if not event.is_private_chat():
                     sender_id = event.get_sender_id()
@@ -5848,6 +5867,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     parts.append(AstrImage(file=p))
                 chain = MessageChain(chain=parts)
                 result = await self.context.send_message(umo, chain)
+                _feishu_ok = 'feishu' in _targets
+                logger.info(f"[ComfyUI] 标准链发送完成(目标={sorted(_targets)}): {str(result)[:200]}")
                 # 尝试从 result 提取 message_id
                 if isinstance(result, dict):
                     msg_id = str(result.get('message_id', ''))
@@ -6264,6 +6285,50 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         except Exception as e:
             logger.debug(f"[ComfyUI] 读取平台 id 失败: {e}")
         return None
+
+    def _detect_event_platform(self, event):
+        """识别消息来源平台：'qq' | 'feishu' | 其它适配器 type。
+        优先读 event 的平台元信息，失败则按 UMO 前缀兜底。"""
+        # 1) 平台元信息里的适配器类型（aiocqhttp / lark ...）
+        try:
+            pm = None
+            for attr in ("platform_meta", "platform"):
+                pm = getattr(event, attr, None)
+                if pm is not None:
+                    break
+            if pm is None:
+                pm = getattr(event, "platform_metadata", None)
+            name = ""
+            if pm is not None:
+                name = str(getattr(pm, "name", "") or getattr(pm, "type", "") or "").lower()
+            if name:
+                if "aiocqhttp" in name or "onebot" in name:
+                    return "qq"
+                if "lark" in name or "feishu" in name:
+                    return "feishu"
+                return name
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 识别平台失败(元信息): {e}")
+        # 2) UMO 前缀兜底：如 "default:FriendMessage:xxx" / "lark-main:FriendMessage:ou_xxx"
+        try:
+            umo = str(getattr(event, "unified_msg_origin", "") or "")
+            pid = umo.split(":", 1)[0].lower()
+            if pid:
+                return "feishu" if "lark" in pid else ("qq" if pid == "default" else pid)
+        except Exception:
+            pass
+        return "unknown"
+
+    def _resolve_send_targets(self, event):
+        """按配置 + 来源平台决定实际发送渠道，返回集合，如 {'qq'} / {'feishu'} / {'qq','feishu'}"""
+        mode = getattr(self, "send_platform", "auto")
+        if mode == "both":
+            return {"qq", "feishu"}
+        if mode in ("qq", "feishu"):
+            return {mode}
+        # auto：按来源平台决定
+        src = self._detect_event_platform(event)
+        return {src} if src in ("qq", "feishu") else {"qq", "feishu"}
 
     def _workflow_preview_path(self, name):
         """返回工作流预览图路径（不存在返回 None）。命名：<工作流名>.png / .jpg（压缩后）"""

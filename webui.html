@@ -4677,6 +4677,15 @@ textarea:focus-visible,
               <input type="checkbox" id="cfg_show_prompt" style="accent-color:var(--primary)" onchange="saveShowPrompt()">
               <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
             </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">结果发送平台</span>
+              <select id="send_platform" onchange="saveSendPlatform()" style="flex:1;min-width:140px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
+                <option value="auto">🔀 自动（跟随来源平台）</option>
+                <option value="qq">🐧 固定发 QQ</option>
+                <option value="feishu">🕊️ 固定发飞书</option>
+                <option value="both">📤 两边都发</option>
+              </select>
+            </div>
           </div>
 
           <!-- 分组 3：生成与随机 -->
@@ -6232,6 +6241,8 @@ function loadCfg() {
     $id('cfg_output_dir').value = c.output_dir || '';
     const sp = document.getElementById('cfg_show_prompt');
     if (sp) sp.checked = c.show_prompt_on_image === true;
+    const spf = document.getElementById('send_platform');
+    if (spf) spf.value = c.send_platform || 'auto';
     // 加载主题
     const scheme = c.color_scheme || 'cyberpunk-orange';
     applyColorScheme(scheme);
@@ -6573,6 +6584,12 @@ async function saveComfyUrl() {
 async function saveShowPrompt() {
   const val = document.getElementById('cfg_show_prompt').checked;
   await apiFetch('/api/config', { method:'POST', body:JSON.stringify({show_prompt_on_image:val}) });
+}
+async function saveSendPlatform() {
+  const val = document.getElementById('send_platform').value;
+  await apiFetch('/api/config', { method:'POST', body:JSON.stringify({send_platform:val}) });
+  const names = { auto:'自动（跟随来源平台）', qq:'固定发 QQ', feishu:'固定发飞书', both:'两边都发' };
+  toast('✅ 发送平台已设为：' + (names[val] || val));
 }
 
 // ========================================================================
