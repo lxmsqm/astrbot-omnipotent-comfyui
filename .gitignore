@@ -38,3 +38,9 @@ Thumbs.db
 
 # Cache (symlinked to E: drive)
 data/cache/
+
+# Local user data (runtime)
+data/user/
+
+# K2 engine toolchain test scripts (dev only)
+k2gen/test/
