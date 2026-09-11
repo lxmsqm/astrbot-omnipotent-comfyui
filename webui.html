@@ -6219,6 +6219,9 @@ let emptyLoadNodes = [];  // 标记为「不使用」的加载节点 id 列表�
 let promptInputKey = '', negativeInputKey = '';
 let modelLists = {}, disabledGroups = {}, groupsSource = '', isBound = false, bindTarget = '', allWorkflows = [];
 let disabledNodes = [];
+// 显式取消标记：用户主动点「取消指定」时置位，saveParams 才允许发送空值覆盖后端
+// （避免切换工作流时未初始化的空值误清后端已保存的节点角色）
+let _explicitClear = {};
 let officialResNodes = [], officialDurationNodes = [];
 let loraNodesConfig = {};     // 各节点的 Lora 配置 {nodeId: [{on, lora_name, strength_model, strength_clip, trigger_words_selected?}, ...]}
 let availableLoras = [];      // 从 ComfyUI 获取的可用 Lora 列表
@@ -8335,7 +8338,7 @@ function _saveLoraConfig() {
 }
 
 function setPromptNode(n) {
-  if (promptNodeId === n) { promptNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
+  if (promptNodeId === n) { promptNodeId = ''; _explicitClear = { prompt: true }; updateNodeDisplay(); renderNodes(); setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50); return; }
   // 校验：检查目标节点是否有文本参数
   const key = _getNodeFirstStringKey(n);
   if (!key) { toast('❌ 该节点没有文本输入框，请选择正确的正面提示词节点', 'error'); return; }
@@ -8352,7 +8355,7 @@ function setPromptNode(n) {
   setTimeout(() => saveParams(), 50);
 }
 function setNegativeNode(n) {
-  if (negativeNodeId === n) { negativeNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
+  if (negativeNodeId === n) { negativeNodeId = ''; _explicitClear = { negative: true }; updateNodeDisplay(); renderNodes(); setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50); return; }
   // 校验：检查目标节点是否有文本参数
   const key = _getNodeFirstStringKey(n);
   if (!key) { toast('❌ 该节点没有文本输入框，请选择正确的负面提示词节点', 'error'); return; }
@@ -8401,7 +8404,7 @@ function _loadNodeTextToTextarea(nodeId, key, textareaId) {
 }
 
 function setResNode(n) {
-  if (resNodeId === n) { resNodeId = ''; }
+  if (resNodeId === n) { resNodeId = ''; _explicitClear = { resolution: true }; }
   else {
     if (promptNodeId === n) promptNodeId = '';
     if (negativeNodeId === n) negativeNodeId = '';
@@ -8410,10 +8413,10 @@ function setResNode(n) {
     resNodeId = n;
   }
   updateNodeDisplay(); renderNodes();
-  setTimeout(() => saveParams(), 50);
+  setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50);
 }
 function setExpandedTextNode(n) {
-  if (expandedTextNodeId === n) { expandedTextNodeId = ''; updateNodeDisplay(); renderNodes(); setTimeout(() => saveParams(), 50); return; }
+  if (expandedTextNodeId === n) { expandedTextNodeId = ''; _explicitClear = { expanded_text: true }; updateNodeDisplay(); renderNodes(); setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50); return; }
   if (promptNodeId === n) promptNodeId = '';
   if (negativeNodeId === n) negativeNodeId = '';
   if (resNodeId === n) resNodeId = '';
@@ -8434,7 +8437,7 @@ function toggleDisableNode(n) {
 }
 function setLoadImageNode(n, idx) {
   if (idx === undefined) idx = 0;
-  if (loadImageNodeIds[idx] === n) { loadImageNodeIds[idx] = ''; }
+  if (loadImageNodeIds[idx] === n) { loadImageNodeIds[idx] = ''; _explicitClear = { load_image: true }; }
   else {
     for (let i = 0; i < loadImageNodeIds.length; i++) {
       if (loadImageNodeIds[i] === n && i !== idx) loadImageNodeIds[i] = '';
@@ -8446,7 +8449,7 @@ function setLoadImageNode(n, idx) {
     loadImageNodeIds[idx] = n;
   }
   updateNodeDisplay(); renderNodes();
-  setTimeout(() => saveParams(), 50);
+  setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50);
 }
 
 /** 序号输入框变更：把节点映射到对应槽位（冲突交换 + 非法回退） */
@@ -8639,23 +8642,36 @@ function clearNodeMedia(nodeId, key) {
 }
 
 function clearNodeRole(role) {
+  // 记录本次是「用户主动取消指定」→ saveParams 时允许发送空值覆盖后端
+  _explicitClear = _explicitClear || {};
+  _explicitClear[role] = true;
   if (role === 'prompt') promptNodeId = '';
   else if (role === 'negative') negativeNodeId = '';
   else if (role === 'resolution') resNodeId = '';
   else if (role === 'load_image') loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
+  else if (role === 'load_audio') loadAudioNodeIds = ['', '', ''];
+  else if (role === 'load_video') loadVideoNodeIds = ['', '', ''];
   else if (role === 'expanded_text') expandedTextNodeId = '';
   else if (role === 'disabled') disabledNodes = [];
   updateNodeDisplay(); renderNodes();
-  setTimeout(() => saveParams(), 50);
+  setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50);
 }
 
 function clearAllNodeRoles() {
-  const hasAny = promptNodeId || negativeNodeId || resNodeId || expandedTextNodeId || loadImageNodeIds.some(id => id) || disabledNodes.length > 0;
+  const hasAny = promptNodeId || negativeNodeId || resNodeId || expandedTextNodeId
+    || loadImageNodeIds.some(id => id) || loadAudioNodeIds.some(id => id)
+    || loadVideoNodeIds.some(id => id) || disabledNodes.length > 0;
   if (!hasAny) return;
-  promptNodeId = ''; negativeNodeId = ''; resNodeId = ''; expandedTextNodeId = ''; loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
+  // 全部角色都标记为显式清空
+  _explicitClear = { prompt: true, negative: true, resolution: true, expanded_text: true,
+                     load_image: true, load_audio: true, load_video: true };
+  promptNodeId = ''; negativeNodeId = ''; resNodeId = ''; expandedTextNodeId = '';
+  loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
+  loadAudioNodeIds = ['', '', ''];
+  loadVideoNodeIds = ['', '', ''];
   disabledNodes = [];
   updateNodeDisplay(); renderNodes();
-  setTimeout(() => saveParams(), 50);
+  setTimeout(() => { saveParams().finally(() => { _explicitClear = {}; }); }, 50);
   toast('已清除所有节点指定');
 }
 
@@ -9364,35 +9380,49 @@ function showNodeDetail(nid) {
     if (typeof p.value === 'object') return;
     const modelKey = `${node.class_type  }_${  p.key}`;
     const elId = `param_${  node.id  }_${  p.key}`;
+    // 实时同步：改动即回写内存缓存 allParamsData，避免"关掉卡片再打开还是旧值"
+    const syncAttr = ` onchange="syncParamValue('${node.id}','${String(p.key).replace(/'/g, "\\'")}',this.value)"`;
     html += `<div class="param-row"><label for="${  elId  }">${  p.key  }</label>`;
     if (Array.isArray(p.options) && p.options.length) {
       // object_info 提供的 COMBO 选项 → 下拉选择
-      html += `<select id="${  elId  }">${  p.options.map((o) => { return `<option${  String(o) === String(p.value) ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
+      html += `<select id="${  elId  }"${syncAttr}>${  p.options.map((o) => { return `<option${  String(o) === String(p.value) ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
     } else if (modelLists[modelKey]) {
-      html += `<select id="${  elId  }">${  modelLists[modelKey].map((o) => { return `<option${  o === p.value ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
+      html += `<select id="${  elId  }"${syncAttr}>${  modelLists[modelKey].map((o) => { return `<option${  o === p.value ? ' selected' : ''  }>${  o  }</option>`; }).join('')  }</select>`;
     } else if (p.type === 'text') {
-      html += `<textarea id="${  elId  }" rows="2">${  p.value === 0 ? '0' : (p.value || '')  }</textarea>`;
+      html += `<textarea id="${  elId  }" rows="2"${syncAttr}>${  p.value === 0 ? '0' : (p.value || '')  }</textarea>`;
     } else if (p.type === 'bool') {
-      html += `<select id="${  elId  }"><option value="true"${  p.value ? ' selected' : ''  }>true</option><option value="false"${  !p.value ? ' selected' : ''  }>false</option></select>`;
+      html += `<select id="${  elId  }"${syncAttr}><option value="true"${  p.value ? ' selected' : ''  }>true</option><option value="false"${  !p.value ? ' selected' : ''  }>false</option></select>`;
     } else if (p.type === 'number' && (p.min !== undefined || p.max !== undefined)) {
       // INT/FLOAT 带范围 → 数字输入限幅
       const stp = (p.step !== undefined && p.step > 0) ? p.step : 1;
-      html += `<input type="number" id="${  elId  }" value="${  p.value  }"${  p.min !== undefined ? ` min="${  p.min  }"` : ''  }${  p.max !== undefined ? ` max="${  p.max  }"` : ''  } step="${  stp  }">`;
+      html += `<input type="number" id="${  elId  }" value="${  p.value  }"${  p.min !== undefined ? ` min="${  p.min  }"` : ''  }${  p.max !== undefined ? ` max="${  p.max  }"` : ''  } step="${  stp  }"${syncAttr}>`;
     } else if (p.type === 'select') {
       if (Array.isArray(p.value)) {
-        html += `<select id="${  elId  }">${  p.value.map((o) => { return `<option>${  o  }</option>`; }).join('')  }</select>`;
+        html += `<select id="${  elId  }"${syncAttr}>${  p.value.map((o) => { return `<option>${  o  }</option>`; }).join('')  }</select>`;
       } else {
         // 值被覆盖为字符串（如从 workflow_config 读取的保存值）
-        html += `<input type="text" id="${  elId  }" value="${  p.value === 0 ? '0' : (p.value || '')  }">`;
+        html += `<input type="text" id="${  elId  }" value="${  p.value === 0 ? '0' : (p.value || '')  }"${syncAttr}>`;
       }
     } else {
-      html += `<input type="text" id="${  elId  }" value="${  p.value === 0 ? '0' : (p.value || '')  }">`;
+      html += `<input type="text" id="${  elId  }" value="${  p.value === 0 ? '0' : (p.value || '')  }"${syncAttr}>`;
     }
     html += '</div>';
   });
   body.innerHTML = html;
   body.dataset.nodeId = nid;
   document.getElementById('node_modal').classList.add('active');
+}
+
+/** 参数控件变更时，实时回写内存缓存 allParamsData
+ *  否则关闭卡片再打开会用旧值渲染（用户看到"改了不刷新，要刷新页面才对"） */
+function syncParamValue(nodeId, key, value) {
+  try {
+    if (!allParamsData || !allParamsData.nodes) return;
+    const n = allParamsData.nodes.find(x => String(x.id) === String(nodeId));
+    if (!n || !n.params) return;
+    const p = n.params.find(x => x.key === key);
+    if (p) p.value = value;
+  } catch (e) { console.warn('syncParamValue error:', e); }
 }
 
 function closeNodeModal() {
@@ -9406,7 +9436,11 @@ function closeNodeModal() {
       if (n.id === nid) {
         n.params.forEach((p) => {
           const e = document.getElementById(`param_${n.id}_${p.key}`);
-          if (e) saveData[`${n.id}_${p.key}`] = e.value;
+          if (e) {
+            saveData[`${n.id}_${p.key}`] = e.value;
+            // ★ 同步回写内存缓存，否则再次打开卡片会用旧值渲染（表现为"改了不刷新"）
+            p.value = e.value;
+          }
         });
       }
     });
@@ -9461,16 +9495,20 @@ async function saveParams() {
       // 触发保存时用空值覆盖后端已保存的节点配置，导致刷新后图片/角色丢失
       __empty_load_nodes__: emptyLoadNodes.join(',')
     };
-    if (promptNodeId) d.__prompt_node__ = promptNodeId;
-    if (resNodeId) d.__resolution_node__ = resNodeId;
-    if (negativeNodeId) d.__negative_node__ = negativeNodeId;
-    if (expandedTextNodeId) d.__expanded_text_node__ = expandedTextNodeId;
+    // 节点角色：默认只在非空时附带（避免切换工作流后未初始化时用空值覆盖后端已存配置）；
+    // 但用户「主动取消指定」时必须发送空值，否则后端保留旧值 → 表现为「取消不掉」。
+    // _explicitClear 里的角色名 = 本次是用户显式取消，允许发送空串覆盖。
+    const _ec = _explicitClear || {};
+    if (promptNodeId || _ec.prompt) d.__prompt_node__ = promptNodeId || '';
+    if (resNodeId || _ec.resolution) d.__resolution_node__ = resNodeId || '';
+    if (negativeNodeId || _ec.negative) d.__negative_node__ = negativeNodeId || '';
+    if (expandedTextNodeId || _ec.expanded_text) d.__expanded_text_node__ = expandedTextNodeId || '';
     const imgIds = loadImageNodeIds.filter(id => id);
-    if (imgIds.length) d.__load_image_nodes__ = imgIds.join(',');
+    if (imgIds.length || _ec.load_image) d.__load_image_nodes__ = imgIds.join(',');
     const audioIds = loadAudioNodeIds.filter(id => id);
-    if (audioIds.length) d.__load_audio_nodes__ = audioIds.join(',');
+    if (audioIds.length || _ec.load_audio) d.__load_audio_nodes__ = audioIds.join(',');
     const videoIds = loadVideoNodeIds.filter(id => id);
-    if (videoIds.length) d.__load_video_nodes__ = videoIds.join(',');
+    if (videoIds.length || _ec.load_video) d.__load_video_nodes__ = videoIds.join(',');
     d.__disabled_nodes__ = disabledNodes;
     d.__lora_nodes__ = loraNodesConfig;
     console.log('[saveParams] sending:', cW, JSON.stringify({...d, __prompt_node__: d.__prompt_node__, __resolution_node__: d.__resolution_node__, __load_image_nodes__: d.__load_image_nodes__, __negative_node__: d.__negative_node__, __expanded_text_node__: d.__expanded_text_node__}));

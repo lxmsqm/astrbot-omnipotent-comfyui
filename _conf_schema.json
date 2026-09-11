@@ -30,9 +30,27 @@
     "default": false
   },
   "send_platform": {
-    "title": "结果发送平台",
-    "description": "生成结果发到哪个平台：auto=自动识别来源平台（推荐）；qq=固定发QQ；feishu=固定发飞书；both=两边都发。切换平台只改这里，各平台逻辑互不影响",
+    "title": "结果发送平台（命令回复）",
+    "description": "QQ/飞书命令触发的生成结果发到哪：auto=自动识别来源平台（推荐）；qq=固定发QQ；feishu=固定发飞书；both=两边都发",
     "type": "string",
     "default": "auto"
+  },
+  "target_platform": {
+    "title": "生成后发送到（平台）",
+    "description": "WebUI 点「生成」后主动推送的平台：qq=QQ；feishu=飞书",
+    "type": "string",
+    "default": "qq"
+  },
+  "target_id": {
+    "title": "生成后发送到（ID）",
+    "description": "目标 ID：QQ 填 QQ号/QQ群号；飞书填 open_id(ou_xxx) 或群 chat_id(oc_xxx)。留空则不主动发送",
+    "type": "string",
+    "default": ""
+  },
+  "target_group": {
+    "title": "目标是群聊",
+    "description": "勾选后按群消息发送（QQ群 / 飞书群）",
+    "type": "bool",
+    "default": false
   }
 }
