@@ -4770,7 +4770,7 @@ textarea:focus-visible,
         <span class="gq-divider" aria-hidden="true"></span>
         <label class="gq-count" title="生成几张">
           <span>数量</span>
-          <select id="gen_count" aria-label="生成数量">
+          <select id="gen_count" aria-label="生成数量" onchange="window._genCount=parseInt(this.value,10)||1">
             <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
           </select>
         </label>
@@ -6245,6 +6245,11 @@ function getCurrentWF() {
 }
 
 function loadCfg() {
+  // 初始化生成数量（供 webuiGenerate 使用，避免 select 实时读取失效）
+  try {
+    const _gc = document.getElementById('gen_count');
+    window._genCount = _gc ? (parseInt(_gc.value, 10) || 1) : 1;
+  } catch (e) { window._genCount = 1; }
   apiFetch('/api/config', {}, true).then((c) =>{
     if (!c) return;
     $id('cfg_comfyui_url').value = c.comfyui_url || '127.0.0.1:8188';
@@ -6316,8 +6321,39 @@ function webuiStop() {
     });
 }
 
-/** 🚀 生成 / 🎲 随机图按钮：用当前工作流生成；isRandom=true 从随机池抽标签；数量取 gen_count */
+/** 🚀 生成 / 🎲 随机图按钮：用当前工作流生成；isRandom=true 从随机池抽标签；数量取 gen_count
+ *  ★ 数量>1 时：直接「模拟连续点击 N 次」——每次独立 K2 组词并提交，出 N 张不同提示词的图。
+ *    这样不依赖后端 count 参数传递（避免前端数量读取失效导致只出 1 张）。 */
 async function webuiGenerate(isRandom) {
+  // ── 数量：优先 window._genCount（onchange 记录），其次实时读 select
+  const _cntEl0 = document.getElementById('gen_count');
+  let _want = 1;
+  if (typeof window._genCount === 'number' && window._genCount >= 1 && window._genCount <= 10) {
+    _want = window._genCount;
+  } else if (_cntEl0) {
+    const _v0 = parseInt(_cntEl0.value, 10);
+    if (!isNaN(_v0) && _v0 >= 1 && _v0 <= 10) _want = _v0;
+    window._genCount = _want;
+  }
+  // 数量>1 → 循环调用自身 N 次（每次 count 强制为 1，独立组词）
+  if (_want > 1) {
+    console.log('[webuiGenerate] 数量=' + _want + ' → 模拟连续点击 ' + _want + ' 次');
+    let _ok = 0, _err = '';
+    for (let _i = 0; _i < _want; _i++) {
+      try {
+        await webuiGenerateOnce(isRandom);
+        _ok++;
+      } catch (e) { _err = e?.message || String(e); break; }
+    }
+    toast(_ok > 0 ? `✅ 生成完成 ${_ok} 张` : ('❌ ' + (_err || '生成失败')), _ok > 0 ? '' : 'error');
+    return;
+  }
+  // 数量=1 → 正常单次执行
+  await webuiGenerateOnce(isRandom);
+}
+
+/** 单次生成（原 webuiGenerate 主体） */
+async function webuiGenerateOnce(isRandom) {
   // 按压反馈：禁用按钮 + loading 文案，防止重复点击
   const genBtn = document.getElementById('gen_btn');
   const randBtn = document.getElementById('rand_btn');
@@ -6343,15 +6379,10 @@ async function webuiGenerate(isRandom) {
   }
   // 后端 random 标志：K2 随机已在前端组词，后端直接按普通 prompt 处理（避免 anima random-pick 丢弃 K2 词）
   const randomFlag = (isRandom && _k2ComposeMode === 'k2') ? false : !!isRandom;
-  // 数量输入框（1~10）
-  const cntEl = document.getElementById('gen_count');
-  let count = 1;
-  if (cntEl) {
-    const v = parseInt(cntEl.value, 10);
-    if (!isNaN(v) && v >= 1 && v <= 10) count = v;
-  }
+  // 单次生成：count 恒为 1（多张由外层 webuiGenerate 循环调用实现，每张独立 K2 组词）
+  const count = 1;
   if (!isRandom && !prompt) { /* 图生视频/图生图允许空提示词，直接提交 */ }
-  const k2MultiRandom = (isRandom && _k2ComposeMode === 'k2' && count > 1);
+  const k2MultiRandom = false;   // 外层已循环，这里不再走逐张分支
   try {
     if (k2MultiRandom) {
       // K2 随机多张：每张都重新组一次词（独立随机），逐张提交，避免同词出多张

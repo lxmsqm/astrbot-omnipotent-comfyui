@@ -1916,12 +1916,15 @@ class WebUIMixin:
             count = 1
         # 图生视频/图生图等允许空提示词（仅靠图片即可生成），不再强制要求 prompt
         quality = data.get("quality") or ""
+        logger.info(f"[ComfyUI] WebUI 生成请求: random={is_random} count={count} "
+                    f"prompt_len={len(prompt)} quality={quality or '-'} keys={list(data.keys())}")
         qo = quality if quality in self.quality_presets else None
         # 根据当前工作流分类获取 cmd_config，与 QQ 命令行为一致
         cur_cat = (self.workflow_config.get('__wf_categories__', {}) or {}).get(self.current_workflow_name, '')
         cmd_config = dict(self.workflow_config.get('__commands__', {}).get(cur_cat, {})) if cur_cat else None
         all_paths = []
         last_text = ""
+        _last_gen_prompt = ""      # 记录最后一次实际使用的提示词（随机模式下是抽出的标签）
         for i in range(count):
             gen_prompt = prompt
             # 随机图模式：从随机池抽标签
@@ -1941,6 +1944,7 @@ class WebUIMixin:
                     if i == 0:
                         return web.json_response({"ok": False, "error": f"随机图抽取失败: {e}"})
                     break
+            _last_gen_prompt = gen_prompt or _last_gen_prompt
             try:
                 status, text, out_path = await self._process_and_submit(
                     gen_prompt, None, cmd_config=cmd_config, user_id="webui",
@@ -1963,16 +1967,25 @@ class WebUIMixin:
             tp = "qq"
         target_id = str(_lc.get("target_id", "") or _lc.get("target_qq", "") or "").strip()
         sent = False
-        # 提示词兜底：WebUI 随机模式下 prompt 可能为空，若开启「图片附带提示词」
-        # 则从本次生成记录的扩展提示词缓存里取，避免发出去的消息没有提示词
-        _send_prompt = prompt
-        if not _send_prompt and getattr(self, "show_prompt_on_image", False) and all_paths:
+        # 提示词兜底链（按可靠性排序）：
+        #   1) 本次实际使用的提示词 _last_gen_prompt（随机模式下=抽出的标签，最可靠）
+        #   2) 前端传入的 prompt
+        #   3) 扩展提示词缓存（按路径，再按文件名兜底）
+        _send_prompt = _last_gen_prompt or prompt
+        if not _send_prompt and all_paths:
             try:
                 _abs = str(Path(all_paths[0]).resolve())
                 _send_prompt = self._expanded_prompt_cache.get(_abs, '') or ''
+                if not _send_prompt:
+                    _fn = Path(_abs).name
+                    for _k, _v in list(self._expanded_prompt_cache.items()):
+                        if _k and Path(_k).name == _fn:
+                            _send_prompt = _v
+                            break
             except Exception:
                 _send_prompt = ''
-        logger.info(f"[ComfyUI] WebUI 推送准备: target={tp}:{target_id[:16]}... prompt={'有('+str(len(_send_prompt))+'字)' if _send_prompt else '空'}")
+        logger.info(f"[ComfyUI] WebUI 推送准备: target={tp}:{target_id[:16]}... "
+                    f"随机模式={is_random} prompt={'有('+str(len(_send_prompt))+'字)' if _send_prompt else '空'}")
         if target_id:
             is_group = bool(_lc.get("target_group", False))
             sent = await self._send_to_target(tp, target_id, all_paths, _send_prompt, group=is_group)
@@ -5882,9 +5895,26 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 如果开启了图片附带提示词，在文本末尾追加最终提示词
             if self.show_prompt_on_image and paths:
                 abs_path = str(Path(paths[0]).resolve())
-                final_prompt = self._expanded_prompt_cache.get(abs_path, '') or prompt
+                _cache_val = self._expanded_prompt_cache.get(abs_path, '')
+                if not _cache_val:
+                    # 键不精确匹配时按文件名兜底（路径形式差异：软链/相对路径/下载路径不一致）
+                    try:
+                        _fname = Path(abs_path).name
+                        for _k, _v in list(self._expanded_prompt_cache.items()):
+                            if _k and Path(_k).name == _fname:
+                                _cache_val = _v
+                                logger.info(f"[ComfyUI] 提示词缓存按文件名兜底命中: {_fname}")
+                                break
+                    except Exception:
+                        pass
+                final_prompt = _cache_val or prompt
+                logger.info(f"[ComfyUI] 附带提示词检查: 开关={self.show_prompt_on_image} "
+                            f"缓存命中={bool(_cache_val)} 传入prompt={bool(prompt)} "
+                            f"缓存键数={len(self._expanded_prompt_cache)} key={abs_path[-60:]}")
                 if final_prompt:
                     text = f"{text}\n{final_prompt}"
+                else:
+                    logger.warning("[ComfyUI] 无可用提示词（缓存与传入均为空），消息将不含提示词")
 
             # 去掉 text 中可能残留的 [CQ:at,...] 前缀
             clean_text = text
@@ -5977,13 +6007,24 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             #   1) 目标是飞书（QQ 的 CQ 码在飞书不可用，必须走标准链，适配器会做素材上传）
             #   2) 需要发 QQ 但 OneBot 直连失败/不可用（保留原有兜底行为）
             if ('feishu' in _targets) or (not _onebot_ok):
+                # 飞书分支：适配器对「文字+图片」混合链会把文字吞掉，改为分两条发送
+                _is_feishu = 'feishu' in _targets
+                if _is_feishu and clean_text:
+                    try:
+                        await self.context.send_message(umo, MessageChain(chain=[Plain(text=clean_text)]))
+                        await asyncio.sleep(0.8)
+                        logger.info(f"[ComfyUI] 飞书文字已单独发送: {clean_text[:60]}")
+                    except Exception as e:
+                        logger.warning(f"[ComfyUI] 飞书文字发送失败: {type(e).__name__}: {e}")
                 parts = []
-                if not event.is_private_chat():
+                if not event.is_private_chat() and not _is_feishu:
                     sender_id = event.get_sender_id()
                     parts.append(At(qq=sender_id))
-                parts.append(Plain(text=clean_text))
+                if clean_text and not _is_feishu:
+                    parts.append(Plain(text=clean_text))
                 for p in paths:
-                    parts.append(AstrImage(file=p))
+                    # 统一用「普通路径」构造（不用 fromFileSystem 的 file:// URI，飞书解析不了）
+                    parts.append(AstrImage(file=str(Path(p).resolve())))
                 chain = MessageChain(chain=parts)
                 result = await self.context.send_message(umo, chain)
                 _feishu_ok = 'feishu' in _targets
@@ -6352,29 +6393,60 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             umo = f"{lark_pid}:{mtype}:{tid}"
             logger.info(f"[ComfyUI] 飞书发送类型判定: id={tid[:12]}... → {mtype} (配置group={group})")
             chain = MessageChain()
-            chain.message(f"✨ 生成完成" + (f": {prompt[:2000]}" if prompt else ""))
+            _text = f"✨ 生成完成" + (f": {prompt[:2000]}" if prompt else "")
+            # 飞书：适配器对「文字+图片」混合链会把文字吞掉 → 文字单独先发
+            _is_feishu_active = is_group or str(target_id).startswith("ou_") or str(target_id).startswith("oc_")
+            if _is_feishu_active:
+                try:
+                    await self.context.send_message(umo, MessageChain(chain=[Plain(text=_text)]))
+                    await asyncio.sleep(0.8)
+                    logger.info(f"[ComfyUI] 飞书(主动推送)文字已单独发送: {_text[:60]}")
+                except Exception as e:
+                    logger.warning(f"[ComfyUI] 飞书(主动推送)文字发送失败: {type(e).__name__}: {e}")
+            else:
+                chain.message(_text)
             sent_any = False
             for p in paths[:10]:
                 if not Path(p).exists():
                     continue
-                ext = Path(p).suffix.lower()
                 try:
-                    if ext in ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'):
-                        chain.chain.append(AstrImage.fromFileSystem(str(p)))
-                    elif ext in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
-                        chain.chain.append(Video.fromFileSystem(str(p)))
-                    elif ext in ('.wav', '.mp3', '.flac', '.ogg', '.m4a'):
-                        chain.chain.append(Record.fromFileSystem(str(p)))
+                    # ★ 平台兼容：飞书分支用「普通路径」构造消息组件。
+                    # 不能用 fromFileSystem()——它返回 file:// URI，
+                    # 飞书适配器的 MediaResolver 解析不了 → 图片被静默跳过
+                    # （日志报"无法打开或上传图片文件"但 send_message 不抛异常，仍显示 True）
+                    _p = str(Path(p).resolve())
+                    _ext2 = Path(_p).suffix.lower()
+                    if _ext2 in ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'):
+                        chain.chain.append(AstrImage(file=_p))
+                    elif _ext2 in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
+                        chain.chain.append(Video(file=_p))
+                    elif _ext2 in ('.wav', '.mp3', '.flac', '.ogg', '.m4a'):
+                        chain.chain.append(Record(file=_p))
                     else:
-                        chain.chain.append(File.fromFileSystem(str(p)))
+                        # File 的 name 是必填位置参数，不能只传 file
+                        chain.chain.append(File(name=Path(_p).name, file=_p))
                     sent_any = True
                 except Exception as e:
                     logger.warning(f"[ComfyUI] 飞书追加 {Path(p).name} 失败: {e}")
             if not sent_any and not prompt:
                 return False
-            r = await self.context.send_message(umo, chain)
-            logger.info(f"[ComfyUI] 已主动发送到飞书 {target_id} (umo={umo}): {str(r)[:150]}")
-            return True
+            # 发送图片：网络波动/上行慢时飞书素材上传可能 WriteTimeout → 重试最多3次
+            _last_err = None
+            for _try in range(3):
+                try:
+                    r = await self.context.send_message(umo, chain)
+                    logger.info(f"[ComfyUI] 已主动发送到飞书 {target_id} (umo={umo}, 第{_try+1}次): {str(r)[:150]}")
+                    return True
+                except Exception as e:
+                    _last_err = e
+                    _ename = type(e).__name__
+                    logger.warning(f"[ComfyUI] 飞书发送第{_try+1}次失败({_ename}): {e}")
+                    # WriteTimeout/Timeout 类错误才重试，其余直接放弃
+                    if 'Timeout' not in _ename and 'timeout' not in str(e).lower():
+                        break
+                    await asyncio.sleep(2 + _try * 2)
+            logger.error(f"[ComfyUI] 飞书发送最终失败(已重试): {type(_last_err).__name__}: {_last_err}")
+            return False
         except Exception as e:
             logger.warning(f"[ComfyUI] 主动发送到飞书 {target_id} 失败: {type(e).__name__}: {e}")
             return False
@@ -7923,6 +7995,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                                 # 扩写后文本缓存，供 _send_image_result 使用
                                 if expanded_text:
                                     self._expanded_prompt_cache[str(sp)] = expanded_text
+                                else:
+                                    # 无扩写节点的工作流：缓存本次实际使用的提示词，
+                                    # 否则「图片附带提示词」开关取不到内容而静默失效
+                                    if prompt:
+                                        self._expanded_prompt_cache[str(sp)] = prompt
                                 saved_images.append(str(sp))
                             else:
                                 logger.warning(f"[ComfyUI] 下载失败 HTTP {ir.status}: {img['filename']}")
