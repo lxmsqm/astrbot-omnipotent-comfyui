@@ -1963,9 +1963,19 @@ class WebUIMixin:
             tp = "qq"
         target_id = str(_lc.get("target_id", "") or _lc.get("target_qq", "") or "").strip()
         sent = False
+        # 提示词兜底：WebUI 随机模式下 prompt 可能为空，若开启「图片附带提示词」
+        # 则从本次生成记录的扩展提示词缓存里取，避免发出去的消息没有提示词
+        _send_prompt = prompt
+        if not _send_prompt and getattr(self, "show_prompt_on_image", False) and all_paths:
+            try:
+                _abs = str(Path(all_paths[0]).resolve())
+                _send_prompt = self._expanded_prompt_cache.get(_abs, '') or ''
+            except Exception:
+                _send_prompt = ''
+        logger.info(f"[ComfyUI] WebUI 推送准备: target={tp}:{target_id[:16]}... prompt={'有('+str(len(_send_prompt))+'字)' if _send_prompt else '空'}")
         if target_id:
             is_group = bool(_lc.get("target_group", False))
-            sent = await self._send_to_target(tp, target_id, all_paths, prompt, group=is_group)
+            sent = await self._send_to_target(tp, target_id, all_paths, _send_prompt, group=is_group)
         return web.json_response({
             "ok": True, "paths": [str(p) for p in all_paths], "count": len(all_paths),
             "sent": sent, "target_qq": target_id, "target_platform": tp, "target_id": target_id,
@@ -6327,12 +6337,22 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             from astrbot.api.message_components import Image as AstrImage, Plain, Video, File, Record
             # 飞书平台实例 id：从 cmd_config.json 里找 type == 'lark' 的 id
             lark_pid = self._get_lark_platform_id() or "lark-main"
-            is_group = group or target_id.startswith("oc_")
+            # 消息类型以 ID 前缀为准（飞书 ID 是强类型的，用错会报 230001 invalid receive_id）：
+            #   oc_xxx = 群聊 chat_id → GroupMessage
+            #   ou_xxx = 用户 open_id → FriendMessage
+            # 前缀无法判断时才回退到配置里的「目标是群聊」勾选
+            tid = str(target_id).strip()
+            if tid.startswith("oc_"):
+                is_group = True
+            elif tid.startswith("ou_"):
+                is_group = False
+            else:
+                is_group = bool(group)
             mtype = "GroupMessage" if is_group else "FriendMessage"
-            umo = f"{lark_pid}:{mtype}:{target_id}"
+            umo = f"{lark_pid}:{mtype}:{tid}"
+            logger.info(f"[ComfyUI] 飞书发送类型判定: id={tid[:12]}... → {mtype} (配置group={group})")
             chain = MessageChain()
-            if prompt:
-                chain.message(f"✨ 生成完成: {prompt[:2000]}")
+            chain.message(f"✨ 生成完成" + (f": {prompt[:2000]}" if prompt else ""))
             sent_any = False
             for p in paths[:10]:
                 if not Path(p).exists():
