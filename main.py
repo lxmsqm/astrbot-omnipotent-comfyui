@@ -939,11 +939,24 @@ class GenerateMixin:
         return self.official_ratio_reverse.get(official, "9:16")
 
     def _find_load_image_node(self, workflow):
-        """仅返回 WebUI 中手动指定的图片载入节点。未指定则返回 None。"""
+        """仅返回 WebUI 中手动指定的图片载入节点。未指定则返回 None。
+        注意：工作流 JSON 的节点键可能是 int 或 str（ComfyUI 导出差异），
+        配置里存的是字符串，因此必须做类型归一化比较。"""
         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
         wf_config = wf_configs.get(self.current_workflow_name, {})
-        manual = wf_config.get('__load_image_node__', '') or self.workflow_config.get('__load_image_node__', '') or wf_config.get('__load_image_nodes__', '') or self.workflow_config.get('__load_image_nodes__', '')
-        if manual and manual in workflow: return manual
+        manual = (wf_config.get('__load_image_node__', '') or self.workflow_config.get('__load_image_node__', '')
+                  or wf_config.get('__load_image_nodes__', '') or self.workflow_config.get('__load_image_nodes__', ''))
+        if not manual:
+            return None
+        manual = str(manual).strip()
+        # 直接命中
+        if manual in workflow:
+            return manual
+        # 类型归一化命中（int 键 vs str 配置）
+        for k in workflow.keys():
+            if str(k) == manual:
+                logger.info(f"[ComfyUI] 图片节点配置 {manual!r} 与工作流键类型不一致(实际 {type(k).__name__})，已归一化匹配")
+                return k
         return None
 
     def _find_all_load_image_nodes(self, workflow):
@@ -1342,17 +1355,50 @@ class GenerateMixin:
 
     async def _set_load_image(self, workflow, image_path):
         """设置工作流中的 LoadImage 节点。
-        image_path 可以是单个路径字符串，也可以是路径列表（设置多个 LoadImage 节点）。"""
+        image_path 可以是单个路径字符串，也可以是路径列表（设置多个 LoadImage 节点）。
+        ★ 关键：注入前先清空所有 LoadImage 节点的图片引用（含缓存文件名），
+          避免多图工作流只传 1 张时，节点 2/3 残留上次的图导致 ComfyUI 用旧图跑出错误结果。
+        """
+        logger.info(f"[ComfyUI] _set_load_image 被调用: image_path={image_path!r}")
+        # 第一步：清空所有图片加载节点的引用（防残留）
+        try:
+            all_nodes = self._find_all_load_image_nodes(workflow)
+            for nid in all_nodes:
+                node = workflow.get(nid)
+                if isinstance(node, dict) and isinstance(node.get('inputs'), dict):
+                    old = node['inputs'].get('image')
+                    if old:
+                        node['inputs']['image'] = ""
+                        logger.info(f"[ComfyUI] 清理节点 {nid} 残留图片引用: {old!r} -> ''")
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 清空图片节点引用失败: {e}")
         if isinstance(image_path, (list, tuple)):
+            logger.info(f"[ComfyUI] 走多图分支, 共 {len(image_path)} 张")
             return await self._set_all_load_images(workflow, list(image_path))
-        return await self._set_single_load_image(workflow, image_path)
+        logger.info(f"[ComfyUI] 走单图分支")
+        r = await self._set_single_load_image(workflow, image_path)
+        logger.info(f"[ComfyUI] 单图注入结果: {r}")
+        return r
 
     async def _set_single_load_image(self, workflow, image_path):
         """设置单个 LoadImage 节点，并删除工作流中其他多余的 LoadImage 节点"""
         nid = self._find_load_image_node(workflow)
-        if not nid: return False
+        # 配置未指定时（工作流改名/新导入导致 __load_image_nodes__ 失配）→ 自动扫描实际节点兜底
+        if not nid:
+            try:
+                cands = self._find_image_input_nodes(workflow) or self._find_all_load_image_nodes(workflow)
+                nid = str(cands[0]) if cands else None
+                if nid:
+                    logger.info(f"[ComfyUI] 配置未指定图片节点，自动识别到 LoadImage {nid}")
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 自动识别 LoadImage 失败: {e}")
+        logger.info(f"[ComfyUI] _set_single_load_image: 找到节点={nid!r}, 图片={image_path!r}")
+        if not nid:
+            logger.error(f"[ComfyUI] 未找到 LoadImage 节点，无法注入图片！工作流节点数={len(workflow)}")
+            return False
         # 统一通过 HTTP 上传到 ComfyUI input 目录（无论 local/remote 模式）
         name = await self._upload_image_remote(Path(image_path))
+        logger.info(f"[ComfyUI] 上传结果 name={name!r}")
         if not name:
             logger.error(f"[ComfyUI] 上传图片失败: {image_path}")
             return False
@@ -1362,25 +1408,35 @@ class GenerateMixin:
             Path(image_path).unlink(missing_ok=True)
         except Exception as e:
             logger.debug(f"[ComfyUI] 删除临时文件失败: {e}")
-        # 删除其他多余的 LoadImage 节点
+        # 删除其他多余的 LoadImage 节点（多图工作流只传1张时，其余节点必须清掉，
+        # 否则会残留上次的图/上次的缓存文件名，导致 ComfyUI 拿旧图跑出错误结果）
         all_nodes = self._find_all_load_image_nodes(workflow)
-        extra = [x for x in all_nodes if x != nid]
+        nid_s = str(nid)
+        extra = [x for x in all_nodes if str(x) != nid_s]   # 类型归一化比较，避免误删已注入节点
         if extra:
+            # 先把多余节点的图片引用清空（防止级联删除失败时残留旧图）
+            for x in extra:
+                node = workflow.get(x)
+                if isinstance(node, dict) and isinstance(node.get('inputs'), dict):
+                    node['inputs']['image'] = ""
             self._remove_workflow_nodes(workflow, extra)
-            logger.info(f"[ComfyUI] 单图模式，删除多余 LoadImage 节点: {extra}")
+            logger.info(f"[ComfyUI] 单图模式，清理多余 LoadImage 节点: {extra}")
         return True
 
     def _remove_workflow_nodes(self, workflow, remove_ids):
-        """智能级联删除：删除指定节点。若下游节点的所有输入都来自已删节点则也删除，否则仅清理引用。"""
+        """智能级联删除：删除指定节点。若下游节点的所有输入都来自已删节点则也删除，否则仅清理引用。
+        注意：工作流节点键可能是 int 或 str，统一按 str 比较，但删除时用真实键。"""
         to_remove = set(str(x) for x in remove_ids)
         if not to_remove:
             return
         while True:
             new_removals = set()
             for nid, node in list(workflow.items()):
-                if nid in to_remove or not isinstance(node, dict):
+                if str(nid) in to_remove or not isinstance(node, dict):
                     continue
                 inputs = node.get('inputs', {})
+                if not isinstance(inputs, dict):
+                    continue
                 refs_deleted = [k for k, v in inputs.items()
                                 if isinstance(v, list) and len(v) >= 1 and str(v[0]) in to_remove]
                 if not refs_deleted:
@@ -1389,7 +1445,7 @@ class GenerateMixin:
                 all_inputs = [v for v in inputs.values() if isinstance(v, list) and len(v) >= 1]
                 all_from_deleted = all(str(v[0]) in to_remove for v in all_inputs)
                 if all_from_deleted and all_inputs:
-                    new_removals.add(nid)
+                    new_removals.add(str(nid))
                 else:
                     # 还有活着的输入源 → 只清理已删引用，保留节点（设为空而非删 key，避免节点结构损坏）
                     for k in refs_deleted:
@@ -1397,10 +1453,14 @@ class GenerateMixin:
             if not new_removals:
                 break
             to_remove.update(new_removals)
-        for nid in to_remove:
-            workflow.pop(nid, None)
-        if to_remove:
-            logger.info(f"[ComfyUI] 级联删除: {sorted(to_remove)}")
+        # 用真实键删除（兼容 int / str 键）
+        removed_real = []
+        for k in list(workflow.keys()):
+            if str(k) in to_remove:
+                workflow.pop(k, None)
+                removed_real.append(k)
+        if removed_real:
+            logger.info(f"[ComfyUI] 级联删除: {removed_real}")
 
     async def _set_all_load_images(self, workflow, image_paths):
         """设置工作流中 LoadImage 节点。图片少于节点时，多余节点及其引用将被删除。"""
@@ -1427,10 +1487,17 @@ class GenerateMixin:
             logger.warning(f"[ComfyUI] LoadImage {nid} HTTP 上传失败，尝试使用原始文件名")
             workflow[nid]['inputs']['image'] = Path(path).name
         # 删除多余的 LoadImage 节点及其下游引用
-        if keep_count < len(nodes):
-            remove_ids = nodes[keep_count:]
+        # 用实际分配数（may < keep_count，若 image_paths 里有空项）判断，确保未分配的节点被清掉
+        assigned = min(keep_count, len(nodes))
+        if assigned < len(nodes):
+            remove_ids = nodes[assigned:]
+            # 先清空引用，防止级联删除失败时残留旧图
+            for x in remove_ids:
+                node = workflow.get(x)
+                if isinstance(node, dict) and isinstance(node.get('inputs'), dict):
+                    node['inputs']['image'] = ""
             self._remove_workflow_nodes(workflow, remove_ids)
-            logger.info(f"[ComfyUI] 删除多余节点: {remove_ids}")
+            logger.info(f"[ComfyUI] 清理未使用的多余图片节点: {remove_ids}（工作流共{len(nodes)}个, 本次用{assigned}个）")
         return True
 
     def _ensure_png(self, path):
