@@ -5074,6 +5074,8 @@ textarea:focus-visible,
       <div class="grm-k2-toolbar" style="flex-wrap:wrap">
         <span class="grm-k2-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lock"/></svg> K2 字段锁定 <span class="section-badge" id="grimoire_k2_badge">随机</span></span>
         <button class="btn btn-xs btn-secondary" id="grm_k2_nsfw_btn" onclick="toggleK2Nsfw()" title="K2 随机是否允许 NSFW（交合/裸露强化）">🔞 <span id="grm_k2_nsfw_text">NSFW关</span></button>
+        <!--【K2】生成随机：调用K2引擎组一句中文提示词并「直接复制到剪贴板」（不生成图片、不回填输入框）。仅K2模式可见（面板本身只在K2模式显示） -->
+        <button class="btn btn-xs btn-primary" id="grm_k2_rand_copy_btn" onclick="k2ComposeAndCopy()" title="用K2引擎随机组一句中文提示词，并直接复制到剪贴板（遵守当前字段锁定/NSFW/预设）"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> 生成随机</button>
         <span style="display:inline-flex;gap:4px;margin-left:2px">
           <button class="btn btn-xs btn-secondary" id="grm_k2_all_toggle" onclick="toggleAllK2Locks()" title="一键全选(全部随机) / 反选(全部排除)"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_k2_all_text">全选随机</span></button>
           <button class="btn btn-xs btn-secondary" id="grm_k2_collapse_all" onclick="toggleAllK2SecCollapse()" title="展开/收起全部分类"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder"/></svg> <span id="grm_k2_collapse_text">收起全部</span></button>
@@ -13902,6 +13904,39 @@ function buildK2Engine(src){
   )();
 }
 /* 用 K2 引擎随机组句，生成完整中文提示词；K2 随机模式下由 webuiGenerate 直接提交，不回填输入框 */
+/** 【K2】生成随机并复制：用 K2 引擎组一句中文提示词 → 直接写入剪贴板。
+ *  不生成图片、不回填输入框（保持 k2Compose 的临时通道语义）。
+ *  遵守当前：字段锁定（固定/排除）、NSFW 开关、已选预设。
+ *  仅 K2 模式可见（按钮在 grimoire_k2_panel 工具栏，该面板只在 _k2ComposeMode==='k2' 时显示）。 */
+async function k2ComposeAndCopy() {
+  // 防御：非 K2 模式不给用（面板理论上不可见，这里兜底）
+  if (_k2ComposeMode !== 'k2') { toast('❌ 仅 K2 模式可用', 'error'); return; }
+  const btn = document.getElementById('grm_k2_rand_copy_btn');
+  const orig = btn ? btn.innerHTML : '';
+  try {
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = '⏳ 组词中…'; }
+    const text = await k2Compose();          // 内部已应用锁定/NSFW，返回最终成句，失败时返回 ''
+    if (!text) { return; }                    // k2Compose 已 toast 报错
+    // 复制到剪贴板（优先 navigator.clipboard，失败走 fallbackCopy 兜底）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+      } catch (e) {
+        fallbackCopy(text);
+        toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+      }
+    } else {
+      fallbackCopy(text);
+      toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+    }
+  } catch (e) {
+    toast('❌ 复制失败: ' + (e && e.message ? e.message : e), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = orig; }
+  }
+}
+
 async function k2Compose(){
   try {
     if (typeof buildK2Engine !== 'function') { toast('❌ K2 引擎未加载', 'error'); return ''; }
