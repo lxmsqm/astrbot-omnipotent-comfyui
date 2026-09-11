@@ -4707,9 +4707,17 @@ textarea:focus-visible,
               </select>
             </div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
-              <span class="settings-label" style="min-width:auto">生成发送 QQ</span>
-              <input type="text" id="cfg_target_qq" class="settings-input" placeholder="填写QQ号，生成结果私聊发送到此号（留空不发送）" style="flex:1;min-width:150px"
-                onchange="saveTargetQq()">
+              <span class="settings-label" style="min-width:auto">生成后发送到</span>
+              <select id="cfg_target_platform" onchange="saveTarget()" style="padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer;min-width:110px">
+                <option value="qq">🐧 QQ</option>
+                <option value="feishu">🕊️ 飞书</option>
+              </select>
+              <input type="text" id="cfg_target_id" class="settings-input" placeholder="填写 QQ号/QQ群号，或飞书 open_id(ou_xxx)/群 oc_xxx（留空不发送）" style="flex:1;min-width:150px"
+                onchange="saveTarget()">
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px">
+              <input type="checkbox" id="cfg_target_group" style="accent-color:var(--primary)" onchange="saveTarget()">
+              <label for="cfg_target_group" style="font-size:12px;cursor:pointer">目标是群聊（QQ群 / 飞书群，按群消息发送）</label>
             </div>
           </div>
 
@@ -6257,23 +6265,37 @@ function loadCfg() {
     // K2 字段锁定面板：仅 K2 模式显示于魔导书内（grimoire_k2_panel）
     syncGrimoireK2UI();
     if (_k2ComposeMode === 'k2') renderK2LocksPanel();
-    // 加载生成结果发送 QQ
-    const tqq = document.getElementById('cfg_target_qq');
-    if (tqq && c && c.target_qq) tqq.value = c.target_qq;
+    // 加载生成结果发送目标（平台 + ID + 是否群聊）
+    const tplat = document.getElementById('cfg_target_platform');
+    if (tplat) tplat.value = (c && c.target_platform) || 'qq';
+    const tid = document.getElementById('cfg_target_id');
+    if (tid) tid.value = (c && (c.target_id || c.target_qq)) || '';
+    const tgrp = document.getElementById('cfg_target_group');
+    if (tgrp) tgrp.checked = !!(c && c.target_group);
     // 加载部署模式
     const dmSel = document.getElementById('cfg_deploy_mode');
     if (dmSel && c && c.deploy_mode) dmSel.value = c.deploy_mode;
   });
 }
 
-/** 保存生成结果发送 QQ 到后端 */
-async function saveTargetQq() {
-  const input = document.getElementById('cfg_target_qq');
-  if (!input) return;
-  const val = input.value.trim();
-  const r = await apiFetch('/api/config', { method:'POST', body:JSON.stringify({target_qq: val}) }, true);
-  if (r && r.ok) toast(val ? '✅ 生成结果将私聊发送到: ' + val : '已关闭生成结果发送');
-  else toast('保存失败', 'error');
+/** 保存生成结果发送目标（平台 + ID + 群聊）到后端 */
+async function saveTarget() {
+  const platEl = document.getElementById('cfg_target_platform');
+  const idEl   = document.getElementById('cfg_target_id');
+  const grpEl  = document.getElementById('cfg_target_group');
+  if (!platEl || !idEl) return;
+  const plat = platEl.value || 'qq';
+  const val  = idEl.value.trim();
+  const grp  = grpEl ? !!grpEl.checked : false;
+  const r = await apiFetch('/api/config', { method:'POST', body:JSON.stringify({
+    target_platform: plat, target_id: val, target_group: grp
+  })}, true);
+  if (r && r.ok) {
+    const pname = plat === 'feishu' ? '飞书' : 'QQ';
+    toast(val ? `✅ 生成结果将发往${pname}${grp ? '群' : ''}: ${val}` : '已关闭生成结果发送');
+  } else {
+    toast('保存失败', 'error');
+  }
 }
 
 /** 停止按钮：向 ComfyUI 发送中断命令，停止当前生成 */
@@ -6341,7 +6363,9 @@ async function webuiGenerate(isRandom) {
     } else {
       const r = await apiFetch('/api/generate', { method:'POST', body:JSON.stringify({prompt, count, random: randomFlag}) }, true);
       if (r && r.ok) {
-        const sentTxt = r.sent ? ` ✅ 已发送到QQ ${r.target_qq}` : (r.target_qq ? ' ⚠️ 发送失败，仅本地生成' : '（未配置发送QQ）');
+        const pname = (r.target_platform === 'feishu') ? '飞书' : 'QQ';
+        const sentTxt = r.sent ? ` ✅ 已发送到${pname} ${r.target_id || r.target_qq}`
+                               : ((r.target_id || r.target_qq) ? ` ⚠️ 发送失败，仅本地生成` : `（未配置发送${pname}目标）`);
         toast(`✅ 生成完成 ${r.count || count} 张` + sentTxt);
       } else {
         toast('❌ ' + (r?.error || '生成失败'), 'error');
@@ -10506,12 +10530,17 @@ function renderBasicScheduler() {
 function updateResPanels() {
   const hasOff = (officialResNodes || []).length > 0;
   const hasDur = (officialDurationNodes || []).length > 0;
+  // 旧版分辨率节点是否存在（resNodeId 由后端识别；部分工作流无分辨率节点，如纯图生图流）
+  const hasLegacy = !!resNodeId;
   const oPanel = document.getElementById('official_res_panel');
   const lPanel = document.getElementById('legacy_res_panel');
   const dPanel = document.getElementById('official_duration_panel');
   if (oPanel) oPanel.style.display = hasOff ? 'block' : 'none';
-  if (lPanel) lPanel.style.display = hasOff ? 'none' : 'block';
+  // 只有存在旧版分辨率节点时才显示旧版预设；两者都无 → 分辨率区块整体隐藏
+  if (lPanel) lPanel.style.display = (hasOff || !hasLegacy) ? 'none' : 'block';
   if (dPanel) dPanel.style.display = hasDur ? 'block' : 'none';
+  const prepRes = document.getElementById('prep_resolution');
+  if (prepRes) prepRes.style.display = (hasOff || hasLegacy || hasDur) ? 'block' : 'none';
 }
 
 function _initOfficialResPanel() {

@@ -1001,7 +1001,14 @@ class GenerateMixin:
         import hashlib
         return hashlib.md5(",".join(parts).encode()).hexdigest()
 
-    def _apply_workflow_config(self, workflow, wf_name=None):
+    def _apply_workflow_config(self, workflow, wf_name=None, protect_nodes=None):
+        """应用工作流保存的参数；并清理未上传的加载节点。
+
+        protect_nodes: 本次生成即将注入图片的节点 ID 集合。
+        这些节点即使当前 image 为空也必须保留——否则清理会先删节点、
+        后续 _set_load_image 注入时节点已不存在（表现为"图生图没反应"）。
+        """
+        protect_nodes = set(str(x) for x in (protect_nodes or ()) if x)
         wf_name = wf_name or self.current_workflow_name
         skip_keys = {'rgthree_comparer', 'any', 'any_input'}
         # 获取当前工作流的保存文本（从 __workflow_node_configs__ 读取，每个工作流隔离）
@@ -1069,6 +1076,10 @@ class GenerateMixin:
                     if ct_key not in ct:
                         continue
                     cur = inputs.get(input_key)
+                    # 本次要注入图片的节点：跳过清理（图还没写进去，等 _set_load_image 写入）
+                    if str(nid) in protect_nodes:
+                        logger.info(f"[ComfyUI] 保留待注入图片的加载节点 {nid}")
+                        break
                     has_file = cur and isinstance(cur, str) and cur.strip() and self._comfy_input_file_exists(cur)
                     if str(nid) in empty_ids:
                         remove_ids.append(nid)
@@ -1592,6 +1603,9 @@ class WebUIMixin:
             "k2_compose_mode": self._load_local_config().get("k2_compose_mode", "anima"),
             "deploy_mode": self._load_local_config().get("deploy_mode", "windows"),
             "target_qq": self._load_local_config().get("target_qq", ""),
+            "target_platform": self._load_local_config().get("target_platform", "qq"),
+            "target_id": self._load_local_config().get("target_id", "") or self._load_local_config().get("target_qq", ""),
+            "target_group": self._load_local_config().get("target_group", False),
         }))
         app.router.add_post('/api/config', self._webui_save_config)
         app.router.add_post('/api/generate', self._webui_generate)
@@ -1795,6 +1809,19 @@ class WebUIMixin:
             updates["random_pick_mode"] = val
         if "target_qq" in d:
             updates["target_qq"] = str(d["target_qq"] or "").strip()
+        if "target_platform" in d:
+            val = str(d["target_platform"] or "qq").lower()
+            if val not in ("qq", "feishu"):
+                val = "qq"
+            self.target_platform = val
+            updates["target_platform"] = val
+        if "target_id" in d:
+            val = str(d["target_id"] or "").strip()
+            self.target_id = val
+            updates["target_id"] = val
+        if "target_group" in d:
+            val = bool(d["target_group"])
+            updates["target_group"] = val
         if "k2_compose_mode" in d:
             val = d["k2_compose_mode"]
             updates["k2_compose_mode"] = val
@@ -1862,12 +1889,21 @@ class WebUIMixin:
             all_paths.extend(paths)
         if not all_paths:
             return web.json_response({"ok": False, "error": last_text or "生成失败"})
-        # 配置了 target_qq → 主动私聊发送
-        target_qq = (self._load_local_config().get("target_qq") or "").strip()
+        # 配置了发送目标 → 主动推送到该平台（QQ 或 飞书）
+        _lc = self._load_local_config()
+        tp = str(_lc.get("target_platform", "qq") or "qq").lower()
+        if tp not in ("qq", "feishu"):
+            tp = "qq"
+        target_id = str(_lc.get("target_id", "") or _lc.get("target_qq", "") or "").strip()
         sent = False
-        if target_qq:
-            sent = await self._send_image_to_qq(target_qq, all_paths, prompt)
-        return web.json_response({"ok": True, "paths": [str(p) for p in all_paths], "count": len(all_paths), "sent": sent, "target_qq": target_qq, "text": last_text or f"生成 {len(all_paths)} 张"})
+        if target_id:
+            is_group = bool(_lc.get("target_group", False))
+            sent = await self._send_to_target(tp, target_id, all_paths, prompt, group=is_group)
+        return web.json_response({
+            "ok": True, "paths": [str(p) for p in all_paths], "count": len(all_paths),
+            "sent": sent, "target_qq": target_id, "target_platform": tp, "target_id": target_id,
+            "text": last_text or f"生成 {len(all_paths)} 张"
+        })
 
     async def _webui_open_dir(self, r):
         data = await r.json()
@@ -5604,6 +5640,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self.send_platform = str(local_cfg.get("send_platform", "auto") or "auto").lower()
         if self.send_platform not in ("auto", "qq", "feishu", "both"):
             self.send_platform = "auto"
+        # WebUI「生成」按钮的主动推送目标: 平台 + 该平台的ID(QQ号/群号/飞书open_id)
+        self.target_platform = str(local_cfg.get("target_platform", "qq") or "qq").lower()
+        if self.target_platform not in ("qq", "feishu"):
+            self.target_platform = "qq"
+        # 兼容旧配置: target_id 为空时回退到历史字段 target_qq
+        self.target_id = str(local_cfg.get("target_id", "") or local_cfg.get("target_qq", "") or "").strip()
         # 随机图抽取模式
         rp_mode = local_cfg.get("random_pick_mode", "all") or self.workflow_config.get("random_pick_mode", "all")
         self.workflow_config["random_pick_mode"] = rp_mode
@@ -6195,7 +6237,85 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         await ws.send(_json.dumps({'action': action, 'params': params, 'echo': {'seq': seq}}))
         return await ResultStore.fetch(seq, 120)
 
-    async def _send_image_to_qq(self, qq, paths, prompt):
+    async def _send_to_target(self, target_platform, target_id, paths, prompt, group=False):
+        """统一主动发送入口：按平台分发到 QQ(OneBot) 或 飞书(标准消息链)。
+        target_platform: 'qq' | 'feishu'
+        target_id: QQ号/QQ群号 或 飞书 open_id(ou_xxx) / chat_id(oc_xxx)
+        group: QQ 群号时为 True（飞书按 id 前缀自动判断群聊）
+        """
+        tp = str(target_platform or 'qq').lower()
+        tid = str(target_id or '').strip()
+        if not tid:
+            return False
+        if tp == 'feishu':
+            return await self._send_image_to_feishu(tid, paths, prompt, group=group)
+        return await self._send_image_to_qq(tid, paths, prompt, group=group)
+
+    async def _send_image_to_feishu(self, target_id, paths, prompt, group=False):
+        """主动发送生成结果到飞书（走 AstrBot 标准消息链，适配器负责素材上传）。
+        target_id: ou_xxx(用户 open_id) / oc_xxx(群 chat_id) / 或直接给消息类型前缀。
+        UMO 形如 "lark-main:FriendMessage:ou_xxx" 或 "lark-main:GroupMessage:oc_xxx"。"""
+        try:
+            from astrbot.api.event import MessageChain
+            from astrbot.api.message_components import Image as AstrImage, Plain, Video, File, Record
+            # 飞书平台实例 id：从 cmd_config.json 里找 type == 'lark' 的 id
+            lark_pid = self._get_lark_platform_id() or "lark-main"
+            is_group = group or target_id.startswith("oc_")
+            mtype = "GroupMessage" if is_group else "FriendMessage"
+            umo = f"{lark_pid}:{mtype}:{target_id}"
+            chain = MessageChain()
+            if prompt:
+                chain.message(f"✨ 生成完成: {prompt[:2000]}")
+            sent_any = False
+            for p in paths[:10]:
+                if not Path(p).exists():
+                    continue
+                ext = Path(p).suffix.lower()
+                try:
+                    if ext in ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'):
+                        chain.chain.append(AstrImage.fromFileSystem(str(p)))
+                    elif ext in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
+                        chain.chain.append(Video.fromFileSystem(str(p)))
+                    elif ext in ('.wav', '.mp3', '.flac', '.ogg', '.m4a'):
+                        chain.chain.append(Record.fromFileSystem(str(p)))
+                    else:
+                        chain.chain.append(File.fromFileSystem(str(p)))
+                    sent_any = True
+                except Exception as e:
+                    logger.warning(f"[ComfyUI] 飞书追加 {Path(p).name} 失败: {e}")
+            if not sent_any and not prompt:
+                return False
+            r = await self.context.send_message(umo, chain)
+            logger.info(f"[ComfyUI] 已主动发送到飞书 {target_id} (umo={umo}): {str(r)[:150]}")
+            return True
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 主动发送到飞书 {target_id} 失败: {type(e).__name__}: {e}")
+            return False
+
+    def _get_lark_platform_id(self):
+        """读取 cmd_config.json 中 type=='lark' 的平台实例 id（飞书 UMO 前缀）。"""
+        try:
+            for ancestor in Path(self._user_data_dir).resolve().parents:
+                cand = ancestor / "data" / "cmd_config.json"
+                if cand.exists():
+                    with open(str(cand), 'r', encoding='utf-8-sig') as f:
+                        cfg = json.load(f)
+                    for p in cfg.get("platform", []) or []:
+                        if str(p.get("type", "")).lower() in ("lark", "feishu"):
+                            return p.get("id") or None
+                    return None
+            cfg_path = Path("/root/AstrBot/data/cmd_config.json")
+            if cfg_path.exists():
+                with open(str(cfg_path), 'r', encoding='utf-8-sig') as f:
+                    cfg = json.load(f)
+                for p in cfg.get("platform", []) or []:
+                    if str(p.get("type", "")).lower() in ("lark", "feishu"):
+                        return p.get("id") or None
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 读取飞书平台 id 失败: {e}")
+        return None
+
+    async def _send_image_to_qq(self, qq, paths, prompt, group=False):
         """主动私聊发送生成结果到指定 QQ（参考隧道插件 master_qq 推送方式）。
         umo 格式必须为 {platform_id}:{message_type.value}:{session_id}。
         platform_id 取 cmd_config.json 的 platform[].id（本机为 "default"），不是适配器 type；
@@ -6208,7 +6328,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             from astrbot.api.event import MessageChain
             # platform_id 取 AstrBot 平台实例 id（cmd_config.json platform[].id），兜底 default
             platform_id = self._get_platform_id() or "default"
-            umo = f"{platform_id}:FriendMessage:{qq}"
+            mtype = "GroupMessage" if group else "FriendMessage"
+            umo = f"{platform_id}:{mtype}:{qq}"
             # 方式一：OneBot 直连（推荐，图片完整不超时）。
             # 双号对等架构：先试 _bot_ref（最近收消息的号），失败/不在线则遍历所有在线连接兜底——
             # 只要任一号在线，推送就能发出。
@@ -6226,8 +6347,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 按优先级排序（主用号 204757347 优先）：任一号在线即可送达，互为哨兵。
             for sid, ws in self._sort_clients_by_pref(clients):
                 try:
-                    await self._onebot_send_via_ws(ws, 'send_private_msg', user_id=int(qq), message=cq_text)
-                    logger.info(f"[ComfyUI] 已主动发送生成结果到 QQ {qq}（OneBot直连 via {sid}）")
+                    if group:
+                        await self._onebot_send_via_ws(ws, 'send_group_msg', group_id=int(qq), message=cq_text)
+                        logger.info(f"[ComfyUI] 已主动发送生成结果到 QQ群 {qq}（OneBot直连 via {sid}）")
+                    else:
+                        await self._onebot_send_via_ws(ws, 'send_private_msg', user_id=int(qq), message=cq_text)
+                        logger.info(f"[ComfyUI] 已主动发送生成结果到 QQ {qq}（OneBot直连 via {sid}）")
                     return True
                 except Exception as e:
                     logger.warning(f"[ComfyUI] OneBot 连接 {sid} 发送失败: {type(e).__name__}: {e}")
@@ -6257,7 +6382,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     logger.warning(f"[ComfyUI] 发送 {Path(p).name} 失败，改用文本提示: {e}")
                     chain.message(f" 文件已生成: {Path(p).name}")
             await self.context.send_message(umo, chain)
-            logger.info(f"[ComfyUI] 已主动发送生成结果到 QQ {qq}")
+            logger.info(f"[ComfyUI] 已主动发送生成结果到 {'QQ群' if group else 'QQ'} {qq}")
             return True
         except Exception as e:
             logger.warning(f"[ComfyUI] 主动发送到 {qq} 失败: {e}")
@@ -7423,7 +7548,19 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             ratio = effective_ratio
 
             # 5. 应用配置 + 写入分辨率
-            self._apply_workflow_config(wf, wf_name=wf_name)
+            # 关键：传入「本次要注入图片的 LoadImage 节点」，避免清理阶段把它们删掉
+            # （否则下面 _set_load_image 注入时节点已不存在 → 图生图无反应）
+            _protect = set()
+            if image_path:
+                try:
+                    _pn = self._find_load_image_node(wf)
+                    if _pn:
+                        _protect.add(str(_pn))
+                    for _n in (self._find_all_load_image_nodes(wf) or []):
+                        _protect.add(str(_n))
+                except Exception as e:
+                    logger.debug(f"[ComfyUI] 预取 LoadImage 节点失败: {e}")
+            self._apply_workflow_config(wf, wf_name=wf_name, protect_nodes=_protect or None)
             # 注：占位文件方案已废弃（改用「未上传加载节点移除+断连」），
             # 不再需要 _ensure_placeholder_files 预上传，避免每次生成浪费 ffmpeg + 上传
             try:
