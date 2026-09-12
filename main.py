@@ -12,6 +12,7 @@ import base64
 from pathlib import Path
 from datetime import datetime
 from astrbot.api.event import filter, AstrMessageEvent, MessageChain
+from astrbot.api.event.filter import CustomFilter
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger, FunctionTool
 from astrbot.api.provider import ProviderRequest
@@ -26,13 +27,66 @@ class ComfyUITaskError(Exception):
 
 
 # ====================================================================
+# 飞书专用「宽松命令匹配」过滤器
+# --------------------------------------------------------------------
+# 背景：AstrBot 的 CommandFilter 用 message_str.startswith("命令") 判断，
+# 而含图片的消息 message_str 会变成 "[图片] 图生图"（图片被 _outline_chain 转成
+# "[图片]" 占位符）→ 命令匹配失败 → 消息落到 LLM（AI 乱加戏、念文件路径）。
+# QQ 用户习惯「引用图片 + 图生图」，引用内容不进入 message_str 主体，所以不受影响。
+#
+# 方案：只在飞书平台启用宽松匹配（剥离 [图片]/[表情:x]/[At:x] 等前缀后再判断），
+# 其它平台（QQ 等）返回 False → 完全保持原有的 @filter.command 行为，零影响。
+# ====================================================================
+_PLACEHOLDER_PREFIX_RE = re.compile(r"^(\[[^\]]{1,24}\]\s*)+")
+
+
+class LarkLooseCommandFilter(CustomFilter):
+    """飞书专用：容忍 [图片] 等占位前缀的命令匹配（其它平台不生效）。
+
+    用法：在命令上叠加 @filter.custom_filter(LarkLooseCommandFilter, "命令名")
+    注意：custom_filter 会以 (raise_error) 实例化本类，故命令名由类属性传入。
+    """
+
+    command_name: str = ""          # 子类通过装饰器参数注入（见 _lark_cmd）
+
+    def __init__(self, raise_error: bool = False) -> None:
+        super().__init__(raise_error=raise_error)
+
+    def filter(self, event: AstrMessageEvent, cfg) -> bool:
+        try:
+            # 只在飞书平台生效，其它平台保持原命令匹配逻辑
+            if (event.get_platform_name() or "") != "lark":
+                return False
+            cmd = (self.command_name or "").strip()
+            if not cmd:
+                return False
+            msg = (event.get_message_str() or "").strip()
+            # 剥离开头的 [图片]/[表情:x]/[At:x] 等占位符
+            cleaned = _PLACEHOLDER_PREFIX_RE.sub("", msg).strip()
+            return cleaned == cmd or cleaned.startswith(cmd + " ")
+        except Exception as e:
+            logger.debug(f"[ComfyUI] LarkLooseCommandFilter 异常: {e}")
+            return False
+
+
+def _lark_cmd(name: str):
+    """生成飞书宽松命令过滤器类：@filter.custom_filter(_lark_cmd('图生图'))"""
+    return type(f"LarkLoose_{name}", (LarkLooseCommandFilter,), {"command_name": name})
+
+
+# ====================================================================
 # LLM 工具集（共10个）
 # ====================================================================
 
 @dataclass
 class ComfyUIDrawTool(FunctionTool):
     name: str = "comfyui_draw"
-    description: str = "使用本地ComfyUI生成图片（文生图）。可根据工作流名称关键词自动切换工作流。"
+    description: str = ("使用本地ComfyUI生成图片（文生图，纯提示词出图，不需要输入图片）。"
+                        "★ 只能用分类为「画」的工作流；若当前工作流不是「画」类，"
+                        "必须先用 comfyui_list_workflows 找到「画」类里合适的工作流，"
+                        "再用 comfyui_switch_workflow 切换后再调用本工具。"
+                        "不要用「图生图」类工作流做文生图。"
+                        "可根据工作流名称关键词自动切换工作流。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object",
         "properties": {
@@ -75,22 +129,72 @@ class ComfyUIDrawTool(FunctionTool):
                     return "✅ 图片已发送"
             except Exception as e:
                 logger.error(f"[ComfyUI] 发送图片失败: {e}")
-            return f"✅ 图片已生成！文件: {path}"
+            return "✅ 图片已生成并发送给用户"
         return text
 
 
 @dataclass
 class ComfyUIListWorkflowsTool(FunctionTool):
     name: str = "comfyui_list_workflows"
-    description: str = "查询/列出本地ComfyUI所有可用工作流。当用户想查看、查询、浏览可用工作流时调用此工具。"
+    description: str = ("查询/列出本地ComfyUI所有可用工作流（含所属分类与用途）。"
+                        "当用户想查看、查询、浏览可用工作流，或需要判断'该用哪个工作流'时调用此工具。"
+                        "分类含义：画=文生图（出图，用 comfyui_draw）；图生图=需要输入图片改图/转风格"
+                        "（用 comfyui_img2img）；图生视频=图片转视频（用 comfyui_video）；"
+                        "反推=从图片提取提示词（用 comfyui_reverse_prompt）。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
     async def run(self, event: AstrMessageEvent):
-        wfs = self._plugin._refresh_workflow_list()
+        plugin = self._plugin
+        wfs = plugin._refresh_workflow_list()
         if not wfs: return "当前没有可用工作流"
-        result = "当前可用工作流：\n"
-        for i, w in enumerate(wfs, 1): result += f"{i}. {w.get('display_name', w['name'])}{' ✅' if w['is_current'] else ''}\n"
-        return result
+        cats = plugin.workflow_config.get('__wf_categories__', {}) or {}
+
+        # 分类用途说明（供 LLM 判断该用哪个工作流、调哪个工具）
+        cat_usage = {
+            '画': '文生图——纯提示词出图（对应工具 comfyui_draw）',
+            '图生图': '必须提供输入图片——改图/转风格/转真人（对应工具 comfyui_img2img）',
+            '图生视频': '必须提供输入图片——图片转视频（对应工具 comfyui_video）',
+            '反推': '从图片反向提取提示词（对应工具 comfyui_reverse_prompt）',
+        }
+
+        groups = {}
+        ungrouped = []
+        for w in wfs:
+            cat = cats.get(w['name'], '')
+            (groups.setdefault(cat, []) if cat else ungrouped).append(w)
+
+        out = "当前可用工作流（按分类分组）：\n"
+        cat_order = ['画', '图生图', '图生视频', '反推']
+        listed = 0
+        for cat in cat_order:
+            if cat not in groups:
+                continue
+            out += f"\n【{cat}】{cat_usage.get(cat, '')}\n"
+            for w in groups[cat]:
+                listed += 1
+                dn = w.get('display_name', w['name'])
+                out += f"  {listed}. {dn}{' ✅(当前)' if w.get('is_current') else ''}\n"
+        # 其它自定义分类
+        for cat in sorted([c for c in groups if c not in cat_order]):
+            out += f"\n【{cat}】\n"
+            for w in groups[cat]:
+                listed += 1
+                dn = w.get('display_name', w['name'])
+                out += f"  {listed}. {dn}{' ✅(当前)' if w.get('is_current') else ''}\n"
+        if ungrouped:
+            out += "\n【未分类】（用途未知，需按用户意图判断）\n"
+            for w in ungrouped:
+                listed += 1
+                dn = w.get('display_name', w['name'])
+                out += f"  {listed}. {dn}{' ✅(当前)' if w.get('is_current') else ''}\n"
+
+        cur = next((w for w in wfs if w.get('is_current')), None)
+        if cur:
+            cur_cat = cats.get(cur['name'], '未分类')
+            out += f"\n当前工作流：{cur.get('display_name', cur['name'])}（分类：{cur_cat}）"
+            out += f"\n⚠ 只能执行当前工作流所属分类对应的命令/工具；若用户要做的操作与当前分类不符，"
+            out += f"请先用 comfyui_switch_workflow 切到该分类下的工作流再执行。"
+        return out
 
 
 @dataclass
@@ -113,11 +217,26 @@ class ComfyUISwitchWorkflowTool(FunctionTool):
 @dataclass
 class ComfyUIGetCurrentWorkflowTool(FunctionTool):
     name: str = "comfyui_get_current_workflow"
-    description: str = "查询当前正在使用的工作流名称。当用户问'我现在用什么工作流'、'当前画风是什么'时调用此工具。"
+    description: str = ("查询当前正在使用的工作流名称及其所属分类（分类决定能用哪个工具："
+                        "画=文生图 comfyui_draw / 图生图=需输入图 comfyui_img2img / "
+                        "图生视频=需输入图 comfyui_video / 反推=提取提示词 comfyui_reverse_prompt）。"
+                        "当用户问'我现在用什么工作流'、'当前画风是什么'，或需要判断能否执行某操作时调用。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
     async def run(self, event: AstrMessageEvent):
-        return f"当前工作流：【{self._plugin._get_display_name(self._plugin.current_workflow_name)}】" if self._plugin.current_workflow_name else "未设置"
+        plugin = self._plugin
+        name = plugin.current_workflow_name
+        if not name:
+            return "未设置"
+        cats = plugin.workflow_config.get('__wf_categories__', {}) or {}
+        cat = cats.get(name, '未分类')
+        usage = {
+            '画': '文生图（纯提示词出图，用 comfyui_draw）',
+            '图生图': '图生图（必须提供输入图片，用 comfyui_img2img）',
+            '图生视频': '图生视频（必须提供输入图片，用 comfyui_video）',
+            '反推': '提示词反推（用 comfyui_reverse_prompt）',
+        }.get(cat, '用途未知')
+        return f"当前工作流：【{plugin._get_display_name(name)}】（分类：{cat} —— {usage}）"
 
 
 # ====================================================================
@@ -127,7 +246,10 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
 @dataclass
 class ComfyUIImg2ImgTool(FunctionTool):
     name: str = "comfyui_img2img"
-    description: str = "使用本地ComfyUI图生图/编辑图片——输入1~10张参考图（逗号分隔），根据提示词修改生成新图片"
+    description: str = ("使用本地ComfyUI图生图/编辑图片——输入1~10张参考图（逗号分隔），根据提示词修改生成新图片。"
+                        "★ 只能用分类为「图生图」的工作流；若当前工作流不是「图生图」类，"
+                        "必须先用 comfyui_list_workflows 找到「图生图」类工作流，"
+                        "再用 comfyui_switch_workflow 切换后再调用本工具。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object", "properties": {
             "prompt": {"type": "string", "description": "提示词，描述要修改的方向，例如'把背景改成红色'"},
@@ -190,14 +312,17 @@ class ComfyUIImg2ImgTool(FunctionTool):
                     await plugin.context.send_message(umo, MessageChain().message("✨ 图生图完成").file_image(out_path))
                     return "✅ 图片已发送"
             except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
-            return f"✅ 图片已生成！文件: {out_path}"
+            return "✅ 图片已生成并发送给用户"
         return text
 
 
 @dataclass
 class ComfyUIVideoTool(FunctionTool):
     name: str = "comfyui_video"
-    description: str = "使用本地ComfyUI生成视频（图生视频）。需要一张输入图片和视频工作流。"
+    description: str = ("使用本地ComfyUI生成视频（图生视频）。需要一张输入图片和视频工作流。"
+                        "★ 只能用分类为「图生视频」的工作流；若当前工作流不是「图生视频」类，"
+                        "必须先用 comfyui_list_workflows 找到「图生视频」类工作流，"
+                        "再用 comfyui_switch_workflow 切换后再调用本工具。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object", "properties": {
             "prompt": {"type": "string", "description": "提示词，描述视频内容"},
@@ -237,7 +362,7 @@ class ComfyUIVideoTool(FunctionTool):
                 return "✅ 视频已生成并发送"
             except Exception as e:
                 logger.error(f"[ComfyUI] 发送视频失败: {e}")
-            return f"✅ 视频已生成！文件: {out_path}"
+            return "✅ 视频已生成并发送给用户"
         return text
 
 
@@ -428,7 +553,7 @@ class ComfyUIExecuteTool(FunctionTool):
                     await plugin.context.send_message(umo, MessageChain().message("✨ 执行完成").file_image(path))
                     return "✅ 执行完成，图片已发送"
             except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
-            return f"✅ 执行完成！文件: {path}"
+            return "✅ 执行完成并发送给用户"
         return text
 
 
@@ -5709,6 +5834,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             pass
         # 扩写后提示词缓存 {文件路径: 扩写文本}，由 _process_and_submit 写入，_send_image_result 消费
         self._expanded_prompt_cache: dict[str, str] = {}
+        # 最近图片缓存：{umo: (timestamp, [urls])} —— 解决飞书「发图后再发命令」拿不到图的问题
+        # （飞书图片是独立消息，命令那条消息没有图片组件；QQ 可同条/紧邻发送所以不受影响）
+        self._recent_images: dict[str, tuple] = {}
+        self._recent_images_ttl = 600   # 缓存有效期 10 分钟
         # OneBot bot 引用（从 event.bot 获取，供撤回使用）
         self._bot_ref = None
         # 黑名单群组缓存（从 persona_switcher 读取）
@@ -6023,8 +6152,15 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 if clean_text and not _is_feishu:
                     parts.append(Plain(text=clean_text))
                 for p in paths:
-                    # 统一用「普通路径」构造（不用 fromFileSystem 的 file:// URI，飞书解析不了）
-                    parts.append(AstrImage(file=str(Path(p).resolve())))
+                    # 飞书分支：超 10MB 的图先压缩（未超限不动原图）
+                    _pp = str(Path(p).resolve())
+                    if _is_feishu:
+                        _shr = self._shrink_for_feishu(_pp)
+                        if not _shr:
+                            logger.warning(f"[ComfyUI] {Path(_pp).name} 超飞书限制且压缩失败，跳过")
+                            continue
+                        _pp = _shr
+                    parts.append(AstrImage(file=_pp))
                 chain = MessageChain(chain=parts)
                 result = await self.context.send_message(umo, chain)
                 _feishu_ok = 'feishu' in _targets
@@ -6417,7 +6553,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     _p = str(Path(p).resolve())
                     _ext2 = Path(_p).suffix.lower()
                     if _ext2 in ('.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp'):
-                        chain.chain.append(AstrImage(file=_p))
+                        # 飞书图片限制 10MB → 超限自动压缩（未超限不动）
+                        _shrunk = self._shrink_for_feishu(_p)
+                        if not _shrunk:
+                            logger.warning(f"[ComfyUI] {Path(_p).name} 超飞书限制且压缩失败，跳过该图")
+                            continue
+                        chain.chain.append(AstrImage(file=_shrunk))
                     elif _ext2 in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
                         chain.chain.append(Video(file=_p))
                     elif _ext2 in ('.wav', '.mp3', '.flac', '.ogg', '.m4a'):
@@ -6653,6 +6794,64 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         except Exception as e:
             logger.warning(f"[ComfyUI] 预览图压缩失败（原样保存）: {e}")
             return raw, 'png'
+
+    def _shrink_for_feishu(self, path, limit_bytes=9 * 1024 * 1024):
+        """飞书图片上传前按需压缩。
+        飞书 im/v1/image 限制：图片 ≤ 10MB。这里用 9MB 作为阈值（留余量）。
+        ★ 只在超限时才压缩 —— 未超限的图原样发送，保持原画质。
+        返回可发送的文件路径（原路径 或 压缩后的新路径）；失败时返回 None 表示无法发送。"""
+        try:
+            p = Path(path)
+            if not p.exists():
+                return None
+            ext = p.suffix.lower()
+            if ext not in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+                return str(path)                       # 视频/音频不走此逻辑
+            size = p.stat().st_size
+            if size <= limit_bytes:
+                return str(path)                       # 未超限 → 原图
+            logger.info(f"[ComfyUI] 图片 {size/1048576:.1f}MB 超飞书限制，开始压缩: {p.name}")
+            from PIL import Image
+            import io as _io
+            img = Image.open(str(p))
+            img.load()
+            if img.mode in ('RGBA', 'P', 'LA'):
+                img = img.convert('RGB')
+            data = None
+            # 第一轮：降 JPEG 质量（从 95 起步，尽量保留画质）
+            for q in (95, 92, 88, 84, 78, 70, 62, 55, 48, 40, 32, 25):
+                buf = _io.BytesIO()
+                img.save(buf, 'JPEG', quality=q)
+                if buf.tell() <= limit_bytes:
+                    data = buf.getvalue()
+                    logger.info(f"[ComfyUI] 压缩成功(质量{q}): {size/1048576:.1f}MB -> {len(data)/1048576:.1f}MB")
+                    break
+            # 第二轮：质量已到底仍超限 → 逐步缩小尺寸（飞书建议 ≤1500x3000，最长边上限 3000）
+            if data is None:
+                w, h = img.size
+                max_side = max(w, h)
+                for shrink in (0.85, 0.75, 0.65, 0.55, 0.45, 0.38, 0.30):
+                    nw, nh = int(w * shrink), int(h * shrink)
+                    # 若最长边仍超 3000，额外按 3000 比例缩
+                    if max(nw, nh) > 3000:
+                        r2 = 3000 / max(nw, nh)
+                        nw, nh = int(nw * r2), int(nh * r2)
+                    nw, nh = max(64, nw), max(64, nh)
+                    buf = _io.BytesIO()
+                    img.resize((nw, nh), Image.LANCZOS).save(buf, 'JPEG', quality=80)
+                    if buf.tell() <= limit_bytes:
+                        data = buf.getvalue()
+                        logger.info(f"[ComfyUI] 压缩成功(缩至{nw}x{nh}): {size/1048576:.1f}MB -> {len(data)/1048576:.1f}MB")
+                        break
+            if data is None:
+                logger.error(f"[ComfyUI] 压缩后仍超限，放弃发送: {p.name}")
+                return None
+            out = p.with_name(p.stem + '_fs.jpg')
+            out.write_bytes(data)
+            return str(out)
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 飞书图片压缩失败: {e}，尝试原图发送")
+            return str(path)
 
     async def _clean_stale_bindings(self):
         """清理绑定中已不存在的工作流（文件被删后产生孤立绑定），返回是否做了清理"""
@@ -6997,7 +7196,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                         saved_images.append(str(save_path))
                         new_content.append({
                             "type": "text",
-                            "text": f"[用户发送了图片，已保存到: {save_path}](请使用此路径调用图生图/编辑工具)"
+                            "text": (f"[用户发送了图片，服务器路径: {save_path}]"
+                                     f"（仅用于调用图生图/编辑工具的 image_urls 参数；"
+                                     f"严禁在回复用户时输出该路径或任何服务器文件路径，用户看不到、也不需要）")
                         })
                     else:
                         new_content.append({"type": "text", "text": "[用户发送了图片，但下载失败]"})
@@ -7372,6 +7573,20 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                             image_urls.append(avatar_url)
                             if len(image_urls) >= max_images:
                                 return image_urls
+
+        # 3. 回退：当前消息与引用都没有图 → 取「最近图片缓存」
+        #    解决飞书「先发图 → 再发 /图生图」拿不到图的问题（图片是独立消息）
+        if not image_urls:
+            try:
+                umo = getattr(event, 'unified_msg_origin', None)
+                if umo:
+                    cached = self._get_recent_images(umo)
+                    if cached:
+                        logger.info(f"[ComfyUI] 当前消息无图，回退使用最近图片缓存（{len(cached)} 张）")
+                        for u in cached[:max_images]:
+                            image_urls.append(u)
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 读取最近图片缓存失败: {e}")
 
         return image_urls
 
@@ -8836,6 +9051,41 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return
         yield event.plain_result("请发送图片或 @用户 后使用 /图生图 [降噪] 提示词")
 
+    # ====================================================================
+    # 飞书专用：含图片的裸命令（如「[图片] 图生图」）转发到上面的命令实现
+    # --------------------------------------------------------------------
+    # 为什么需要：AstrBot 的 CommandFilter 用 message_str.startswith("图生图") 判断，
+    # 而含图片消息的 message_str 是 "[图片] 图生图" → 命令匹配失败 → 落到 LLM
+    # （表现为 AI 乱加戏、念服务器路径）。RegexFilter 用 search 且不受 wake_prefix 制约，
+    # 可以容忍占位前缀。此处只在飞书 + 确实带图时转发，避免与 QQ 的 /命令 重复触发。
+    # ====================================================================
+    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*图生图(\s|$)")
+    async def _lark_img2img_loose(self, event: AstrMessageEvent):
+        """飞书：[图片] 图生图 → 转发给 img2img 命令实现（其它平台/场景不处理）"""
+        if (event.get_platform_name() or "") != "lark":
+            return
+        logger.info("[ComfyUI] 飞书宽松匹配命中：图生图（含图片前缀）")
+        async for r in self.img2img(event):
+            yield r
+
+    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*图生视频(\s|$)")
+    async def _lark_img2vid_loose(self, event: AstrMessageEvent):
+        """飞书：[图片] 图生视频 → 转发给 img2vid 命令实现"""
+        if (event.get_platform_name() or "") != "lark":
+            return
+        logger.info("[ComfyUI] 飞书宽松匹配命中：图生视频（含图片前缀）")
+        async for r in self.img2vid(event):
+            yield r
+
+    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*反推(\s|$)")
+    async def _lark_reverse_loose(self, event: AstrMessageEvent):
+        """飞书：[图片] 反推 → 转发给 reverse_prompt 命令实现"""
+        if (event.get_platform_name() or "") != "lark":
+            return
+        logger.info("[ComfyUI] 飞书宽松匹配命中：反推（含图片前缀）")
+        async for r in self.reverse_prompt(event):
+            yield r
+
     @filter.command("图生视频")
     async def img2vid(self, event: AstrMessageEvent):
         await self._ensure_workflow_for_event(event)
@@ -8945,6 +9195,46 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         """消息发送后恢复事件传播，防止 yield 被截断"""
         if event.is_stopped():
             event.continue_event()
+
+    @filter.event_message_type(
+        filter.EventMessageType.PRIVATE_MESSAGE | filter.EventMessageType.GROUP_MESSAGE
+    )   # EventMessageType 是 enum.Flag，按位或即"私聊+群聊都接收"
+    async def _cache_incoming_images(self, event: AstrMessageEvent):
+        """捕获用户发来的图片并缓存（按会话），供后续命令在「当前消息无图」时回退取用。
+
+        场景：飞书图片是独立消息，用户「先发图 → 再发 /图生图」时，命令那条消息没有图片组件；
+        QQ 可同条/紧邻发送，不受影响。此缓存让两个平台行为一致（10 分钟内有效）。
+        """
+        try:
+            urls = []
+            for comp in event.get_messages():
+                if isinstance(comp, AstrImage):
+                    u = getattr(comp, 'url', None) or getattr(comp, 'file', None)
+                    if u:
+                        urls.append(str(u))
+            if not urls:
+                return
+            umo = getattr(event, 'unified_msg_origin', None)
+            if not umo:
+                return
+            self._recent_images[str(umo)] = (time.time(), urls)
+            logger.info(f"[ComfyUI] 已缓存最近图片 {len(urls)} 张 (umo={umo[-20:]})")
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 缓存最近图片失败: {e}")
+
+    def _get_recent_images(self, umo):
+        """取该会话最近的图片缓存（超过 TTL 返回空）"""
+        try:
+            rec = self._recent_images.get(str(umo))
+            if not rec:
+                return []
+            ts, urls = rec
+            if time.time() - ts > self._recent_images_ttl:
+                self._recent_images.pop(str(umo), None)
+                return []
+            return list(urls)
+        except Exception:
+            return []
 
     # ========================================================================
     # Anima 数据 API & LLM 工具
