@@ -4677,6 +4677,10 @@ textarea:focus-visible,
               <input type="checkbox" id="cfg_show_prompt" style="accent-color:var(--primary)" onchange="saveShowPrompt()">
               <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
             </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px">
+              <input type="checkbox" id="cfg_anima_enhance" style="accent-color:var(--primary)" onchange="saveAnimaEnhance()">
+              <label for="cfg_anima_enhance" style="font-size:12px;cursor:pointer" title="按 Anima 官方规范组织随机图提示词：固定开头(masterpiece/best quality/score_7/safe)+补主体数+追加自然语言句。score_7 仅适用于 Base 版模型，Aesthetic 版请关闭">Anima 随机规范增强（Base版）</label>
+            </div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">结果发送平台</span>
               <select id="send_platform" onchange="saveSendPlatform()" style="flex:1;min-width:140px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
@@ -5411,12 +5415,19 @@ async function getCachedImageURL(url) {
   }
 }
 
-/** 用缓存方式给 <img> 设置 src（渐进替换，不阻塞渲染） */
+/** 用缓存方式给 <img> 设置 src（渐进替换，不阻塞渲染）
+ *  ★ 关键：先用原始 URL 立刻显示（浏览器直接加载，跨域图片无 CORS 限制），
+ *    再异步尝试用 Cache API 的结果替换。避免跨域 fetch 卡住导致图片长时间空白。 */
 async function setImgWithCache(img, url) {
   if (!img || !url) return;
+  // 第一步：立即用原始 URL 渲染（保证可见，不等 fetch）
+  try {
+    img.src = url;
+  } catch (e) { /* noop */ }
+  // 第二步：后台尝试缓存版本（成功且有 blob 才替换；失败保持原图不动）
   try {
     const cached = await getCachedImageURL(url);
-    if (img.isConnected) img.src = cached || url;
+    if (img.isConnected && cached && cached !== url) img.src = cached;
   } catch (e) { /* noop */ }
 }
 
@@ -6259,6 +6270,8 @@ function loadCfg() {
     $id('cfg_output_dir').value = c.output_dir || '';
     const sp = document.getElementById('cfg_show_prompt');
     if (sp) sp.checked = c.show_prompt_on_image === true;
+    const ae = document.getElementById('cfg_anima_enhance');
+    if (ae) ae.checked = c.anima_spec_enhance !== false;   // 默认开
     const spf = document.getElementById('send_platform');
     if (spf) spf.value = c.send_platform || 'auto';
     // 加载主题
@@ -6644,6 +6657,13 @@ async function saveComfyUrl() {
 async function saveShowPrompt() {
   const val = document.getElementById('cfg_show_prompt').checked;
   await apiFetch('/api/config', { method:'POST', body:JSON.stringify({show_prompt_on_image:val}) });
+}
+async function saveAnimaEnhance() {
+  const el = document.getElementById('cfg_anima_enhance');
+  if (!el) return;
+  const val = !!el.checked;
+  await apiFetch('/api/config', { method:'POST', body:JSON.stringify({anima_spec_enhance:val}) });
+  toast(val ? '✅ 已开启 Anima 随机规范增强' : '已关闭（随机结果按原始标签拼接）');
 }
 async function saveSendPlatform() {
   const val = document.getElementById('send_platform').value;

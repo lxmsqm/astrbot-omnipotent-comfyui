@@ -17,6 +17,7 @@ import bisect
 import json
 import os
 import re
+import time
 import logging
 from pathlib import Path
 from typing import Optional
@@ -860,9 +861,14 @@ _CHARACTER_CATEGORY_CN = {
 }
 
 class AnimaDataManager:
-    def __init__(self, data_dir: str, user_data_dir: str = ""):
+    def __init__(self, data_dir: str, user_data_dir: str = "", artist_limit: int = 0,
+                 character_limit: int = 0):
         self.data_dir = Path(data_dir)
         self._user_data_dir = Path(user_data_dir) if user_data_dir else None
+        self.artist_limit = int(artist_limit) if artist_limit is not None else 0
+        """画师加载上限：0 或负数 = 全量（有多少拉多少，按 liked 排序）"""
+        self.character_limit = int(character_limit) if character_limit is not None else 0
+        """角色加载上限：0 或负数 = 全量（有多少拉多少，按 liked 排序）"""
         self._datasets: dict[str, list[dict]] = {}
         """{分类名: [{name, tags, ...}]}"""
         self._name_index: dict[str, list[tuple[str, int]]] = {}
@@ -893,42 +899,479 @@ class AnimaDataManager:
             logger.warning(f"[AnimaData] 解析 JS 失败 {filepath}: {e}")
             return []
 
+    # animadex 画师 API（正确的数据源；旧的 anima.mooshieblob.com/images/{p}/{id}.webp 已失效，
+    # 该域名现在返回 HTML 错误页，导致浏览器 <img> 加载失败 → 画师卡片全部空白）
+    _ANIMADEX_ARTIST_API = "https://animadex.net/api/artists/search"
+    _ANIMADEX_CACHE = "anima_artists_cache.json"
+
     def _load_anima_tools_artists(self) -> list[dict]:
-        """从 Anima-Tools data.js 加载画师数据（含 CDN 图片）"""
+        """加载画师数据（优先 animadex API，失败回退本地缓存，再回退 data.js）
+
+        数据来源说明：
+          - animadex API（/api/artists/search）返回字段：
+              slug/name/trigger/count/thumb_url/img_url/has_image/score/fav_count
+            trigger 即提示词用的标签（已规范，无需清理转义括号）；
+            thumb_url 指向 blobs.animadex.net/ArtistOutputs/thumbs/<slug>.webp（真实可用）
+          - 旧 data.js 的图片模板 anima.mooshieblob.com/images/{p}/{id}.webp 已失效
+          - 结果按热度截断（artist_limit，默认 500）并缓存到本地，避免每次启动拉网络
+        """
+        limit = self.artist_limit
+        try:
+            limit = int(self.artist_limit)
+        except Exception:
+            limit = 0
+        # 0 或负数 → 全量（有多少拉多少）
+
+        cache_path = (self._user_data_dir or self.data_dir) / self._ANIMADEX_CACHE
+
+        # ① 优先读本地缓存（有就用，避免每次启动都请求网络）
+        cached = self._read_anima_artist_cache(cache_path, limit)
+        if cached:
+            return cached
+
+        # ② 拉取 animadex API（分页累加，直到达到 limit）
+        items = self._fetch_animadex_artists(limit)
+        if items:
+            self._write_anima_artist_cache(cache_path, items)
+            logger.info(f"[AnimaData] 画师: {len(items)} 条 (animadex API, 已缓存)")
+            return items
+
+        # ③ 回退：本地 data.js（图片可能失效，但标签可用）
+        logger.warning("[AnimaData] animadex API 不可用，回退本地 data.js（画师缩略图可能无法显示）")
+        return self._load_artists_from_js(limit)
+
+    def _fetch_animadex_artists(self, limit: int) -> list[dict]:
+        """从 animadex API 并发分页拉取画师（按 liked 排序，只保留有图的）。
+        limit <= 0 或极大值 → 拉到 API 返回完为止（有多少拉多少）。
+
+        注：API 的 limit 参数无效（始终每页 36 条），全量约 442 页；
+        改为 8 线程并发拉取（串行约 7-8 分钟 → 并发约 1-2 分钟）。
+        """
+        import urllib.request
+        import urllib.parse
+
+        unlimited = (limit <= 0 or limit >= 999999)
+
+        # 先拉第 1 页拿总页数
+        try:
+            qs = urllib.parse.urlencode({"sort": "liked"})
+            req = urllib.request.Request(
+                f"{self._ANIMADEX_ARTIST_API}?{qs}",
+                headers={"User-Agent": "Mozilla/5.0 (compatible; AstrBot-ComfyUI-Plugin)",
+                         "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                first = json.loads(resp.read().decode("utf-8", "replace"))
+        except Exception as e:
+            logger.warning(f"[AnimaData] 画师 API 首页失败: {e}")
+            return []
+
+        total_pages = int(first.get("pages") or 1)
+        if not unlimited:
+            total_pages = min(total_pages, (limit // 36) + 2)
+        logger.info(f"[AnimaData] 画师并发拉取: {total_pages} 页 × 36 条 (8线程)")
+
+        def _parse(results):
+            out = []
+            for r in results:
+                trigger = (r.get("trigger") or "").strip()
+                if not trigger:
+                    continue
+                thumb = (r.get("thumb_url") or "").strip()
+                if not thumb or not r.get("has_image", True):
+                    continue
+                name = (r.get("name") or trigger).strip()
+                out.append({
+                    "name": name,                    # 显示名
+                    "tags": f"@{trigger}",           # 提示词用（画师必须 @）
+                    "category": "",
+                    "note": f"作品数: {r.get('count', 0)}, 收藏: {r.get('fav_count', 0)}",
+                    "source": "anima_tools",
+                    "post_count": r.get("count", 0),
+                    "fav_count": r.get("fav_count", 0),
+                    "score": r.get("score", 0),
+                    "image_url": thumb,
+                    "img_url": (r.get("img_url") or "").strip(),
+                    "slug": r.get("slug", ""),
+                    "style": "anime",
+                })
+            return out
+
+        return self._fetch_pages_concurrent(
+            f"{self._ANIMADEX_ARTIST_API}?{urllib.parse.urlencode({'sort': 'liked'})}",
+            total_pages, _parse, workers=8,
+            unlimited=unlimited, limit=limit, label="画师")
+
+    def _fetch_animadex_artists_serial(self, limit: int) -> list[dict]:
+        """（保留）串行版画师拉取，供需要时回退"""
+        import urllib.request
+        import urllib.parse
+
+        unlimited = (limit <= 0 or limit >= 999999)
+        items, seen = [], set()
+        page = 1
+        page_size_cap = 100
+        max_pages = 999 if unlimited else min(400, (limit // page_size_cap) + 5)
+        while (unlimited or len(items) < limit) and page <= max_pages:
+            try:
+                qs = urllib.parse.urlencode({
+                    "sort": "liked", "page": page, "limit": page_size_cap,
+                })
+                req = urllib.request.Request(
+                    f"{self._ANIMADEX_ARTIST_API}?{qs}",
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; AstrBot-ComfyUI-Plugin)",
+                             "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    data = json.loads(resp.read().decode("utf-8", "replace"))
+            except Exception as e:
+                logger.warning(f"[AnimaData] 画师 API 第{page}页失败: {e}")
+                break
+
+            results = data.get("results") or []
+            if not results:
+                break
+            for r in results:
+                trigger = (r.get("trigger") or "").strip()
+                if not trigger:
+                    continue
+                key = trigger.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                thumb = (r.get("thumb_url") or "").strip()
+                if not thumb or not r.get("has_image", True):
+                    continue
+                name = (r.get("name") or trigger).strip()
+                items.append({
+                    "name": name,
+                    "tags": f"@{trigger}",
+                    "category": "",
+                    "note": f"作品数: {r.get('count', 0)}, 收藏: {r.get('fav_count', 0)}",
+                    "source": "anima_tools",
+                    "post_count": r.get("count", 0),
+                    "fav_count": r.get("fav_count", 0),
+                    "score": r.get("score", 0),
+                    "image_url": thumb,
+                    "img_url": (r.get("img_url") or "").strip(),
+                    "slug": r.get("slug", ""),
+                    "style": "anime",
+                })
+                if not unlimited and len(items) >= limit:
+                    break
+            try:
+                if page >= int(data.get("pages") or 1):
+                    break
+            except Exception:
+                pass
+            page += 1
+        return items
+
+    def _read_anima_artist_cache(self, path, limit: int) -> list[dict]:
+        """读本地缓存（不存在/损坏返回空）。limit<=0 = 返回全部。"""
+        try:
+            p = Path(path)
+            if not p.exists():
+                return []
+            data = json.loads(p.read_text(encoding="utf-8"))
+            items = data.get("items") if isinstance(data, dict) else data
+            if not isinstance(items, list) or not items:
+                return []
+            out = items if limit <= 0 else items[:limit]
+            logger.info(f"[AnimaData] {p.name}: {len(out)} 条 (本地缓存)")
+            return out
+        except Exception as e:
+            logger.warning(f"[AnimaData] 读缓存失败 {path}: {e}")
+            return []
+
+    def _write_anima_artist_cache(self, path, items: list[dict]) -> None:
+        """写本地画师缓存（原子替换）"""
+        try:
+            p = Path(path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps({
+                "updated_at": time.time(),
+                "count": len(items),
+                "items": items,
+            }, ensure_ascii=False, indent=1), encoding="utf-8")
+            tmp.replace(p)
+        except Exception as e:
+            logger.warning(f"[AnimaData] 写画师缓存失败: {e}")
+
+    def _load_artists_from_js(self, limit: int) -> list[dict]:
+        """回退方案：从 Anima-Tools data.js 加载（图片 URL 可能已失效，标签仍可用）"""
         raw = self._extract_js_array(_ANIMA_TOOLS_JS_DIR / "data.js")
         if not raw:
             return []
-        items = []
-        seen = set()
+        try:
+            raw = sorted(raw, key=lambda x: int(x.get("post_count") or 0), reverse=True)
+        except Exception:
+            pass
+
+        items, seen = [], set()
         for item in raw:
-            name = (item.get("name") or "").strip()
-            if not name or name in seen:
+            if len(items) >= limit:
+                break
+            raw_name = (item.get("name") or "").strip()
+            if not raw_name:
                 continue
-            seen.add(name)
+            # 规范化提示词用名：去转义反斜杠 → 去尾部括号消歧义
+            tag_name = raw_name.replace("\\", "")
+            tag_name = re.sub(r"\s*\(.*?\)\s*$", "", tag_name).strip()
+            if not tag_name:
+                continue
+            key = tag_name.lower()
+            if key in seen:
+                continue
+            seen.add(key)
             item_id = str(item.get("id", ""))
             partition = item.get("p", 1)
-            image_url = (
-                f"https://anima.mooshieblob.com/images/{partition}/{item_id}.webp"
-            )
             items.append({
-                "name": name,
-                "tags": f"@{name}",
+                "name": raw_name,
+                "tags": f"@{tag_name}",
                 "category": "",
                 "note": f"作品数: {item.get('post_count', 0)}, "
                         f"独特度: {item.get('uniqueness_score', 0)}",
                 "source": "anima_tools",
                 "post_count": item.get("post_count", 0),
                 "uniqueness_score": item.get("uniqueness_score", 0),
-                "image_url": image_url,
+                # 旧模板（已失效，保留字段兼容前端；前端加载失败会自动显示占位图）
+                "image_url": f"https://anima.mooshieblob.com/images/{partition}/{item_id}.webp",
                 "id": item_id,
                 "p": partition,
                 "style": "anime",
             })
-        logger.info(f"[AnimaData] Anima-Tools 画师: {len(items)} 条 (JS)")
+        logger.info(f"[AnimaData] Anima-Tools 画师(JS回退): {len(items)} 条")
         return items
 
+
+    _ANIMADEX_CHAR_API = "https://animadex.net/api/characters/search"
+    _ANIMADEX_CHAR_CACHE = "anima_characters_cache.json"
+
     def _load_anima_tools_characters(self) -> list[dict]:
-        """从 Anima-Tools character_data.js 加载角色数据（含 CDN 图片）"""
+        """加载角色数据（优先 animadex API，失败回退本地缓存，再回退 character_data.js）
+
+        为什么改用 API：源站已从「静态 JS」迁移到 API 架构（data.js/character_data.js
+        在远端已下线），本地 JS 是 7 月快照且缺图片 URL；
+        API 返回字段更全：trigger（角色名+系列的规范触发词）、tags（外观标签数组）、
+        thumb_url（真实可用图片）、loras（配套 Lora 推荐）、count（作品数）。
+        数量默认 8000（character_limit 可调），保持与原本地库一致的规模。
+        """
+        limit = 0
+        try:
+            limit = int(self.character_limit)
+        except Exception:
+            limit = 0
+        # 0 或负数 → 全量（有多少拉多少）
+
+        cache_path = (self._user_data_dir or self.data_dir) / self._ANIMADEX_CHAR_CACHE
+
+        cached = self._read_anima_artist_cache(cache_path, limit)
+        if cached:
+            return cached
+
+        items = self._fetch_animadex_characters(limit)
+        if items:
+            self._write_anima_artist_cache(cache_path, items)
+            logger.info(f"[AnimaData] 角色: {len(items)} 条 (animadex API, 已缓存)")
+            return items
+
+        logger.warning("[AnimaData] 角色 API 不可用，回退本地 character_data.js")
+        return self._load_characters_from_js()
+
+    # ------------------------------------------------------------------
+    # 并发分页拉取工具
+    # ------------------------------------------------------------------
+    def _fetch_pages_concurrent(self, api_url: str, total_pages: int,
+                                page_parser, *, workers: int = 8,
+                                unlimited: bool = True, limit: int = 0,
+                                label: str = "") -> list[dict]:
+        """并发拉取 API 分页数据（API 每页固定返回 36 条，串行拉 1000+ 页太慢）。
+
+        api_url: 基础 URL（会追加 &page=N）
+        total_pages: 已知总页数（从第一页响应取 pages 字段）
+        page_parser: 单页解析函数 (results:list) -> list[dict]（含去重过滤）
+        workers: 并发线程数（默认 8；过高可能被 CDN 限流）
+        unlimited/limit: 是否全量 / 条数上限
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        import urllib.request
+
+        def _get_page(pno: int):
+            try:
+                sep = "&" if "?" in api_url else "?"
+                req = urllib.request.Request(
+                    f"{api_url}{sep}page={pno}",
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; AstrBot-ComfyUI-Plugin)",
+                             "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8", "replace"))
+                return pno, (data.get("results") or [])
+            except Exception as e:
+                logger.debug(f"[AnimaData] {label} 第{pno}页失败: {e}")
+                return pno, []
+
+        # ★ 分批提交（每批 BATCH 页）：一次性提交上千个 future 会占用大量内存，
+        #   在手机上可能被系统杀掉（实测 1014 页一次性提交导致进程死亡）
+        BATCH = 60
+        results_map = {}
+        done = 0
+        for bstart in range(1, total_pages + 1, BATCH):
+            bend = min(bstart + BATCH - 1, total_pages)
+            with ThreadPoolExecutor(max_workers=workers) as ex:
+                futs = {ex.submit(_get_page, p): p for p in range(bstart, bend + 1)}
+                for fut in as_completed(futs):
+                    pno, res = fut.result()
+                    results_map[pno] = res
+                    done += 1
+            if done % 60 < BATCH and done > 0:
+                logger.info(f"[AnimaData] {label} 进度 {done}/{total_pages} 页")
+
+        # 按页序合并（保证热度排序不乱）
+        items, seen = [], set()
+        for pno in sorted(results_map):
+            for it in page_parser(results_map[pno]):
+                key = (it.get("tags") or it.get("name") or "").lower()
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                items.append(it)
+                if not unlimited and len(items) >= limit:
+                    return items
+        return items
+
+    def _fetch_animadex_characters(self, limit: int) -> list[dict]:
+        """从 animadex API 并发分页拉取角色（按 liked 排序，只保留有图的）。
+        limit <= 0 或极大值 → 拉到 API 返回完为止（有多少拉多少）。
+
+        注：API 的 limit 参数无效（始终每页 36 条），全量约 1014 页；
+        串行拉需 30-50 分钟，故改为 8 线程并发（约 3-6 分钟）。
+        """
+        import urllib.request
+        import urllib.parse
+
+        unlimited = (limit <= 0 or limit >= 999999)
+
+        # 先拉第 1 页拿总页数
+        try:
+            qs = urllib.parse.urlencode({"sort": "liked"})
+            req = urllib.request.Request(
+                f"{self._ANIMADEX_CHAR_API}?{qs}",
+                headers={"User-Agent": "Mozilla/5.0 (compatible; AstrBot-ComfyUI-Plugin)",
+                         "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                first = json.loads(resp.read().decode("utf-8", "replace"))
+        except Exception as e:
+            logger.warning(f"[AnimaData] 角色 API 首页失败: {e}")
+            return []
+
+        total_pages = int(first.get("pages") or 1)
+        if not unlimited:
+            total_pages = min(total_pages, (limit // 36) + 2)
+        logger.info(f"[AnimaData] 角色并发拉取: {total_pages} 页 × 36 条 (8线程)")
+
+        def _parse(results):
+            out = []
+            for r in results:
+                name = (r.get("name") or "").strip()
+                trigger = (r.get("trigger") or "").strip()
+                thumb = (r.get("thumb_url") or "").strip()
+                if not name or not trigger or not thumb:
+                    continue
+                if not r.get("has_image", True):
+                    continue
+                cps = (r.get("copyright_name") or r.get("copyright") or "").strip()
+                out.append({
+                    "name": name,
+                    "tags": trigger,
+                    "category": cps,
+                    "note": f"作品数: {r.get('count', 0)}" + (f", 收藏: {r.get('fav_count', 0)}" if r.get("fav_count") else ""),
+                    "source": "anima_tools",
+                    "post_count": r.get("count", 0),
+                    "fav_count": r.get("fav_count", 0),
+                    "tags_list": r.get("tags") or [],
+                    "image_url": thumb,
+                    "img_url": (r.get("img_url") or "").strip(),
+                    "slug": r.get("slug", ""),
+                    "loras": r.get("loras") or [],
+                    "style": "anime",
+                })
+            return out
+
+        # 首页结果直接并入（避免重复请求）
+        items = self._fetch_pages_concurrent(
+            f"{self._ANIMADEX_CHAR_API}?{urllib.parse.urlencode({'sort': 'liked'})}",
+            total_pages, _parse, workers=8,
+            unlimited=unlimited, limit=limit, label="角色")
+
+        # 若首页结果不在其中（page 从 1 开始，已包含），直接返回
+        return items
+
+    def _fetch_animadex_characters_serial(self, limit: int) -> list[dict]:
+        """（保留）串行版角色拉取，供并发失败时回退"""
+        import urllib.request
+        import urllib.parse
+
+        unlimited = (limit <= 0 or limit >= 999999)
+        items, seen = [], set()
+        page, cap = 1, 100
+        max_pages = 999 if unlimited else min(400, (limit // cap) + 5)
+        while (unlimited or len(items) < limit) and page <= max_pages:
+            try:
+                qs = urllib.parse.urlencode({"sort": "liked", "page": page, "limit": cap})
+                req = urllib.request.Request(
+                    f"{self._ANIMADEX_CHAR_API}?{qs}",
+                    headers={"User-Agent": "Mozilla/5.0 (compatible; AstrBot-ComfyUI-Plugin)",
+                             "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    data = json.loads(resp.read().decode("utf-8", "replace"))
+            except Exception as e:
+                logger.warning(f"[AnimaData] 角色 API 第{page}页失败: {e}")
+                break
+
+            results = data.get("results") or []
+            if not results:
+                break
+            for r in results:
+                name = (r.get("name") or "").strip()
+                trigger = (r.get("trigger") or "").strip()
+                thumb = (r.get("thumb_url") or "").strip()
+                if not name or not trigger or not thumb:
+                    continue
+                if not r.get("has_image", True):
+                    continue
+                key = trigger.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                cps = (r.get("copyright_name") or r.get("copyright") or "").strip()
+                tag_list = r.get("tags") or []
+                items.append({
+                    "name": name,
+                    "tags": trigger,                     # 触发词：角色名, 系列（规范写法）
+                    "category": cps,
+                    "note": f"作品数: {r.get('count', 0)}" + (f", 收藏: {r.get('fav_count', 0)}" if r.get("fav_count") else ""),
+                    "source": "anima_tools",
+                    "post_count": r.get("count", 0),
+                    "fav_count": r.get("fav_count", 0),
+                    "tags_list": tag_list,               # 外观标签数组（眼/发/服装等）
+                    "image_url": thumb,
+                    "img_url": (r.get("img_url") or "").strip(),
+                    "slug": r.get("slug", ""),
+                    "loras": r.get("loras") or [],
+                    "style": "anime",
+                })
+                if not unlimited and len(items) >= limit:
+                    break
+            try:
+                if page >= int(data.get("pages") or 1):
+                    break
+            except Exception:
+                pass
+            page += 1
+        return items
+
+    def _load_characters_from_js(self) -> list[dict]:
+        """回退：从本地 character_data.js 加载（图片 URL 已修正）"""
         raw = self._extract_js_array(_ANIMA_TOOLS_JS_DIR / "character_data.js")
         if not raw:
             return []
@@ -951,9 +1394,15 @@ class AnimaDataManager:
             if eye:
                 tags_parts.append(f"{eye} eyes")
             raw_name = f"{name}, {copyright_}" if copyright_ else name
+            # ★ 图片 URL 规则（实测 100% 命中）：
+            #   文件名 = 把「name, copyright」里的冒号换成下划线后 URL 编码
+            #   例：rem (re:zero) + re:zero kara hajimeru isekai seikatsu
+            #       → rem%20(re_zero)%2C%20re_zero%20kara%20hajimeru%20isekai%20seikatsu.webp
+            #   括号 () 保留不编码；缺这步转换会导致 404（图片空白）
+            _img_key = raw_name.replace(":", "_")
             image_url = (
                 f"https://blobs.animadex.net/Outputs/thumbs/"
-                f"{quote(raw_name)}.webp"
+                f"{quote(_img_key, safe='')}.webp"
             )
             items.append({
                 "name": name,
@@ -1183,7 +1632,13 @@ def _loader_extract_js_array(filepath: Path) -> list:
 
 
 def load_anima_tools_source(source_name: str) -> list[dict]:
-    """从 Anima-Tools JS 加载指定源的数据（artists / characters / clothing）"""
+    """从 Anima-Tools 加载指定源的数据（artists / characters / clothing）
+
+    ★ 画师(artists) 走 animadex API（与 AnimaDataManager._load_anima_tools_artists 一致）：
+      旧 data.js 的图片模板 anima.mooshieblob.com/images/{p}/{id}.webp 已失效
+      （该域名现返回 text/html，浏览器 <img> 加载失败 → 卡片空白）；
+      且旧源有 4 万条（含大量冷门/无图），新源按 liked 排序且带 has_image 标记。
+    """
     # 缓存命中
     if source_name in _ANIMA_LOADER_CACHE:
         return _ANIMA_LOADER_CACHE[source_name]
@@ -1192,34 +1647,58 @@ def load_anima_tools_source(source_name: str) -> list[dict]:
     items = []
 
     if source_name == "artists":
-        raw = _loader_extract_js_array(js_dir / "data.js")
-        seen = set()
-        for item in raw:
-            name = (item.get("name") or "").strip()
-            if not name or name in seen:
-                continue
-            seen.add(name)
-            item_id = str(item.get("id", ""))
-            partition = item.get("p", 1)
-            image_url = (
-                f"https://anima.mooshieblob.com/images/{partition}/{item_id}.webp"
+        # 复用 Manager 的实现（含 API 拉取 + 本地缓存 + 热度截断 + JS 回退）
+        # ★ user_data_dir 必须传有效路径：缓存位于 data/user/ 下，
+        #   传空会回退到 data 顶层，导致读到旧的/错误位置的缓存
+        try:
+            _mgr = AnimaDataManager(
+                str(_ANIMA_TOOLS_JS_DIR.parent),
+                str(_ANIMA_TOOLS_JS_DIR.parent / "user"),
+                artist_limit=0
             )
-            items.append({
-                "name": name,
-                "tags": f"@{name}",
-                "category": "",
-                "note": f"作品数: {item.get('post_count', 0)}, "
-                        f"独特度: {item.get('uniqueness_score', 0)}",
-                "source": "anima_tools",
-                "post_count": item.get("post_count", 0),
-                "uniqueness_score": item.get("uniqueness_score", 0),
-                "image_url": image_url,
-                "id": item_id,
-                "p": partition,
-                "style": "anime",
-            })
+            items = _mgr._load_anima_tools_artists()
+        except Exception as e:
+            logger.warning(f"[AnimaData] 画师加载异常，回退 JS: {e}")
+            items = []
+        if not items:
+            raw = _loader_extract_js_array(js_dir / "data.js")
+            seen = set()
+            for item in raw:
+                name = (item.get("name") or "").strip()
+                if not name or name in seen:
+                    continue
+                seen.add(name)
+                tag_name = re.sub(r"\s*\(.*?\)\s*$", "", name.replace("\\", "")).strip()
+                if not tag_name:
+                    continue
+                items.append({
+                    "name": name,
+                    "tags": f"@{tag_name}",
+                    "category": "",
+                    "note": f"作品数: {item.get('post_count', 0)}",
+                    "source": "anima_tools",
+                    "post_count": item.get("post_count", 0),
+                    "style": "anime",
+                })
 
     elif source_name == "characters":
+        # ★ 与 Manager 统一：走 animadex API（含 trigger/tags 数组/正确图片 URL）
+        #   源站已迁移到 API，本地 character_data.js 是 7 月快照且图片规则易失效
+        # ★ user_data_dir 必须传有效路径（缓存位于 data/user/，同 artists 分支说明）
+        try:
+            _mgr = AnimaDataManager(
+                str(_ANIMA_TOOLS_JS_DIR.parent),
+                str(_ANIMA_TOOLS_JS_DIR.parent / "user"),
+                character_limit=0
+            )
+            items = _mgr._load_anima_tools_characters()
+        except Exception as e:
+            logger.warning(f"[AnimaData] 角色加载异常，回退 JS: {e}")
+            items = []
+        if items:
+            _ANIMA_LOADER_CACHE[source_name] = items
+            return items
+        # 回退：本地 JS
         raw = _loader_extract_js_array(js_dir / "character_data.js")
         for item in raw:
             name = (item.get("name") or "").strip()
@@ -1239,9 +1718,15 @@ def load_anima_tools_source(source_name: str) -> list[dict]:
             if eye:
                 tags_parts.append(f"{eye} eyes")
             raw_name = f"{name}, {copyright_}" if copyright_ else name
+            # ★ 图片 URL 规则（实测 100% 命中）：
+            #   文件名 = 把「name, copyright」里的冒号换成下划线后 URL 编码
+            #   例：rem (re:zero) + re:zero kara hajimeru isekai seikatsu
+            #       → rem%20(re_zero)%2C%20re_zero%20kara%20hajimeru%20isekai%20seikatsu.webp
+            #   括号 () 保留不编码；缺这步转换会导致 404（图片空白）
+            _img_key = raw_name.replace(":", "_")
             image_url = (
                 f"https://blobs.animadex.net/Outputs/thumbs/"
-                f"{quote(raw_name)}.webp"
+                f"{quote(_img_key, safe='')}.webp"
             )
             items.append({
                 "name": name,

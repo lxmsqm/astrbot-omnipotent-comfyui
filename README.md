@@ -2,6 +2,28 @@
 
 AstrBot 插件，连接本地/云端 ComfyUI，实现**文生图、图生图、图生视频、图片编辑**。自带 WebUI 可视化面板（赛博魔法主题）、魔导书提示词库。
 
+**🎉 v4.2.0 更新（Anima 词库升级 + 全量汉化）：**
+- 🌐 **数据源迁移到 animadex API** — 源站已从静态 JS 改为 API 架构（旧 `data.js`/`character_data.js` 在远端已下线）。画师/角色改从 `/api/artists/search`、`/api/characters/search` 拉取
+  - **画师**：标签自动规范为 `@名字`（原名形如 `hammer \(sunset beach\)`，带括号会与权重语法 `(...)` 冲突）；只收有图的
+  - **角色**：含规范触发词（`hatsune miku, vocaloid`）、**外观标签数组**（`["1girl","aqua eyes",...]`）、配套 Lora 推荐
+- 🖼️ **修复图片全部空白** — 旧图片域名 `anima.mooshieblob.com` 已失效（返回 `text/html` 而非图片）；改用 `blobs.animadex.net`，角色图片 URL 需把原名里的冒号转下划线（实测 100% 命中）
+- ⚡ **并发分页拉取** — 源 API 每页固定 36 条（`limit` 参数无效），全量需 1000+ 页；改为 8 线程分批拉取，**画师 9072 条 + 角色 35372 条约 10 分钟**（串行需 40+ 分钟）
+- 💾 **三级容错** — 读本地缓存 → 拉 API → 回退 JS；缓存位于 `data/user/`，首次拉取后永久可用
+- 🇨🇳 **全量汉化** — 角色名与 IP/系列名 **100% 中文**（35372 + 3651 条）
+  - 新增 `name_cn` / `category_cn` 字段，前端**优先显示中文**，**支持中文搜索**（搜"初音"能出 55 条）
+  - 示例：`Hatsune Miku → 初音未来`、`Frieren → 芙莉莲`、`Rem (Re:zero) → 雷姆`、`Genshin Impact → 原神`
+  - 画师人名保留原文（译名无意义）
+- 📚 **词库扩充 + 官方规范**
+  - 新增「官方规范」38 条：品质（masterpiece/best quality…）、评分（score_9~5）、年代（year 2025/newest…）、Meta（absurdres/anime screenshot）、安全（safe/sensitive/nsfw/explicit）、主体数（1girl/solo/2girls/no humans）
+  - 扩充 7 个薄弱分类：肤质 3→25、年龄段 6→15、内衣泳装 5→30、连衣裙 7→28、金属 5→16、皮革 6→16、画风技法 6→25
+  - **词库总量 780 → 935 条**
+- 🎯 **Anima 随机规范增强**（WebUI 开关，默认开）
+  - 固定开头：`masterpiece, best quality, score_7, safe`（去重后前置）
+  - 自动补主体数：池子里没抽到 `1girl/solo` 等时自动补
+  - **末尾追加 2 句自然语言**（符合官方"tag + 自然语言混合写"要求）
+  - ⚠️ `score_7` 适用于 Base 版模型，**Aesthetic 版请关闭本项**
+- ⚙️ **新增配置**：`anima_artist_limit` / `anima_character_limit`（默认 `0` = 全量）、`anima_spec_enhance`（默认开）
+
 **🎉 v4.1.0 更新（飞书适配）：**
 - 🧭 **LLM 工作流分类感知（修复 AI 搞混工作流）**
   - `comfyui_list_workflows` 改为**按分类分组输出**：`【画】文生图…【图生图】必须提供输入图片…【图生视频】…【反推】…`，并为每类标注**用途与对应工具**

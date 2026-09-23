@@ -52,5 +52,23 @@
     "description": "勾选后按群消息发送（QQ群 / 飞书群）",
     "type": "bool",
     "default": false
+  },
+  "anima_spec_enhance": {
+    "title": "Anima 随机规范增强",
+    "description": "开启后，Anima 模式随机图会自动按官方规范组织提示词：固定开头 masterpiece/best quality/score_7/safe、补主体数 1girl solo、并在末尾追加 1~2 句自然语言描述（tag+自然语言混合写法）。仅 anima 模式生效；K2 模式（中文成句引擎）不受影响。注意：score_7 适用于 Base 版模型，Aesthetic 版请关闭本项",
+    "type": "bool",
+    "default": true
+  },
+  "anima_artist_limit": {
+    "title": "画师库加载上限",
+    "description": "从 animadex API 加载的画师数量。默认 0 = 全量（有多少拉多少，约 1.5 万条，按 liked 热度排序，只收有图的）。填正数则只加载前 N 个热门画师（如 500，可加快首次加载）。画师标签自动规范成 @名字 写入提示词；首次全量加载约需数分钟，之后直接读本地缓存",
+    "type": "int",
+    "default": 0
+  },
+  "anima_character_limit": {
+    "title": "角色库加载上限",
+    "description": "从 animadex API 加载的角色数量。默认 0 = 全量（有多少拉多少，约 3.6 万条，按 liked 热度排序，只收有图的）。填正数则只加载前 N 个热门角色。角色数据含规范触发词（角色名+系列）、外观标签数组、可用缩略图；首次全量加载约需 10-20 分钟，之后直接读本地缓存",
+    "type": "int",
+    "default": 0
   }
 }

@@ -1789,6 +1789,7 @@ class WebUIMixin:
             "webui_lan": self.webui_lan,
             "webui_ipv6": self.webui_ipv6,
             "show_prompt_on_image": self.show_prompt_on_image,
+            "anima_spec_enhance": self._load_local_config().get("anima_spec_enhance", True),
             "send_platform": getattr(self, "send_platform", "auto"),
             "color_scheme": self._load_local_config().get("color_scheme", "cyberpunk-orange"),
             "random_pick_mode": self._load_local_config().get("random_pick_mode", "all"),
@@ -1987,6 +1988,9 @@ class WebUIMixin:
             val = d["show_prompt_on_image"]
             self.show_prompt_on_image = bool(val)
             updates["show_prompt_on_image"] = self.show_prompt_on_image
+        if "anima_spec_enhance" in d:
+            val = bool(d["anima_spec_enhance"])
+            updates["anima_spec_enhance"] = val
         if "send_platform" in d:
             val = str(d["send_platform"] or "auto").lower()
             if val not in ("auto", "qq", "feishu", "both"):
@@ -4654,7 +4658,77 @@ class GrimoireMixin:
             pick_names.append(src.replace('.json','').split('/')[-1])
 
         logger.info(f"[随机图] 固定标签: {len(pins)}个, 随机池: {len(active_pool)}个源, 合并后 {len(all_tags)} 个标签 (SmartComfy增强)")
-        return web.json_response({"ok": True, "tags": ", ".join(all_tags)})
+
+        # ============================================================
+        # 5. Anima 规范增强（方案B）—— 让随机结果符合 Anima 提示词规范
+        #    规范要点（见 anima-prompt-guide.md）：
+        #      ① 开头固定 质量/年代/安全：masterpiece, best quality, score_7, safe
+        #      ② 必须有主体数：1girl, solo（优先用池子里抽到的，缺失才补默认）
+        #      ③ tag + 自然语言混合：至少补 1~2 句自然语言描述
+        #    仅 anima 模式生效（K2 模式是中文成句引擎，不套用）
+        #    可用配置 anima_spec_enhance 关闭（默认开）
+        # ============================================================
+        tags_str = ", ".join(all_tags)
+        try:
+            _lc = self._load_local_config()
+            _enhance_on = _lc.get('anima_spec_enhance', True)
+            if prompt_model == 'anima' and _enhance_on and all_tags:
+                import re as _re
+                _lower_all = [t.lower() for t in all_tags]
+
+                # ① 固定前置：质量 + score_7(Base版) + safe
+                _prefix = []
+                if not any('masterpiece' in t for t in _lower_all):
+                    _prefix.append('masterpiece')
+                if not any('best quality' in t for t in _lower_all):
+                    _prefix.append('best quality')
+                if not any(_re.match(r'^score_\d+$', t) for t in _lower_all):
+                    _prefix.append('score_7')          # Base 版；Aesthetic 版请关闭本增强
+                if not any(t == 'safe' or t.startswith('safe') for t in _lower_all):
+                    _prefix.append('safe')
+
+                # ② 主体数：从抽到的标签里找，缺失才补
+                _subject_words = ('1girl', '2girls', '3girls', '1boy', '2boys',
+                                  'multiple girls', 'multiple boys', 'solo', 'no humans', '1other')
+                _has_subject = any(any(sw in t for sw in _subject_words) for t in _lower_all)
+                if not _has_subject:
+                    _prefix.extend(['1girl', 'solo'])
+
+                # ③ 自然语言后缀：从 场景/光照/构图 类标签拼一句（不足则再补一句通用句）
+                _scene, _light, _shot, _action = [], [], [], []
+                for _t, _o in zip(all_tags, all_tag_objects):
+                    _sc = str(_o.get('subcategory') or _o.get('category') or '')
+                    _src = str(_o.get('source') or '')
+                    _key = _sc + _src
+                    if any(k in _key for k in ('场景', '建筑', '自然', 'scene', '背景')):
+                        _scene.append(_t)
+                    elif any(k in _key for k in ('光影', '光照', 'lighting', '天气', '色彩')):
+                        _light.append(_t)
+                    elif any(k in _key for k in ('构图', '镜头', 'shot', '景别')):
+                        _shot.append(_t)
+                    elif any(k in _key for k in ('动作', '姿态', 'pose', '站坐卧')):
+                        _action.append(_t)
+
+                _s1_parts = []
+                if _action: _s1_parts.append(_action[0])
+                if _scene:  _s1_parts.append('in ' + _scene[0])
+                if _light:  _s1_parts.append('with ' + _light[0])
+                _sent1 = ("The illustration shows a girl " + ", ".join(_s1_parts) + "."
+                          ) if _s1_parts else "The illustration shows a girl, rendered in a clean anime style."
+                _s2_parts = []
+                if _shot:  _s2_parts.append(_shot[0])
+                if _light: _s2_parts.append(_light[0])
+                _sent2 = ("The composition uses " + ", ".join(_s2_parts) + "."
+                          ) if _s2_parts else "Soft, balanced lighting keeps the focus on the character."
+
+                _prefix_str = (", ".join(_prefix) + ", ") if _prefix else ""
+                tags_str = (_prefix_str + ", ".join(all_tags) + ". " + _sent1 + " " + _sent2).strip()
+                logger.info(f"[随机图] Anima规范增强: 前置[{', '.join(_prefix) or '无'}] "
+                            f"自然语言2句 主体数{'已有' if _has_subject else '已补'}")
+        except Exception as _e:
+            logger.warning(f"[ComfyUI] Anima规范增强失败(用原始拼接): {_e}")
+
+        return web.json_response({"ok": True, "tags": tags_str})
 
     async def _webui_grimoire_get_models(self, request):
         """返回可用的提示词模型列表"""
@@ -5896,7 +5970,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._refresh_workflow_list()
         # 加载 Anima 数据
         data_dir = Path(__file__).parent / "data"
-        self.anima_data = AnimaDataManager(str(data_dir), str(self._user_data_dir))
+        self.anima_data = AnimaDataManager(
+            str(data_dir), str(self._user_data_dir),
+            artist_limit=int(self.config.get("anima_artist_limit", 0) or 0),
+            character_limit=int(self.config.get("anima_character_limit", 0) or 0),
+        )
         self.anima_data.load_all()
         self._register_tools()
         # 启动时自动修复 lora 路径（解决用户保存的 lora_name 与实际路径不一致的问题）
