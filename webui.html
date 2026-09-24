@@ -4726,17 +4726,9 @@ textarea:focus-visible,
             </div>
           </div>
 
-          <!-- 分组 3.5：云端数据库同步（v4.3.0，v4.3.5 起 GitHub 公开镜像） -->
+          <!-- 分组 3.5：云端数据库同步（v4.3.5：开箱即用，高级选项折叠） -->
           <div class="settings-group">
-            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库（GitHub 公开镜像）</div>
-            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
-              <span class="settings-label" style="min-width:auto">私人令牌</span>
-              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="可选：仅同步私有仓库时需要；GitHub 公开镜像无需填写" style="flex:1;min-width:150px" autocomplete="off">
-            </div>
-            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
-              <span class="settings-label" style="min-width:auto">仓库名</span>
-              <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="lxmsqm/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off">
-            </div>
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库</div>
             <div class="settings-row" style="justify-content:flex-start;gap:14px;flex-wrap:wrap">
               <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
                 <input type="checkbox" id="cfg_sync_artists" style="accent-color:var(--primary)"><label for="cfg_sync_artists">画师缓存 (4MB)</label>
@@ -4749,7 +4741,21 @@ textarea:focus-visible,
               <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
               <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
             </div>
-            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，无需任何令牌；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从内置的 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，开箱即用无需任何配置；缓存体积大，仅勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
+            <div style="margin-top:6px">
+              <a href="javascript:void(0)" id="gitee_adv_toggle" onclick="toggleGiteeAdvanced()" style="font-size:10px;color:var(--text-sub2);text-decoration:underline">高级选项（私有仓库 / 自定义源）▾</a>
+            </div>
+            <div id="gitee_advanced" style="display:none">
+              <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px">
+                <span class="settings-label" style="min-width:auto">数据源地址</span>
+                <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="lxmsqm/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off" title="GitHub 或 Gitee 仓库（owner/repo）；留空用内置默认">
+              </div>
+              <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+                <span class="settings-label" style="min-width:auto">私人令牌</span>
+                <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="仅同步 Gitee 私有仓库时需要；GitHub 公开镜像无需填写" style="flex:1;min-width:150px" autocomplete="off">
+              </div>
+              <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">自建私有源示例：Gitee 私有仓库 + 私人令牌（走 API 通道）。数据源格式须与官方镜像一致（words/ + anima_cache/ + manifest.json，可用 gitee_upload_v2.py 生成）。</div>
+            </div>
           </div>
 
           <!-- 分组 4：危险操作 -->
@@ -6348,12 +6354,22 @@ function loadCfg() {
 }
 
 /** v4.3.0 云端数据库同步：状态加载 + 执行 */
+function toggleGiteeAdvanced() {
+  const box = document.getElementById('gitee_advanced');
+  const link = document.getElementById('gitee_adv_toggle');
+  if (!box) return;
+  const show = box.style.display === 'none';
+  box.style.display = show ? '' : 'none';
+  if (link) link.textContent = show ? '高级选项（私有仓库 / 自定义源）▴' : '高级选项（私有仓库 / 自定义源）▾';
+}
+
 async function loadGiteeSyncStatus() {
   try {
     const s = await apiFetch('/api/gitee-sync/status', {}, true);
     if (!s || !s.ok) return;
+    // v4.3.5: 仓库名留空 = 用内置默认；只有用户自定义过（≠默认值）才回填显示
     const repoEl = document.getElementById('cfg_gitee_repo');
-    if (repoEl && !repoEl.value) repoEl.value = s.repo || '';
+    if (repoEl && s.repo && s.repo !== 'lxmsqm/astrbot-comfyui-data') repoEl.value = s.repo;
     const taEl = document.getElementById('cfg_sync_artists');
     if (taEl) taEl.checked = s.sync_artists !== false;
     const tcEl = document.getElementById('cfg_sync_characters');
