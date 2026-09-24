@@ -4726,7 +4726,7 @@ textarea:focus-visible,
             </div>
           </div>
 
-          <!-- 分组 3.5：云端数据库同步（v4.3.5：开箱即用，高级选项折叠） -->
+          <!-- 分组 3.5：云端数据库同步（v4.3.6：零配置，无自定义源） -->
           <div class="settings-group">
             <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库</div>
             <div class="settings-row" style="justify-content:flex-start;gap:14px;flex-wrap:wrap">
@@ -4741,21 +4741,7 @@ textarea:focus-visible,
               <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
               <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
             </div>
-            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从内置的 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，开箱即用无需任何配置；缓存体积大，仅勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
-            <div style="margin-top:6px">
-              <a href="javascript:void(0)" id="gitee_adv_toggle" onclick="toggleGiteeAdvanced()" style="font-size:10px;color:var(--text-sub2);text-decoration:underline">高级选项（私有仓库 / 自定义源）▾</a>
-            </div>
-            <div id="gitee_advanced" style="display:none">
-              <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:6px">
-                <span class="settings-label" style="min-width:auto">数据源地址</span>
-                <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="lxmsqm/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off" title="GitHub 或 Gitee 仓库（owner/repo）；留空用内置默认">
-              </div>
-              <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
-                <span class="settings-label" style="min-width:auto">私人令牌</span>
-                <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="仅同步 Gitee 私有仓库时需要；GitHub 公开镜像无需填写" style="flex:1;min-width:150px" autocomplete="off">
-              </div>
-              <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">自建私有源示例：Gitee 私有仓库 + 私人令牌（走 API 通道）。数据源格式须与官方镜像一致（words/ + anima_cache/ + manifest.json，可用 gitee_upload_v2.py 生成）。</div>
-            </div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从官方 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，开箱即用无需任何配置；缓存体积大，仅勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
           </div>
 
           <!-- 分组 4：危险操作 -->
@@ -6353,23 +6339,11 @@ function loadCfg() {
   });
 }
 
-/** v4.3.0 云端数据库同步：状态加载 + 执行 */
-function toggleGiteeAdvanced() {
-  const box = document.getElementById('gitee_advanced');
-  const link = document.getElementById('gitee_adv_toggle');
-  if (!box) return;
-  const show = box.style.display === 'none';
-  box.style.display = show ? '' : 'none';
-  if (link) link.textContent = show ? '高级选项（私有仓库 / 自定义源）▴' : '高级选项（私有仓库 / 自定义源）▾';
-}
-
+/** v4.3.0 云端数据库同步：状态加载 + 执行（v4.3.6 起数据源固定为内置镜像，零配置） */
 async function loadGiteeSyncStatus() {
   try {
     const s = await apiFetch('/api/gitee-sync/status', {}, true);
     if (!s || !s.ok) return;
-    // v4.3.5: 仓库名留空 = 用内置默认；只有用户自定义过（≠默认值）才回填显示
-    const repoEl = document.getElementById('cfg_gitee_repo');
-    if (repoEl && s.repo && s.repo !== 'lxmsqm/astrbot-comfyui-data') repoEl.value = s.repo;
     const taEl = document.getElementById('cfg_sync_artists');
     if (taEl) taEl.checked = s.sync_artists !== false;
     const tcEl = document.getElementById('cfg_sync_characters');
@@ -6380,7 +6354,7 @@ async function loadGiteeSyncStatus() {
         const okTxt = s.last.ok ? '✅' : '⚠️';
         stEl.textContent = `${okTxt} 上次同步 ${s.last.finished_at}（词库 ${s.last.words_ok || 0} / 缓存 ${s.last.cache_ok || 0}）`;
       } else {
-        stEl.textContent = s.configured ? '从未同步过' : '未配置令牌';
+        stEl.textContent = '从未同步过';
       }
     }
   } catch (e) {}
@@ -6389,25 +6363,21 @@ async function loadGiteeSyncStatus() {
 async function runGiteeSync() {
   const btn = document.getElementById('btn_gitee_sync');
   const stEl = document.getElementById('gitee_sync_state');
-  const tokenEl = document.getElementById('cfg_gitee_token');
-  const repoEl = document.getElementById('cfg_gitee_repo');
   const taEl = document.getElementById('cfg_sync_artists');
   const tcEl = document.getElementById('cfg_sync_characters');
+  // v4.3.6: 数据源固定为内置 GitHub 公开镜像，前端不再传 repo/token
   const body = {
     sync_artists: taEl ? !!taEl.checked : true,
     sync_characters: tcEl ? !!tcEl.checked : true,
   };
-  if (tokenEl && tokenEl.value.trim()) body.gitee_token = tokenEl.value.trim();
-  if (repoEl && repoEl.value.trim()) body.gitee_repo = repoEl.value.trim();
   if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（首次含缓存约 2-5 分钟，勿关页面）'; }
-  if (stEl) stEl.textContent = '⏳ 正在从 GitHub 镜像拉取词库与缓存…';
+  if (stEl) stEl.textContent = '⏳ 正在从官方镜像拉取词库与缓存…';
   try {
     // ★ 超时给足 12 分钟（28MB 缓存 + 手机网络）；旧版 30s 必超时
     const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body), timeoutMs: 720000 }, true);
     if (r && r.ok) {
       if (stEl) stEl.textContent = `✅ 同步完成 ${r.finished_at || ''}（词库 ${r.words_ok} 个${r.cache_ok ? '，缓存 ' + r.cache_ok + ' 个' : ''}）`;
       toast(`✅ 云端数据库同步完成：词库 ${r.words_ok} 个` + (r.cache_ok ? `，缓存 ${r.cache_ok} 个` : ''), 'success', 5000);
-      if (tokenEl) tokenEl.value = '';
       // 刷新魔导书数据源列表（词库已重载）
       if (typeof loadGrimoireData === 'function') loadGrimoireData().catch(() => {});
     } else {

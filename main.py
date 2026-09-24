@@ -2082,22 +2082,20 @@ class WebUIMixin:
         })
 
     async def _webui_gitee_sync_run(self, request):
-        """执行云端同步：POST {gitee_token?, gitee_repo?, sync_artists?, sync_characters?}
-        token 不传则用已保存的。同步过程同步执行（词库小；缓存 28MB 视网络约 1-3 分钟）"""
-        from .gitee_sync import GiteeSync
+        """执行云端同步：POST {sync_artists?, sync_characters?}
+        v4.3.6: 数据源固定为内置 GitHub 公开镜像（repo/token 不再接受前端传入——
+        自定义源无法保证 manifest/目录结构与镜像匹配，属伪需求）；
+        已保存的历史 gitee_token/gitee_repo 配置仍被读取以兼容旧部署。"""
+        from .gitee_sync import GiteeSync, DEFAULT_REPO
         try:
             d = await request.json()
         except Exception:
             d = {}
         cfg = self._get_gitee_cfg()
-        token = str(d.get("gitee_token") or cfg.get("gitee_token") or "").strip()
-        repo = str(d.get("gitee_repo") or cfg.get("gitee_repo") or "").strip()
-        # 顺手保存本次传入的配置（下次免填）
+        token = str(cfg.get("gitee_token") or "").strip()
+        repo = str(cfg.get("gitee_repo") or "").strip() or DEFAULT_REPO
+        # 仅同步开关可配置
         updates = {}
-        if d.get("gitee_token"):
-            updates["gitee_token"] = str(d["gitee_token"]).strip()
-        if d.get("gitee_repo"):
-            updates["gitee_repo"] = str(d["gitee_repo"]).strip()
         if "sync_artists" in d:
             updates["sync_artists"] = bool(d["sync_artists"])
         if "sync_characters" in d:
