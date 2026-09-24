@@ -1,0 +1,137 @@
+[
+  {
+    "name": "透明感",
+    "tags": "see-through",
+    "category": "光泽"
+  },
+  {
+    "name": "半透明",
+    "tags": "semi-transparent",
+    "category": "光泽"
+  },
+  {
+    "name": "玻璃感",
+    "tags": "glassy",
+    "category": "光泽"
+  },
+  {
+    "name": "水晶感",
+    "tags": "crystalline",
+    "category": "光泽"
+  },
+  {
+    "name": "琉璃感",
+    "tags": "glazed",
+    "category": "光泽"
+  },
+  {
+    "name": "金属光",
+    "tags": "metallic",
+    "category": "光泽"
+  },
+  {
+    "name": "镜面反射",
+    "tags": "mirror reflection",
+    "category": "光泽"
+  },
+  {
+    "name": "湿漉漉",
+    "tags": "wet",
+    "category": "光泽"
+  },
+  {
+    "name": "油亮",
+    "tags": "oily",
+    "category": "光泽"
+  },
+  {
+    "name": "丝绒感",
+    "tags": "velvet",
+    "category": "光泽"
+  },
+  {
+    "name": "哑光",
+    "tags": "matte",
+    "category": "光泽"
+  },
+  {
+    "name": "磨砂感",
+    "tags": "frosted",
+    "category": "光泽"
+  },
+  {
+    "name": "珠光",
+    "tags": "iridescence",
+    "category": "光泽"
+  },
+  {
+    "name": "荧光",
+    "tags": "fluorescent",
+    "category": "光泽"
+  },
+  {
+    "name": "磷光",
+    "tags": "phosphorescent",
+    "category": "光泽"
+  },
+  {
+    "name": "光泽感",
+    "tags": "glossy",
+    "category": "光泽"
+  },
+  {
+    "name": "高光",
+    "tags": "highlight",
+    "category": "光泽"
+  },
+  {
+    "name": "抛光",
+    "tags": "polished",
+    "category": "光泽"
+  },
+  {
+    "name": "湿润",
+    "tags": "moist",
+    "category": "光泽"
+  },
+  {
+    "name": "反光",
+    "tags": "shiny",
+    "category": "光泽"
+  },
+  {
+    "name": "折射光",
+    "tags": "refraction",
+    "category": "光泽"
+  },
+  {
+    "name": "薄纱透光",
+    "tags": "sheer",
+    "category": "光泽"
+  },
+  {
+    "name": "半透明皮",
+    "tags": "translucent skin",
+    "category": "光泽"
+  },
+  {
+    "name": "玻璃皮肤",
+    "tags": "glassy skin",
+    "category": "光泽"
+  },
+  {
+    "name": "湿润头发",
+    "tags": "wet hair",
+    "category": "光泽"
+  },
+  {
+    "name": "金属质感",
+    "tags": "metal texture",
+    "category": "光泽"
+  },
+  {
+    "name": "湿润眼睛",
+    "tags": "glistening eyes",
+    "category": "光泽"
+  }
+]

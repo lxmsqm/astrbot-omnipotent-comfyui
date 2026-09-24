@@ -20,6 +20,10 @@ from astrbot.api.message_components import Image as AstrImage, At, Plain
 from aiohttp import web
 from dataclasses import dataclass, field
 from .anima_data import AnimaDataManager, load_anima_tools_source, _is_anima_source, _ANIMA_SOURCE_NAMES
+# v4.3.0 数据分离：大文件（缓存/JS回退源/用户配置）外移到 AstrBot/data/comfyui_allinone_data/
+from . import data_paths
+from .data_paths import (data_dir_resolver, user_data_dir_resolver,
+                         migrate_out as _data_migrate_out, migration_status as _data_migration_status)
 
 
 class ComfyUITaskError(Exception):
@@ -1790,6 +1794,7 @@ class WebUIMixin:
             "webui_ipv6": self.webui_ipv6,
             "show_prompt_on_image": self.show_prompt_on_image,
             "anima_spec_enhance": self._load_local_config().get("anima_spec_enhance", True),
+            "anima_nsfw": self._load_local_config().get("anima_nsfw", False),
             "send_platform": getattr(self, "send_platform", "auto"),
             "color_scheme": self._load_local_config().get("color_scheme", "cyberpunk-orange"),
             "random_pick_mode": self._load_local_config().get("random_pick_mode", "all"),
@@ -1802,6 +1807,11 @@ class WebUIMixin:
         }))
         app.router.add_post('/api/config', self._webui_save_config)
         app.router.add_post('/api/generate', self._webui_generate)
+        # v4.3.0 云端数据库同步（Gitee 私有仓库 words/ + anima_cache/）
+        app.router.add_get('/api/gitee-sync/status', self._webui_gitee_sync_status)
+        app.router.add_post('/api/gitee-sync/run', self._webui_gitee_sync_run)
+        # v4.3.0 数据分离状态（外部数据目录布局/插件体积）
+        app.router.add_get('/api/data-layout', self._webui_data_layout)
         app.router.add_post('/api/deploy-mode', self._webui_set_deploy_mode)
         app.router.add_get('/api/groups', self._webui_get_groups)
         app.router.add_get('/api/proxy', self._webui_proxy)
@@ -1991,6 +2001,9 @@ class WebUIMixin:
         if "anima_spec_enhance" in d:
             val = bool(d["anima_spec_enhance"])
             updates["anima_spec_enhance"] = val
+        if "anima_nsfw" in d:
+            val = bool(d["anima_nsfw"])
+            updates["anima_nsfw"] = val
         if "send_platform" in d:
             val = str(d["send_platform"] or "auto").lower()
             if val not in ("auto", "qq", "feishu", "both"):
@@ -2027,6 +2040,79 @@ class WebUIMixin:
         if updates:
             self._save_local_config(updates)
         return web.json_response({"ok": True})
+
+    # ── v4.3.0 云端数据库同步（Gitee 私有仓库） ─────────────────────────
+    def _get_gitee_cfg(self) -> dict:
+        """从本地配置读 Gitee 同步参数（token/repo/缓存下载开关）"""
+        lc = self._load_local_config()
+        return {
+            "gitee_token": lc.get("gitee_token", ""),
+            "gitee_repo": lc.get("gitee_repo", "heigulin/astrbot-comfyui-data"),
+            "sync_artists": bool(lc.get("sync_artists", True)),
+            "sync_characters": bool(lc.get("sync_characters", True)),
+        }
+
+    async def _webui_gitee_sync_status(self, request):
+        """同步状态（上次结果 + 当前配置掩码 + 数据分离布局）"""
+        from .gitee_sync import GiteeSync, DEFAULT_REPO
+        try:
+            st = GiteeSync(self).last_state()
+        except Exception:
+            st = {}
+        cfg = self._get_gitee_cfg()
+        token = cfg.get("gitee_token", "")
+        return web.json_response({
+            "ok": True,
+            "last": st,
+            "configured": bool(token),
+            "token_masked": (token[:6] + "…" + token[-4:]) if len(token) > 12 else ("已填写" if token else ""),
+            "repo": cfg.get("gitee_repo") or DEFAULT_REPO,
+            "sync_artists": cfg.get("sync_artists", True),
+            "sync_characters": cfg.get("sync_characters", True),
+            "layout": _data_migration_status(),
+        })
+
+    async def _webui_gitee_sync_run(self, request):
+        """执行云端同步：POST {gitee_token?, gitee_repo?, sync_artists?, sync_characters?}
+        token 不传则用已保存的。同步过程同步执行（词库小；缓存 28MB 视网络约 1-3 分钟）"""
+        from .gitee_sync import GiteeSync
+        try:
+            d = await request.json()
+        except Exception:
+            d = {}
+        cfg = self._get_gitee_cfg()
+        token = str(d.get("gitee_token") or cfg.get("gitee_token") or "").strip()
+        repo = str(d.get("gitee_repo") or cfg.get("gitee_repo") or "").strip()
+        # 顺手保存本次传入的配置（下次免填）
+        updates = {}
+        if d.get("gitee_token"):
+            updates["gitee_token"] = str(d["gitee_token"]).strip()
+        if d.get("gitee_repo"):
+            updates["gitee_repo"] = str(d["gitee_repo"]).strip()
+        if "sync_artists" in d:
+            updates["sync_artists"] = bool(d["sync_artists"])
+        if "sync_characters" in d:
+            updates["sync_characters"] = bool(d["sync_characters"])
+        if updates:
+            self._save_local_config(updates)
+        syncer = GiteeSync(self)
+        loop = asyncio.get_running_loop()
+        try:
+            # 同步是纯阻塞 IO（urllib），丢线程池避免卡事件循环
+            res = await loop.run_in_executor(
+                None,
+                lambda: syncer.sync(
+                    token, repo,
+                    include_artists=bool(updates.get("sync_artists", cfg.get("sync_artists", True))),
+                    include_characters=bool(updates.get("sync_characters", cfg.get("sync_characters", True))),
+                ))
+        except Exception as e:
+            return web.json_response({"ok": False, "error": f"同步异常: {e}"})
+        return web.json_response(res)
+
+    async def _webui_data_layout(self, request):
+        """数据分离布局状态（插件体积/外部目录/各目录实际生效位置）"""
+        return web.json_response({"ok": True, **_data_migration_status()})
 
     async def _webui_generate(self, r):
         """WebUI 生成按钮：用当前工作流 + 提示词生成；配置了 target_qq 则生成后主动私聊发送。
@@ -3786,14 +3872,15 @@ class GrimoireMixin:
 
     async def _webui_grimoire_sources(self, request):
         """列出所有数据源（按目录分组），缺失的 anima 数据从 Anima-Tools JS 补充"""
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         sources = []
         have_anima_sources = set()
         if data_dir.exists():
             for fpath in sorted(data_dir.rglob("*.json")):
                 rel = fpath.relative_to(data_dir)
-                # 跳过非数据文件
-                if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user'):
+                # 跳过非数据文件（v4.3.0 注：缓存/JS 源已外移，此处兜底 + 迁移备份目录）
+                if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user',
+                                                  'anima_tools_migrated_backup', 'user_migrated_backup'):
                     continue
                 try:
                     with open(fpath, 'r', encoding='utf-8') as f:
@@ -3877,7 +3964,7 @@ class GrimoireMixin:
         category = request.query.get('category', '').strip()
         if not source:
             return web.json_response({"ok": False, "error": "缺少 source 参数"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         # 兼容 Windows 路径（前端传正斜杠，需要转成系统分隔符）
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
@@ -3970,7 +4057,7 @@ class GrimoireMixin:
         source = request.query.get('source', '').strip()
         if not source:
             return web.json_response({"ok": False, "error": "缺少 source 参数"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4050,7 +4137,7 @@ class GrimoireMixin:
             entry["category"] = category
         if category_cn:
             entry["category_cn"] = category_cn
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4124,7 +4211,7 @@ class GrimoireMixin:
             parsed.append(entry)
         if not parsed:
             return web.json_response({"ok": False, "error": "没有有效数据", "errors": errors})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4172,7 +4259,7 @@ class GrimoireMixin:
             return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可批量删除"})
         if not isinstance(indices, list):
             return web.json_response({"ok": False, "error": "indices 必须是数组"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4368,23 +4455,55 @@ class GrimoireMixin:
         return web.json_response({"ok": True, "presets": list(presets.keys())})
 
     async def _webui_grimoire_random_pick(self, request):
-        """从随机池中每个子分类随机取一条，合并固定标签返回（去重 + 智能排序 + 冲突检测）"""
-        from .random_prompt import shuffle as sc_shuffle, matches_body_group, check_conflict, get_prompt_section
+        """从随机池中每个子分类随机取一条，合并固定标签返回（去重 + 智能排序 + 冲突检测 + NSFW过滤）"""
+        from .random_prompt import (shuffle as sc_shuffle, matches_body_group,
+                                   check_conflict, get_prompt_section, _is_nsfw_tag,
+                                   _is_low_quality)
 
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         pool = self.workflow_config.get('__grimoire_rand_pool__', [])
         pins = self.workflow_config.get('__grimoire_pins__', {})
+
+        # ★ NSFW 开关（宽松档：只过滤明确色情标签；开启则不过滤）
+        #   K2 模式沿用前端的 K2 NSFW 设置；anima 模式用独立的 anima_nsfw 配置
+        try:
+            _k2_nsfw = bool(self.workflow_config.get('__k2_nsfw__', False))
+        except Exception:
+            _k2_nsfw = False
+        try:
+            _anima_nsfw = bool(self._load_local_config().get('anima_nsfw', False))
+        except Exception:
+            _anima_nsfw = False
+        _pm = str(self.workflow_config.get('__prompt_model__', 'anima') or 'anima')
+        _nsfw_on = _k2_nsfw if _pm == 'k2' else _anima_nsfw
 
         # 已固定的数据源不参与随机（避免同源出重复）
         pinned_sources = set(pins.keys())
         active_pool = [s for s in pool if s not in pinned_sources]
+
+        # ★ NSFW 关闭时：整个「色情动作」类数据源不参与随机（宽松档只过滤内容，不整源剔除其余分类）
+        if not _nsfw_on:
+            _before = len(active_pool)
+            active_pool = [s for s in active_pool
+                           if not any(k in s for k in ("色情动作", "erotic", "nsfw"))]
+            if len(active_pool) != _before:
+                logger.info(f"[随机图] NSFW过滤: 排除 {_before - len(active_pool)} 个色情类数据源")
+
+        # ★ 排除 anima 自带的「图片服装」源（anima/clothing，约 430 条带预览图的服装）
+        #   它与文字服装分类（服装配饰/上衣、下装…）重复，同时参与会导致"穿三件衣服"
+        _before2 = len(active_pool)
+        active_pool = [s for s in active_pool
+                       if not (s.startswith("anima/") and
+                               ("clothing" in s.lower() or "服装" in s))]
+        if len(active_pool) != _before2:
+            logger.info(f"[随机图] 排除 {_before2 - len(active_pool)} 个 anima 图片服装源（避免与文字服装重复）")
 
         import random
         seen_tags = set()
         all_tags = []
         all_tag_objects = []  # 保留标签对象用于后续智能排序
 
-        # 1. 固定标签（总是包含）
+        # 1. 固定标签（总是包含；NSFW 关闭时同样过滤明确色情标签）
         for src, info in pins.items():
             # 兼容：新格式 [{name,tags}] 和旧格式 {name,tags}
             entries = info if isinstance(info, list) else [info]
@@ -4393,31 +4512,45 @@ class GrimoireMixin:
                 if t:
                     for part in t.split(","):
                         p = part.strip().lower()
-                        if p and len(p) > 1 and p not in seen_tags:
-                            seen_tags.add(p)
-                            all_tags.append(part.strip())
-                            all_tag_objects.append({
-                                "en": part.strip(),
-                                "category": "固定",
-                                "subcategory": "",
-                            })
+                        if not p or len(p) <= 1 or p in seen_tags:
+                            continue
+                        # ★ NSFW 过滤（固定标签也要过）
+                        if not _nsfw_on and _is_nsfw_tag(p):
+                            logger.info(f"[随机图] NSFW过滤(固定标签): 跳过 {p}")
+                            continue
+                        seen_tags.add(p)
+                        all_tags.append(part.strip())
+                        all_tag_objects.append({
+                            "en": part.strip(),
+                            "category": "固定",
+                            "subcategory": "",
+                        })
 
         # 2. 分组：同组子分类只取一个，避免冲突
-        # 组定义：组名下是对应的子分类路径（匹配 data/ 下的目录）
+        # 组定义：组名下是对应的子分类路径（匹配 data/ 下的实际目录）
         SOURCE_GROUPS = [
             ["艺术风格", ["艺术风格/动漫风格", "艺术风格/画风技法", "艺术风格/渲染技术"]],
-            ["画质", ["画质与渲染/品质保证"]],
+            ["画质", ["画质与渲染/品质保证", "画质与渲染/官方规范"]],
             ["光影", ["画质与渲染/光影效果"]],
-            ["人物特征", ["人物特征/体型", "人物特征/年龄段", "人物特征/肤质"]],
-            ["发型发色", ["发型发色/发型", "发型发色/发色"]],
-            ["面部特征", ["面部特征/眼色", "面部特征/表情"]],
-            ["服装", ["服装配饰/上衣", "服装配饰/下装", "服装配饰/连衣裙", "服装配饰/内衣泳装"]],
-            ["配饰鞋袜", ["服装配饰/配饰", "服装配饰/鞋袜"]],
-            ["材质质感", ["材质质感/布料", "材质质感/皮革", "材质质感/金属", "材质质感/表面"]],
-            ["动作姿态", ["动作姿态/站坐卧", "动作姿态/腿部动作", "动作姿态/手臂动作", "动作姿态/全身动作"]],
+            ["人物特征", ["人物特征/体型", "人物特征/年龄段"]],
+            ["肤质", ["人物特征/肤质"]],
+            ["发型", ["发型发色/发型"]],
+            ["发色", ["发型发色/发色"]],
+            ["面部", ["面部特征/眼色", "面部特征/表情", "面部特征/表情细节"]],
+            # ★ 服装：连衣裙独立（与上下装互斥）；上衣/下装/内衣泳装各自独立（可共存）
+            #   旧配置把四者放一组「四选一」，导致只能出一件衣服，无法形成完整穿搭
+            ["连衣裙", ["服装配饰/连衣裙"]],
+            ["材质质感", ["材质质感/布料", "材质质感/皮革", "材质质感/金属",
+                          "材质质感/表面", "材质质感/光泽"]],
+            # ★ 动作姿态：正常动作 / 色情动作 二选一（具体取哪个由 NSFW 开关决定，见下）
+            ["动作姿态", ["动作姿态/正常动作", "动作姿态/色情动作"]],
             ["场景", ["场景构图/自然环境", "场景构图/建筑场景"]],
-            ["天气色彩", ["场景构图/天气时间", "场景构图/色彩氛围"]],
-            ["构图镜头", ["场景构图/构图景别", "场景构图/镜头效果"]],
+            ["天气", ["场景构图/天气时间", "特殊效果/天气效果"]],
+            ["色彩", ["场景构图/色彩氛围"]],
+            ["构图镜头", ["场景构图/构图景别", "场景构图/镜头效果", "场景构图/视角"]],
+            ["情绪", ["情绪氛围/氛围", "情绪氛围/表情细节"]],
+            ["特效", ["特殊效果/视觉效果"]],
+            ["道具", ["道具物品/手持物", "道具物品/武器"]],
         ]
         # 将 active_pool 按组分，每个组随机取一个匹配的子分类
         pool_set = set(active_pool)
@@ -4425,11 +4558,20 @@ class GrimoireMixin:
         matched = set()
         for group_name, members in SOURCE_GROUPS:
             available = [m for m in members if m in pool_set]
-            if available:
-                import random
-                chosen = random.choice(available)
-                grouped_picks.append(chosen)
-                matched.add(chosen)
+            if not available:
+                continue
+            # ★ 动作姿态组：按 NSFW 开关决定只取哪个源
+            #   NSFW 关闭 → 只抽「正常动作」（色情动作已在前面被排除）
+            #   NSFW 开启 → 只抽「色情动作」（用户要求：开启时只出色情动作）
+            if group_name == "动作姿态":
+                if _nsfw_on:
+                    available = [m for m in available if "色情" in m] or available
+                else:
+                    available = [m for m in available if "色情" not in m] or available
+            import random
+            chosen = random.choice(available)
+            grouped_picks.append(chosen)
+            matched.add(chosen)
         # 未分组的源（如 anima 角色、画师等特殊源）限制只抽一个
         anima_tools_sources = []
         other_sources = []
@@ -4490,6 +4632,12 @@ class GrimoireMixin:
                     continue
                 # 拆分成单个标签检查冲突
                 parts = [x.strip() for x in t.split(",") if x.strip()]
+                # ★ NSFW 过滤（anima_nsfw 关闭时跳过明确色情标签，从同分类继续抽下一个）
+                if not _nsfw_on and any(_is_nsfw_tag(p) for p in parts):
+                    continue
+                # ★ 低质量标签过滤（总是跳过：normal/low/worst quality、score_1~6 等）
+                if any(_is_low_quality(p) for p in parts):
+                    continue
                 # 检查是否有任一标签与已选冲突
                 conflict = False
                 for part in parts:
@@ -4556,7 +4704,57 @@ class GrimoireMixin:
                 all_tags = [t for i, t in enumerate(all_tags) if i not in conflict_indices]
                 logger.info(f"[随机图] 冲突检测移除: {removed}")
 
+        # ★ 服装数量上限：最多保留 2 件（防"上衣+下装+内衣+配饰"叠一堆）
+        #   优先级：连衣裙 > 上衣/下装 > 内衣泳装 > 鞋袜 > 配饰
+        try:
+            _CLOTH_PRI = [
+                (0, ("服装配饰/连衣裙",)),
+                (1, ("服装配饰/上衣", "服装配饰/下装")),
+                (2, ("服装配饰/内衣泳装",)),
+                (3, ("服装配饰/鞋袜",)),
+                (4, ("服装配饰/配饰",)),
+            ]
+            _cloth_idx = []   # [(优先级, 序号)]
+            for _i, _o in enumerate(all_tag_objects):
+                _src = str(_o.get("source") or "")
+                for _pri, _prefixes in _CLOTH_PRI:
+                    if any(_src.startswith(_p) for _p in _prefixes):
+                        _cloth_idx.append((_pri, _i))
+                        break
+            if len(_cloth_idx) > 2:
+                # 按优先级排序，保留前 2 件
+                _cloth_idx.sort()
+                _drop = {_i for _pri, _i in _cloth_idx[2:]}
+                _dropped_names = [all_tags[_i] for _i in sorted(_drop)]
+                all_tags = [t for _i, t in enumerate(all_tags) if _i not in _drop]
+                all_tag_objects = [o for _i, o in enumerate(all_tag_objects) if _i not in _drop]
+                logger.info(f"[随机图] 服装上限(2件)：移除 {_dropped_names}")
+        except Exception as _e:
+            logger.debug(f"[ComfyUI] 服装上限处理失败: {_e}")
+
         # 3.6 动作→服装联动：色情动作时过滤所有服装源标签，只保留裸体/露出标签
+        # ★ 连衣裙独占：抽到连衣裙时，移除上衣/下装类标签（避免"连衣裙+裙子"冲突）
+        #   连衣裙是连体服装，与上衣/下装天然互斥
+        try:
+            _has_dress = any(str(o.get("source") or "").startswith("服装配饰/连衣裙")
+                             for o in all_tag_objects)
+            if _has_dress:
+                _keep_t, _keep_o = [], []
+                _removed = 0
+                for _i, _t in enumerate(all_tags):
+                    _o = all_tag_objects[_i] if _i < len(all_tag_objects) else {}
+                    _src = str(_o.get("source") or "")
+                    if _src.startswith("服装配饰/上衣") or _src.startswith("服装配饰/下装"):
+                        _removed += 1
+                        continue
+                    _keep_t.append(_t)
+                    _keep_o.append(_o)
+                if _removed:
+                    all_tags, all_tag_objects = _keep_t, _keep_o
+                    logger.info(f"[随机图] 连衣裙独占：移除 {_removed} 个上衣/下装标签")
+        except Exception as _e:
+            logger.debug(f"[ComfyUI] 连衣裙独占处理失败: {_e}")
+
         # 色情动作关键词（匹配 any()，命中任一即触发）
         EROTIC_KEYWORDS = [
             "masturbation", "fingering", "penetration", "sex", "clit", "pussy",
@@ -4574,6 +4772,11 @@ class GrimoireMixin:
                 if "色情动作" in src or "erotic" in src.lower() or "nsfw" in src.lower():
                     has_erotic = True
                     break
+        # ★ NSFW 关闭时不做"色情增强"：不丢服装标签、不补裸体标签
+        #   （旧逻辑无论开关都会在检测到色情动作时强加 nude/no panties/no bra）
+        if has_erotic and not _nsfw_on:
+            logger.info("[随机图] NSFW过滤开启，跳过色情动作增强（不补裸体标签）")
+            has_erotic = False
         if has_erotic:
             # 服装相关源路径前缀（这些源的标签在色情动作时全部丢弃）
             CLOTHING_SOURCE_PREFIXES = [
@@ -4694,32 +4897,91 @@ class GrimoireMixin:
                 if not _has_subject:
                     _prefix.extend(['1girl', 'solo'])
 
-                # ③ 自然语言后缀：从 场景/光照/构图 类标签拼一句（不足则再补一句通用句）
-                _scene, _light, _shot, _action = [], [], [], []
-                for _t, _o in zip(all_tags, all_tag_objects):
-                    _sc = str(_o.get('subcategory') or _o.get('category') or '')
-                    _src = str(_o.get('source') or '')
-                    _key = _sc + _src
-                    if any(k in _key for k in ('场景', '建筑', '自然', 'scene', '背景')):
-                        _scene.append(_t)
-                    elif any(k in _key for k in ('光影', '光照', 'lighting', '天气', '色彩')):
-                        _light.append(_t)
-                    elif any(k in _key for k in ('构图', '镜头', 'shot', '景别')):
-                        _shot.append(_t)
-                    elif any(k in _key for k in ('动作', '姿态', 'pose', '站坐卧')):
+                # ③ 自然语言后缀：基于标签【内容】推断语义（而不是依赖 source 字段——
+                #    抽取时不一定记录 source，导致分类全落空、拼接出病句）
+                _hair, _eyes, _action, _scene, _light, _shot, _prop, _mood = [], [], [], [], [], [], [], []
+                _HAIR_C = ('hair',)
+                _EYE_C = ('eyes', 'heterochromia')
+                _ACTION_C = ('standing', 'sitting', 'lying', 'walking', 'running', 'jumping',
+                             'kneeling', 'dancing', 'leaning', 'crouching', 'squatting',
+                             'crossed legs', 'arms crossed', 'hand on', 'hands on',
+                             'looking back', 'looking down', 'looking up', 'reaching',
+                             'holding ', 'waving', 'pointing', 'salute', 'stretching')
+                _SCENE_C = ('forest', 'field', 'beach', 'ocean', 'river', 'lake', 'mountain',
+                            'city', 'street', 'room', 'bedroom', 'classroom', 'cafe',
+                            'garden', 'castle', 'sky', 'night', 'snow', 'rain', 'sunset',
+                            'sunrise', 'moon', 'cherry blossoms', 'flower', 'rooftop',
+                            'library', 'temple', 'church', 'ruins', 'desert', 'underwater')
+                _LIGHT_C = ('lighting', 'light', 'backlight', 'bokeh', 'glow', 'shadow',
+                            'sunbeam', 'ray', 'lens flare', 'bloom', 'contrast')
+                _SHOT_C = ('view', 'shot', 'close-up', 'closeup', 'portrait', 'full body',
+                           'upper body', 'from above', 'from below', 'from behind',
+                           'dutch angle', 'angle', 'perspective', 'depth of field')
+                _MOOD_C = ('smile', 'smirk', 'tears', 'crying', 'angry', 'sad', 'happy',
+                           'expressionless', 'blush', 'surprised', 'scared', 'bored',
+                           'melancholic', 'peaceful', 'relaxed', 'confident', 'shy',
+                           'serious', 'sleepy', 'embarrassed', 'determined')
+                for _t in all_tags:
+                    _lt = _t.lower()
+                    if any(k in _lt for k in _HAIR_C) and 'hair' in _lt:
+                        _hair.append(_t)
+                    elif any(k in _lt for k in _EYE_C):
+                        _eyes.append(_t)
+                    elif any(_lt.startswith(k) or k in _lt for k in _ACTION_C):
                         _action.append(_t)
+                    elif any(k in _lt for k in _SCENE_C):
+                        _scene.append(_t)
+                    elif any(k in _lt for k in _LIGHT_C):
+                        _light.append(_t)
+                    elif any(k in _lt for k in _SHOT_C):
+                        _shot.append(_t)
+                    elif any(k in _lt for k in _MOOD_C):
+                        _mood.append(_t)
+                    elif _lt.startswith('holding '):
+                        _prop.append(_t)
 
-                _s1_parts = []
-                if _action: _s1_parts.append(_action[0])
-                if _scene:  _s1_parts.append('in ' + _scene[0])
-                if _light:  _s1_parts.append('with ' + _light[0])
-                _sent1 = ("The illustration shows a girl " + ", ".join(_s1_parts) + "."
-                          ) if _s1_parts else "The illustration shows a girl, rendered in a clean anime style."
-                _s2_parts = []
-                if _shot:  _s2_parts.append(_shot[0])
-                if _light: _s2_parts.append(_light[0])
-                _sent2 = ("The composition uses " + ", ".join(_s2_parts) + "."
-                          ) if _s2_parts else "Soft, balanced lighting keeps the focus on the character."
+                # ── 主语短语：A girl with silver hair and blue eyes ──
+                _subj = "A girl"
+                _mods = []
+                if _hair:
+                    _mods.append("with " + _hair[0])
+                if _eyes:
+                    _mods.append(_eyes[0] if _eyes[0].lower().endswith('eyes') else _eyes[0] + " eyes")
+                if _mood:
+                    _mods.append(_mood[0])
+                if _mods:
+                    _subj = "A girl " + ", ".join(_mods[:2]) + (" " + _mods[2] if len(_mods) > 2 else "")
+                if _mods:
+                    _subj = "A girl " + ", ".join(_mods)
+
+                # 第1句：主语 + 动作 + 场景
+                _s1 = _subj
+                if _action:
+                    a = _action[0]
+                    # 动词化常见动作（避免 "standing" 位置不当）
+                    _verb_map = {
+                        "standing": "stands", "sitting": "sits", "lying down": "lies down",
+                        "walking": "walks", "running": "runs", "jumping": "jumps",
+                        "kneeling": "kneels", "dancing": "dances", "leaning forward": "leans forward",
+                    }
+                    _s1 += " " + _verb_map.get(a.lower(), a)
+                if _prop:
+                    _s1 += ", holding " + _prop[0].replace("holding ", "")
+                if _scene:
+                    _s1 += " in a " + _scene[0]
+                _sent1 = _s1 + "."
+
+                # 第2句：镜头 + 光照（各自独立成句，避免 "lit by long dress" 这类怪句）
+                _s2 = []
+                if _shot:
+                    _s2.append("The shot is framed as " + _shot[0] + ".")
+                if _light and any(k in _light[0].lower() for k in
+                                  ('light', 'lighting', 'backlight', 'glow', 'sunbeam',
+                                   'ray', 'flare', 'bloom', 'shadow', 'bokeh')):
+                    _s2.append("The scene is lit by " + _light[0] + ".")
+                if not _s2:
+                    _s2.append("Soft, balanced lighting keeps the focus on the character.")
+                _sent2 = " ".join(_s2[:2])
 
                 _prefix_str = (", ".join(_prefix) + ", ") if _prefix else ""
                 tags_str = (_prefix_str + ", ".join(all_tags) + ". " + _sent1 + " " + _sent2).strip()
@@ -4780,7 +5042,7 @@ class GrimoireMixin:
         # Anima-Tools 源只读保护
         if _is_anima_source(source):
             return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可编辑"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4825,7 +5087,7 @@ class GrimoireMixin:
         # Anima-Tools 源只读保护
         if _is_anima_source(source):
             return web.json_response({"ok": False, "error": "Anima-Tools 数据源为只读，不可删除"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -4865,7 +5127,7 @@ class GrimoireMixin:
             return web.json_response({"ok": False, "error": "文件名不能为空"})
         if not filename.endswith('.json'):
             filename += '.json'
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         cat_dir = data_dir / category
         cat_dir.mkdir(parents=True, exist_ok=True)
         fpath = cat_dir / filename
@@ -4895,7 +5157,7 @@ class GrimoireMixin:
             return web.json_response({"ok": False, "error": "缺少参数"})
         if not new_name.endswith('.json'):
             new_name += '.json'
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         src_path = data_dir / source.replace('/', os.sep).replace('\\', os.sep)
         if not src_path.suffix:
             src_path = src_path.with_suffix('.json')
@@ -4925,7 +5187,7 @@ class GrimoireMixin:
         name = body.get('name', '').strip()
         if not name:
             return web.json_response({"ok": False, "error": "名称不能为空"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         cat_dir = data_dir / name
         if cat_dir.exists():
             return web.json_response({"ok": False, "error": "该分类已存在"})
@@ -4948,7 +5210,7 @@ class GrimoireMixin:
         # 保护 anima 目录
         if category == 'anima':
             return web.json_response({"ok": False, "error": "不允许修改 Anima 分类名称"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         src_dir = data_dir / category
         if not src_dir.exists() or not src_dir.is_dir():
             return web.json_response({"ok": False, "error": "分类不存在"})
@@ -4977,7 +5239,7 @@ class GrimoireMixin:
         # 保护 anima 目录
         if category == 'anima':
             return web.json_response({"ok": False, "error": "不允许删除 Anima 分类"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         cat_dir = data_dir / category
         if not cat_dir.exists() or not cat_dir.is_dir():
             return web.json_response({"ok": False, "error": "分类不存在"})
@@ -5003,7 +5265,7 @@ class GrimoireMixin:
         # 保护：不允许删除 anima/ 下的原始数据（保护 24000+ 角色数据）
         if source.startswith('anima'):
             return web.json_response({"ok": False, "error": "不允许删除 Anima 原始数据（角色/画师/服装）"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -5082,7 +5344,7 @@ class GrimoireMixin:
         """动态扫描 data/ 目录，返回所有可用的魔导书数据源列表"""
         from .random_prompt import get_prompt_section, PROMPT_SECTION_ORDER
 
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         sources = []
         dirs_seen = {}
         for fpath in sorted(data_dir.rglob("*.json")):
@@ -5141,7 +5403,7 @@ class GrimoireMixin:
 
     def _grimoire_read(self, source_path: str) -> list:
         """读取魔导书 JSON 文件，返回列表"""
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         fpath = data_dir / source_path.replace('/', os.sep)
         if not fpath.exists():
             return []
@@ -5154,7 +5416,7 @@ class GrimoireMixin:
 
     def _grimoire_write(self, source_path: str, data: list) -> bool:
         """写入魔导书 JSON 文件"""
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         fpath = data_dir / source_path.replace('/', os.sep)
         fpath.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -5317,7 +5579,7 @@ class GrimoireMixin:
         source = request.query.get('source', '').strip()
         if not source:
             return web.json_response({"ok": False, "error": "缺少 source 参数"})
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         source = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / source
         if not fpath.suffix:
@@ -5448,7 +5710,7 @@ class LLMToolsMixin:
                 src = self._grimoire_find_source_path(source)  # 动态兜底
             if not src:
                 return f"未知数据源: {source}"
-            fpath = Path(__file__).resolve().parent / "data" / src.replace('/', os.sep)
+            fpath = data_dir_resolver() / src.replace('/', os.sep)  # v4.3.0
             items = []
             if fpath.exists():
                 try:
@@ -5491,7 +5753,7 @@ class LLMToolsMixin:
             results.extend(self.anima_data.search(keyword, top_k=10))
         # 2. 魔导书启用时才搜索数据文件
         if self.grimoire_enabled:
-            data_dir = Path(__file__).resolve().parent / "data"
+            data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
             kw = keyword.lower().strip()
             for fpath in data_dir.rglob("*.json"):
                 try:
@@ -5728,7 +5990,7 @@ class LLMToolsMixin:
         src = name_map.get(source.lower().strip())
         if not src:
             return f"未知数据源: {source}"
-        fpath = Path(__file__).resolve().parent / "data" / src.replace('/', os.sep)
+        fpath = data_dir_resolver() / src.replace('/', os.sep)  # v4.3.0
         items = []
         if fpath.exists():
             try:
@@ -5799,8 +6061,18 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         if config is not None: self.config = config
 
         # ── 统一用户数据目录 data/user/（必须最先初始化，后续方法依赖它） ──
+        # v4.3.0 数据分离：优先外部 comfyui_allinone_data/user/（插件目录瘦身，
+        # 满足商店 <18MB）；首次启动自动把插件内旧数据迁移出去；失败回退插件内路径
         _plugin_root = Path(__file__).resolve().parent
-        self._user_data_dir = _plugin_root / "data" / "user"
+        try:
+            _mig = _data_migrate_out()
+            if _mig.get("moved"):
+                logger.info(f"[ComfyUI] 数据分离迁移完成: {_mig['moved']}")
+            if _mig.get("errors"):
+                logger.warning(f"[ComfyUI] 数据分离迁移部分失败(回退旧路径): {_mig['errors']}")
+        except Exception as _mige:
+            logger.warning(f"[ComfyUI] 数据分离迁移异常(回退旧路径): {_mige}")
+        self._user_data_dir = user_data_dir_resolver()
         self._user_data_dir.mkdir(parents=True, exist_ok=True)
 
         local_cfg = self._load_local_config()
@@ -5968,8 +6240,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._start_webui()
         wdir = self._get_workflow_dir(); wdir.mkdir(parents=True, exist_ok=True)
         self._refresh_workflow_list()
-        # 加载 Anima 数据
-        data_dir = Path(__file__).parent / "data"
+        # 加载 Anima 数据（v4.3.0：词库目录经 data_dir_resolver 解析，当前恒为插件内 data/）
+        data_dir = data_dir_resolver()
         self.anima_data = AnimaDataManager(
             str(data_dir), str(self._user_data_dir),
             artist_limit=int(self.config.get("anima_artist_limit", 0) or 0),
@@ -9398,7 +9670,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
 
     async def _run_cache_background(self, source):
         """后台分批下载全部图片"""
-        data_dir = Path(__file__).resolve().parent / "data"
+        data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         src_path = source.replace('/', os.sep).replace('\\', os.sep)
         fpath = data_dir / src_path
         if not fpath.suffix:

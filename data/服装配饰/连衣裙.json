@@ -1,5 +1,20 @@
 [
   {
+    "name": "短裙",
+    "tags": "short skirt",
+    "category": "连衣裙"
+  },
+  {
+    "name": "露肩裙",
+    "tags": "off-shoulder dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "高开叉裙",
+    "tags": "high slit dress",
+    "category": "连衣裙"
+  },
+  {
     "name": "连衣裙",
     "tags": "dress",
     "category": "连衣裙"
@@ -32,6 +47,96 @@
   {
     "name": "圣诞装",
     "tags": "santa costume",
+    "category": "连衣裙"
+  },
+  {
+    "name": "晚礼服",
+    "tags": "evening gown",
+    "category": "连衣裙"
+  },
+  {
+    "name": "婚纱",
+    "tags": "wedding dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "旗袍",
+    "tags": "china dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "和服",
+    "tags": "kimono",
+    "category": "连衣裙"
+  },
+  {
+    "name": "振袖",
+    "tags": "furisode",
+    "category": "连衣裙"
+  },
+  {
+    "name": "汉服",
+    "tags": "hanfu",
+    "category": "连衣裙"
+  },
+  {
+    "name": "公主裙",
+    "tags": "princess dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "蓬蓬裙",
+    "tags": "puffy dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "无袖连衣裙",
+    "tags": "sleeveless dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "吊带裙",
+    "tags": "slip dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "衬衫裙",
+    "tags": "shirt dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "毛衣连衣裙",
+    "tags": "sweater dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "碎花裙",
+    "tags": "floral dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "蕾丝裙",
+    "tags": "lace dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "黑色连衣裙",
+    "tags": "black dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "白色连衣裙",
+    "tags": "white dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "红色连衣裙",
+    "tags": "red dress",
+    "category": "连衣裙"
+  },
+  {
+    "name": "长裙",
+    "tags": "long dress",
     "category": "连衣裙"
   }
 ]

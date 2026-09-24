@@ -1,5 +1,50 @@
 [
   {
+    "name": "旗袍",
+    "tags": "cheongsam",
+    "category": "上衣"
+  },
+  {
+    "name": "旗袍改良",
+    "tags": "modern cheongsam",
+    "category": "上衣"
+  },
+  {
+    "name": "泡泡袖",
+    "tags": "puffy sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "短袖",
+    "tags": "short sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "长袖",
+    "tags": "long sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "卷袖",
+    "tags": "rolled-up sleeves",
+    "category": "上衣"
+  },
+  {
+    "name": "无袖",
+    "tags": "sleeveless",
+    "category": "上衣"
+  },
+  {
+    "name": "褶边",
+    "tags": "ruffles",
+    "category": "上衣"
+  },
+  {
+    "name": "蕾丝边",
+    "tags": "lace trim",
+    "category": "上衣"
+  },
+  {
     "name": "衬衫",
     "tags": "shirt",
     "category": "上衣"
@@ -41,7 +86,7 @@
   },
   {
     "name": "抹胸",
-    "tags": "strapless",
+    "tags": "tube top",
     "category": "上衣"
   },
   {
@@ -122,56 +167,6 @@
   {
     "name": "实验袍",
     "tags": "lab coat",
-    "category": "上衣"
-  },
-  {
-    "name": "旗袍",
-    "tags": "cheongsam",
-    "category": "上衣"
-  },
-  {
-    "name": "旗袍改良",
-    "tags": "qipao",
-    "category": "上衣"
-  },
-  {
-    "name": "泡泡袖",
-    "tags": "puffy sleeves",
-    "category": "上衣"
-  },
-  {
-    "name": "短袖",
-    "tags": "short sleeves",
-    "category": "上衣"
-  },
-  {
-    "name": "长袖",
-    "tags": "long sleeves",
-    "category": "上衣"
-  },
-  {
-    "name": "卷袖",
-    "tags": "rolled-up sleeves",
-    "category": "上衣"
-  },
-  {
-    "name": "无袖",
-    "tags": "sleeveless",
-    "category": "上衣"
-  },
-  {
-    "name": "褶边",
-    "tags": "frills",
-    "category": "上衣"
-  },
-  {
-    "name": "花边皱褶",
-    "tags": "ruffles",
-    "category": "上衣"
-  },
-  {
-    "name": "蕾丝边",
-    "tags": "lace trim",
     "category": "上衣"
   }
 ]

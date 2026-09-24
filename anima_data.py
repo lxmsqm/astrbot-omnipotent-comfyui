@@ -25,8 +25,13 @@ from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
-# Anima-Tools JS 数据目录（插件自带，不依赖外部）
-_ANIMA_TOOLS_JS_DIR = Path(__file__).resolve().parent / "data" / "anima_tools"
+# Anima-Tools JS 数据目录（v4.3.0 数据分离：优先外部 comfyui_allinone_data/anima_tools/，
+# 异常/未迁移时回退插件内 data/anima_tools/）
+try:
+    from .data_paths import anima_tools_dir_resolver as _anima_tools_resolver
+    _ANIMA_TOOLS_JS_DIR = Path(_anima_tools_resolver())
+except Exception:
+    _ANIMA_TOOLS_JS_DIR = Path(__file__).resolve().parent / "data" / "anima_tools"
 
 # 萌娘百科风格的角色作品分类中文翻译（覆盖全部已知版权）
 _CHARACTER_CATEGORY_CN = {
@@ -1490,8 +1495,10 @@ class AnimaDataManager:
 
         for fpath in sorted(self.data_dir.rglob("*.json")):
             rel = fpath.relative_to(self.data_dir)
-            # 跳过非数据文件
-            if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user'):
+            # 跳过非数据文件（v4.3.0 注：缓存/JS 回退源已外移到 comfyui_allinone_data/，
+            # 这里保留旧规则兜底 —— 万一外部目录回退到插件内旧路径，缓存也不能进词库）
+            if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user',
+                                              'anima_tools_migrated_backup', 'user_migrated_backup'):
                 continue
             try:
                 with open(fpath, 'r', encoding='utf-8') as f:

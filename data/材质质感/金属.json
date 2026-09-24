@@ -1,27 +1,77 @@
 [
   {
+    "name": "金属光泽",
+    "tags": "metallic",
+    "category": "材质"
+  },
+  {
+    "name": "金属质感",
+    "tags": "delete",
+    "category": "材质质感"
+  },
+  {
     "name": "抛光金属",
     "tags": "polished metal",
-    "category": "金属"
-  },
-  {
-    "name": "铬金属",
-    "tags": "chrome",
-    "category": "金属"
-  },
-  {
-    "name": "黄金质感",
-    "tags": "gold texture",
-    "category": "金属"
-  },
-  {
-    "name": "哑光金属",
-    "tags": "matte metal",
-    "category": "金属"
+    "category": "材质"
   },
   {
     "name": "拉丝金属",
     "tags": "brushed metal",
-    "category": "金属"
+    "category": "材质"
+  },
+  {
+    "name": "镀铬",
+    "tags": "chrome",
+    "category": "材质"
+  },
+  {
+    "name": "银饰",
+    "tags": "silver",
+    "category": "材质"
+  },
+  {
+    "name": "金饰",
+    "tags": "gold",
+    "category": "材质"
+  },
+  {
+    "name": "铜色",
+    "tags": "copper",
+    "category": "材质"
+  },
+  {
+    "name": "青铜",
+    "tags": "bronze",
+    "category": "材质"
+  },
+  {
+    "name": "钢铁",
+    "tags": "steel",
+    "category": "材质"
+  },
+  {
+    "name": "铁质",
+    "tags": "iron",
+    "category": "材质"
+  },
+  {
+    "name": "钛金属",
+    "tags": "titanium",
+    "category": "材质"
+  },
+  {
+    "name": "镜面反射",
+    "tags": "mirror finish",
+    "category": "材质"
+  },
+  {
+    "name": "机械关节",
+    "tags": "mechanical parts",
+    "category": "材质"
+  },
+  {
+    "name": "金属装甲",
+    "tags": "metal armor",
+    "category": "材质"
   }
 ]

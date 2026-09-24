@@ -1,5 +1,75 @@
 [
   {
+    "name": "角",
+    "tags": "horns",
+    "category": "配饰"
+  },
+  {
+    "name": "兽耳",
+    "tags": "animal ears",
+    "category": "配饰"
+  },
+  {
+    "name": "小皇冠",
+    "tags": "tiara",
+    "category": "配饰"
+  },
+  {
+    "name": "王冠",
+    "tags": "crown",
+    "category": "配饰"
+  },
+  {
+    "name": "面纱",
+    "tags": "veil",
+    "category": "配饰"
+  },
+  {
+    "name": "蒙眼布",
+    "tags": "blindfold",
+    "category": "配饰"
+  },
+  {
+    "name": "眼罩面罩",
+    "tags": "eye mask",
+    "category": "配饰"
+  },
+  {
+    "name": "项圈领",
+    "tags": "collar",
+    "category": "配饰"
+  },
+  {
+    "name": "领结",
+    "tags": "bow tie",
+    "category": "配饰"
+  },
+  {
+    "name": "领带",
+    "tags": "necktie",
+    "category": "配饰"
+  },
+  {
+    "name": "领巾",
+    "tags": "ascot",
+    "category": "配饰"
+  },
+  {
+    "name": "吊坠",
+    "tags": "pendant",
+    "category": "配饰"
+  },
+  {
+    "name": "耳机",
+    "tags": "headphones",
+    "category": "配饰"
+  },
+  {
+    "name": "动物装",
+    "tags": "animal costume",
+    "category": "配饰"
+  },
+  {
     "name": "发带",
     "tags": "hair ribbon",
     "category": "配饰"
@@ -122,76 +192,6 @@
   {
     "name": "光环",
     "tags": "halo",
-    "category": "配饰"
-  },
-  {
-    "name": "角",
-    "tags": "horns",
-    "category": "配饰"
-  },
-  {
-    "name": "兽耳",
-    "tags": "animal ears",
-    "category": "配饰"
-  },
-  {
-    "name": "小皇冠",
-    "tags": "tiara",
-    "category": "配饰"
-  },
-  {
-    "name": "王冠",
-    "tags": "crown",
-    "category": "配饰"
-  },
-  {
-    "name": "面纱",
-    "tags": "veil",
-    "category": "配饰"
-  },
-  {
-    "name": "蒙眼布",
-    "tags": "blindfold",
-    "category": "配饰"
-  },
-  {
-    "name": "眼罩面罩",
-    "tags": "eye mask",
-    "category": "配饰"
-  },
-  {
-    "name": "项圈领",
-    "tags": "collar",
-    "category": "配饰"
-  },
-  {
-    "name": "领结",
-    "tags": "bow tie",
-    "category": "配饰"
-  },
-  {
-    "name": "领带",
-    "tags": "necktie",
-    "category": "配饰"
-  },
-  {
-    "name": "领巾",
-    "tags": "ascot",
-    "category": "配饰"
-  },
-  {
-    "name": "吊坠",
-    "tags": "pendant",
-    "category": "配饰"
-  },
-  {
-    "name": "耳机",
-    "tags": "headphones",
-    "category": "配饰"
-  },
-  {
-    "name": "动物装",
-    "tags": "animal costume",
     "category": "配饰"
   }
 ]

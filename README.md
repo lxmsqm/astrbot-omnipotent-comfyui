@@ -2,6 +2,21 @@
 
 AstrBot 插件，连接本地/云端 ComfyUI，实现**文生图、图生图、图生视频、图片编辑**。自带 WebUI 可视化面板（赛博魔法主题）、魔导书提示词库。
 
+**🎉 v4.3.0 更新（数据分离 + 云端同步 + 词库扩充）：**
+- 📦 **插件数据分离（满足商店 <18MB 限制）**
+  - 大文件自动外移到 `AstrBot/data/comfyui_allinone_data/`：角色/画师缓存（~33MB）、`anima_tools/` JS 回退源（7.8MB）、用户配置
+  - 首次启动自动迁移（幂等，插件内旧数据改名 `*_migrated_backup` 留观）；迁移失败自动回退插件内旧路径，**绝不让插件起不来**
+  - 词库（39 个分类 + K2）保留在插件内，继续随插件分发
+- 🔄 **WebUI「📥 同步云端数据库」按钮**（设置页 → 云端数据库分组）
+  - 填 Gitee 私人令牌后一键从私有仓库拉取最新词库（`words/` 39 个分类 + `words/k2/`）覆盖本地
+  - 角色缓存（28MB）/ 画师缓存（4MB）按勾选下载，本地已一致自动跳过；同步后自动重载词库**无需重启**
+  - 断点重试（退避 5/10/15s）、大小校验、`.tmp` 原子写入防损坏、同步状态本地留存
+  - 后端：`gitee_sync.py` + `/api/gitee-sync/status|run`；配置项 `gitee_token` / `gitee_repo`（存 `__local_config__`）
+  - ⚠️ 实测注意：Gitee **新建文件必须 POST**（PUT 仅更新且必须带 sha，否则 400 "sha is missing"）；私有仓库 **raw 地址对 token 认证返回 403**，下载要走 API contents 的 base64 content
+- 📚 **词库清洗 + 新增 8 分类**（935 → 907 条清洗去重，新增 视角/氛围/表情细节/视觉效果/天气效果/光泽/手持物/武器 等 +236 条）
+- 🧹 **词库结构重构** — 连衣裙独占（抽到连衣裙时移除上衣/下装标签）、动作姿态按 NSFW 开关选源（关=只抽正常动作，开=只抽色情动作）、NSFW 开关移到魔导书工具栏 🔞 按钮
+- 🛠️ **缓存路径修复** — `load_anima_tools_source` 的 `user_data_dir` 传空导致缓存读到错误位置的问题（现在统一经 `data_paths.user_data_dir_resolver()` 解析）
+
 **🎉 v4.2.0 更新（Anima 词库升级 + 全量汉化）：**
 - 🌐 **数据源迁移到 animadex API** — 源站已从静态 JS 改为 API 架构（旧 `data.js`/`character_data.js` 在远端已下线）。画师/角色改从 `/api/artists/search`、`/api/characters/search` 拉取
   - **画师**：标签自动规范为 `@名字`（原名形如 `hammer \(sunset beach\)`，带括号会与权重语法 `(...)` 冲突）；只收有图的

@@ -4681,6 +4681,7 @@ textarea:focus-visible,
               <input type="checkbox" id="cfg_anima_enhance" style="accent-color:var(--primary)" onchange="saveAnimaEnhance()">
               <label for="cfg_anima_enhance" style="font-size:12px;cursor:pointer" title="按 Anima 官方规范组织随机图提示词：固定开头(masterpiece/best quality/score_7/safe)+补主体数+追加自然语言句。score_7 仅适用于 Base 版模型，Aesthetic 版请关闭">Anima 随机规范增强（Base版）</label>
             </div>
+            <!-- NSFW 开关已移至魔导书工具栏（🔞 按钮），设置页不再重复 -->
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">结果发送平台</span>
               <select id="send_platform" onchange="saveSendPlatform()" style="flex:1;min-width:140px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
@@ -4723,6 +4724,32 @@ textarea:focus-visible,
               <input type="checkbox" id="cfg_target_group" style="accent-color:var(--primary)" onchange="saveTarget()">
               <label for="cfg_target_group" style="font-size:12px;cursor:pointer">目标是群聊（QQ群 / 飞书群，按群消息发送）</label>
             </div>
+          </div>
+
+          <!-- 分组 3.5：云端数据库同步（v4.3.0） -->
+          <div class="settings-group">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库（Gitee 私有仓库）</div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">私人令牌</span>
+              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="Gitee 私人令牌（首次填写后自动保存）" style="flex:1;min-width:150px" autocomplete="off">
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">仓库名</span>
+              <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="heigulin/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off">
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:14px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="cfg_sync_artists" style="accent-color:var(--primary)"><label for="cfg_sync_artists">画师缓存 (4MB)</label>
+              </span>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="cfg_sync_characters" style="accent-color:var(--primary)"><label for="cfg_sync_characters">角色缓存 (28MB)</label>
+              </span>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;align-items:center">
+              <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
+              <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
+            </div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 Gitee 私有仓库拉取最新词库（39 个分类 + K2）覆盖本地；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。同步完成自动重载词库，无需重启。</div>
           </div>
 
           <!-- 分组 4：危险操作 -->
@@ -5057,6 +5084,10 @@ textarea:focus-visible,
           </div>
         </div>
         <div style="flex:1"></div>
+        <!-- ★ Anima 随机 NSFW 开关（放在魔导书里，手机端同样可见）
+             关闭（默认）= 过滤裸体/性行为/性器官/BDSM（内衣/泳装/透视保留）
+             开启 = 完全放开，不做任何过滤 -->
+        <button class="btn btn-xs btn-secondary" id="grm_anima_nsfw_btn" onclick="toggleAnimaNsfw()" title="Anima 随机是否允许 NSFW：关闭时过滤裸体/性行为/性器官/BDSM（内衣泳装保留），开启后完全放开">🔞 <span id="grm_anima_nsfw_text">SFW</span></button>
         <input type="text" class="grimoire-detail-search desktop-only" id="grimoire_data_search" placeholder="搜索条目..." oninput="filterGrimoireData()">
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_edit_toggle" onclick="toggleGrimoireEditMode()" title="切换编辑模式"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> <span id="grm_edit_toggle_text">编辑</span></button>
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_batch" onclick="showGrimoireBatchModal()" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-upload"/></svg> <span>批量导入</span></button>
@@ -6272,6 +6303,14 @@ function loadCfg() {
     if (sp) sp.checked = c.show_prompt_on_image === true;
     const ae = document.getElementById('cfg_anima_enhance');
     if (ae) ae.checked = c.anima_spec_enhance !== false;   // 默认开
+    const an = document.getElementById('cfg_anima_nsfw');
+    if (an) an.checked = c.anima_nsfw === true;            // 默认关
+    // 同步魔导书工具栏的 Anima NSFW 开关状态（配置为准，回写 localStorage）
+    if (typeof c.anima_nsfw !== 'undefined') {
+      window._animaNsfwOn = c.anima_nsfw === true;
+      try { localStorage.setItem('anima_nsfw_on', window._animaNsfwOn ? '1' : '0'); } catch (e) {}
+      if (typeof _syncAnimaNsfwUI === 'function') _syncAnimaNsfwUI();
+    }
     const spf = document.getElementById('send_platform');
     if (spf) spf.value = c.send_platform || 'auto';
     // 加载主题
@@ -6287,6 +6326,7 @@ function loadCfg() {
     _k2ComposeMode = (c && c.k2_compose_mode) || 'anima';
     // K2 字段锁定面板：仅 K2 模式显示于魔导书内（grimoire_k2_panel）
     syncGrimoireK2UI();
+    if (typeof _syncAnimaNsfwUI === 'function') _syncAnimaNsfwUI();   // 魔导书 Anima NSFW 按钮状态
     if (_k2ComposeMode === 'k2') renderK2LocksPanel();
     // 加载生成结果发送目标（平台 + ID + 是否群聊）
     const tplat = document.getElementById('cfg_target_platform');
@@ -6298,7 +6338,68 @@ function loadCfg() {
     // 加载部署模式
     const dmSel = document.getElementById('cfg_deploy_mode');
     if (dmSel && c && c.deploy_mode) dmSel.value = c.deploy_mode;
+    // v4.3.0 云端数据库同步状态
+    loadGiteeSyncStatus();
   });
+}
+
+/** v4.3.0 云端数据库同步：状态加载 + 执行 */
+async function loadGiteeSyncStatus() {
+  try {
+    const s = await apiFetch('/api/gitee-sync/status', {}, true);
+    if (!s || !s.ok) return;
+    const repoEl = document.getElementById('cfg_gitee_repo');
+    if (repoEl && !repoEl.value) repoEl.value = s.repo || '';
+    const taEl = document.getElementById('cfg_sync_artists');
+    if (taEl) taEl.checked = s.sync_artists !== false;
+    const tcEl = document.getElementById('cfg_sync_characters');
+    if (tcEl) tcEl.checked = s.sync_characters !== false;
+    const stEl = document.getElementById('gitee_sync_state');
+    if (stEl) {
+      if (s.last && s.last.finished_at) {
+        const okTxt = s.last.ok ? '✅' : '⚠️';
+        stEl.textContent = `${okTxt} 上次同步 ${s.last.finished_at}（词库 ${s.last.words_ok || 0} / 缓存 ${s.last.cache_ok || 0}）`;
+      } else {
+        stEl.textContent = s.configured ? '从未同步过' : '未配置令牌';
+      }
+    }
+  } catch (e) {}
+}
+
+async function runGiteeSync() {
+  const btn = document.getElementById('btn_gitee_sync');
+  const stEl = document.getElementById('gitee_sync_state');
+  const tokenEl = document.getElementById('cfg_gitee_token');
+  const repoEl = document.getElementById('cfg_gitee_repo');
+  const taEl = document.getElementById('cfg_sync_artists');
+  const tcEl = document.getElementById('cfg_sync_characters');
+  const body = {
+    sync_artists: taEl ? !!taEl.checked : true,
+    sync_characters: tcEl ? !!tcEl.checked : true,
+  };
+  if (tokenEl && tokenEl.value.trim()) body.gitee_token = tokenEl.value.trim();
+  if (repoEl && repoEl.value.trim()) body.gitee_repo = repoEl.value.trim();
+  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（缓存约 1-3 分钟）'; }
+  if (stEl) stEl.textContent = '⏳ 正在从 Gitee 拉取词库与缓存…';
+  try {
+    const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body) }, true);
+    if (r && r.ok) {
+      if (stEl) stEl.textContent = `✅ 同步完成 ${r.finished_at || ''}（词库 ${r.words_ok} 个${r.cache_ok ? '，缓存 ' + r.cache_ok + ' 个' : ''}）`;
+      toast(`✅ 云端数据库同步完成：词库 ${r.words_ok} 个` + (r.cache_ok ? `，缓存 ${r.cache_ok} 个` : ''), 'success', 5000);
+      if (tokenEl) tokenEl.value = '';
+      // 刷新魔导书数据源列表（词库已重载）
+      if (typeof loadGrimoireData === 'function') loadGrimoireData().catch(() => {});
+    } else {
+      const msg = (r && (r.error || (r.errors && r.errors.join('; ')))) || '未知错误';
+      if (stEl) stEl.textContent = '❌ 同步失败';
+      toast('❌ 同步失败: ' + msg, 'error', 8000);
+    }
+  } catch (e) {
+    if (stEl) stEl.textContent = '❌ 同步异常';
+    toast('❌ 同步异常: ' + e, 'error', 8000);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库'; }
+  }
 }
 
 /** 保存生成结果发送目标（平台 + ID + 群聊）到后端 */
@@ -6664,6 +6765,13 @@ async function saveAnimaEnhance() {
   const val = !!el.checked;
   await apiFetch('/api/config', { method:'POST', body:JSON.stringify({anima_spec_enhance:val}) });
   toast(val ? '✅ 已开启 Anima 随机规范增强' : '已关闭（随机结果按原始标签拼接）');
+}
+async function saveAnimaNsfw() {
+  const el = document.getElementById('cfg_anima_nsfw');
+  if (!el) return;
+  const val = !!el.checked;
+  await apiFetch('/api/config', { method:'POST', body:JSON.stringify({anima_nsfw:val}) });
+  toast(val ? '✅ 已允许 NSFW（不再过滤）' : '已开启宽松过滤（跳过明确色情标签）');
 }
 async function saveSendPlatform() {
   const val = document.getElementById('send_platform').value;
@@ -11814,6 +11922,29 @@ function toggleK2Nsfw() {
   toast(window._k2NsfwOn ? '🔞 K2 随机已开启 NSFW（交合/裸露强化）' : 'K2 随机已关闭 NSFW，仅出 SFW 人像描述');
   // 同步到后端：QQ /随机图 组句遵循同一 NSFW 开关
   apiFetch('/api/k2-nsfw', { method: 'POST', body: JSON.stringify({ nsfw: window._k2NsfwOn }) }, true).catch(() => {});
+}
+
+// ★ Anima NSFW 开关（魔导书工具栏；存后端配置 anima_nsfw，供随机抽取过滤）
+//   关闭（默认）= 过滤裸体/性行为/性器官/BDSM（内衣/泳装/透视保留，即"宽松档"）
+//   开启 = 完全放开，不做任何过滤
+if (typeof window._animaNsfwOn === 'undefined') {
+  try { window._animaNsfwOn = localStorage.getItem('anima_nsfw_on') === '1'; } catch (e) { window._animaNsfwOn = false; }
+}
+function _syncAnimaNsfwUI() {
+  const bt = document.getElementById('grm_anima_nsfw_text');
+  if (bt) bt.textContent = window._animaNsfwOn ? 'NSFW开' : 'SFW';
+  const bc = document.getElementById('grm_anima_nsfw_btn');
+  if (bc) bc.className = 'btn btn-xs ' + (window._animaNsfwOn ? 'btn-primary' : 'btn-secondary');
+}
+function toggleAnimaNsfw() {
+  window._animaNsfwOn = !window._animaNsfwOn;
+  try { localStorage.setItem('anima_nsfw_on', window._animaNsfwOn ? '1' : '0'); } catch (e) {}
+  _syncAnimaNsfwUI();
+  toast(window._animaNsfwOn
+    ? '🔞 Anima 随机已放开（不做过滤）'
+    : 'Anima 随机已开启宽松过滤（跳过裸体/性行为，保留内衣泳装）');
+  // 同步到后端配置
+  apiFetch('/api/config', { method: 'POST', body: JSON.stringify({ anima_nsfw: window._animaNsfwOn }) }, true).catch(() => {});
 }
 
 // ===================== K2 字段锁定面板 =====================

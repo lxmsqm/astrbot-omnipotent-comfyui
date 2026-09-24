@@ -1,7 +1,27 @@
 [
   {
-    "name": "比基尼",
+    "name": "沙滩泳装",
     "tags": "bikini",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "湿身内衣",
+    "tags": "wet clothes",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "睡衣",
+    "tags": "pajamas",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "浴衣",
+    "tags": "yukata",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "和服内衣",
+    "tags": "hadajuban",
     "category": "内衣泳装"
   },
   {
@@ -22,6 +42,106 @@
   {
     "name": "盔甲",
     "tags": "armor",
+    "category": "服装配饰"
+  },
+  {
+    "name": "黑色内衣",
+    "tags": "black lingerie",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "白色内衣",
+    "tags": "white lingerie",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "蕾丝内衣",
+    "tags": "lace lingerie",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "丝绸内衣",
+    "tags": "silk lingerie",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "透明内衣",
+    "tags": "see-through",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "胸罩",
+    "tags": "bra",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "内裤",
+    "tags": "panties",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "丁字裤",
+    "tags": "thong",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "吊带内衣",
+    "tags": "camisole",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "束腰",
+    "tags": "corset",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "吊袜带",
+    "tags": "garter belt",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "长袜",
+    "tags": "thighhighs",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "连裤袜",
+    "tags": "pantyhose",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "渔网袜",
+    "tags": "fishnet pantyhose",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "吊带袜",
+    "tags": "stockings",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "露背装",
+    "tags": "backless",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "运动内衣",
+    "tags": "sports bra",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "高叉泳装",
+    "tags": "highleg swimsuit",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "竞技泳装",
+    "tags": "competition swimsuit",
+    "category": "内衣泳装"
+  },
+  {
+    "name": "死库水",
+    "tags": "school swimsuit",
     "category": "内衣泳装"
   }
 ]

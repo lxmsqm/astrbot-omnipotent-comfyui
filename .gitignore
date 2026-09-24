@@ -20,6 +20,9 @@ plugin_config.json
 
 # User data directory (gitignored — each user's personal config)
 data/user/
+# v4.3.0 数据分离迁移后留下的旧数据备份（真实数据在 AstrBot/data/comfyui_allinone_data/）
+data/user_migrated_backup/
+data/anima_tools_migrated_backup/
 
 # Local machine paths / OS
 previews/

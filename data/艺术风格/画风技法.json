@@ -16,7 +16,7 @@
   },
   {
     "name": "粉彩",
-    "tags": "pastel color",
+    "tags": "pastel",
     "category": "画风技法"
   },
   {
@@ -27,6 +27,101 @@
   {
     "name": "线稿",
     "tags": "line art",
+    "category": "画风技法"
+  },
+  {
+    "name": "厚涂",
+    "tags": "impasto",
+    "category": "画风技法"
+  },
+  {
+    "name": "平涂",
+    "tags": "flat color",
+    "category": "画风技法"
+  },
+  {
+    "name": "渐变上色",
+    "tags": "gradient",
+    "category": "画风技法"
+  },
+  {
+    "name": "半厚涂",
+    "tags": "semi-realistic",
+    "category": "画风技法"
+  },
+  {
+    "name": "油画",
+    "tags": "oil painting",
+    "category": "画风技法"
+  },
+  {
+    "name": "水墨",
+    "tags": "ink wash painting",
+    "category": "画风技法"
+  },
+  {
+    "name": "像素艺术",
+    "tags": "pixel art",
+    "category": "画风技法"
+  },
+  {
+    "name": "漫画风",
+    "tags": "manga",
+    "category": "画风技法"
+  },
+  {
+    "name": "美漫风",
+    "tags": "comic",
+    "category": "画风技法"
+  },
+  {
+    "name": "复古动画",
+    "tags": "retro artstyle",
+    "category": "画风技法"
+  },
+  {
+    "name": "90年代动画",
+    "tags": "90s anime",
+    "category": "画风技法"
+  },
+  {
+    "name": "吉卜力风",
+    "tags": "studio ghibli",
+    "category": "画风技法"
+  },
+  {
+    "name": "赛博朋克风",
+    "tags": "cyberpunk",
+    "category": "画风技法"
+  },
+  {
+    "name": "蒸汽朋克风",
+    "tags": "steampunk",
+    "category": "画风技法"
+  },
+  {
+    "name": "浮世绘",
+    "tags": "ukiyo-e",
+    "category": "画风技法"
+  },
+  {
+    "name": "印象派",
+    "tags": "impressionism",
+    "category": "画风技法"
+  },
+  {
+    "name": "极简风",
+    "tags": "minimalist",
+    "category": "画风技法"
+  },
+  {
+    "name": "写实渲染",
+    "tags": "photorealistic",
+    "category": "画风技法"
+  },
+  {
+    "name": "3D渲染",
+    "tags": "3d render",
     "category": "画风技法"
   }
 ]

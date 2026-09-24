@@ -1,0 +1,152 @@
+[
+  {
+    "name": "雨天",
+    "tags": "rain",
+    "category": "天气效果"
+  },
+  {
+    "name": "暴雨",
+    "tags": "heavy rain",
+    "category": "天气效果"
+  },
+  {
+    "name": "细雨",
+    "tags": "light rain",
+    "category": "天气效果"
+  },
+  {
+    "name": "雪",
+    "tags": "snowing",
+    "category": "天气效果"
+  },
+  {
+    "name": "暴雪",
+    "tags": "blizzard",
+    "category": "天气效果"
+  },
+  {
+    "name": "雾",
+    "tags": "fog",
+    "category": "天气效果"
+  },
+  {
+    "name": "薄雾",
+    "tags": "haze",
+    "category": "天气效果"
+  },
+  {
+    "name": "雷电",
+    "tags": "lightning",
+    "category": "天气效果"
+  },
+  {
+    "name": "彩虹",
+    "tags": "rainbow",
+    "category": "天气效果"
+  },
+  {
+    "name": "大风",
+    "tags": "wind",
+    "category": "天气效果"
+  },
+  {
+    "name": "沙尘",
+    "tags": "dust storm",
+    "category": "天气效果"
+  },
+  {
+    "name": "极光",
+    "tags": "aurora",
+    "category": "天气效果"
+  },
+  {
+    "name": "日落",
+    "tags": "sunset",
+    "category": "天气效果"
+  },
+  {
+    "name": "日出",
+    "tags": "sunrise",
+    "category": "天气效果"
+  },
+  {
+    "name": "黄昏",
+    "tags": "dusk",
+    "category": "天气效果"
+  },
+  {
+    "name": "夜晚",
+    "tags": "night",
+    "category": "天气效果"
+  },
+  {
+    "name": "星空",
+    "tags": "starry night",
+    "category": "天气效果"
+  },
+  {
+    "name": "月夜",
+    "tags": "moonlight",
+    "category": "天气效果"
+  },
+  {
+    "name": "阴天",
+    "tags": "overcast",
+    "category": "天气效果"
+  },
+  {
+    "name": "云海",
+    "tags": "cloud sea",
+    "category": "天气效果"
+  },
+  {
+    "name": "多云",
+    "tags": "cloudy",
+    "category": "天气效果"
+  },
+  {
+    "name": "晴天",
+    "tags": "clear",
+    "category": "天气效果"
+  },
+  {
+    "name": "雷阵雨",
+    "tags": "thunderstorm",
+    "category": "天气效果"
+  },
+  {
+    "name": "冰雹",
+    "tags": "hail",
+    "category": "天气效果"
+  },
+  {
+    "name": "龙卷风",
+    "tags": "tornado",
+    "category": "天气效果"
+  },
+  {
+    "name": "龙卷风",
+    "tags": "dust devil",
+    "category": "天气效果"
+  },
+  {
+    "name": "海市蜃楼",
+    "tags": "mirage",
+    "category": "天气效果"
+  },
+  {
+    "name": "流星",
+    "tags": "shooting star",
+    "category": "天气效果"
+  },
+  {
+    "name": "血月",
+    "tags": "blood moon",
+    "category": "天气效果"
+  },
+  {
+    "name": "雾凇",
+    "tags": "rime",
+    "category": "天气效果"
+  }
+]

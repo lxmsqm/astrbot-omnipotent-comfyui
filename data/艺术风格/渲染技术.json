@@ -1,5 +1,40 @@
 [
   {
+    "name": "菲涅尔效应",
+    "tags": "fresnel effect",
+    "category": "渲染技术"
+  },
+  {
+    "name": "各向异性反射",
+    "tags": "anisotropic reflection",
+    "category": "渲染技术"
+  },
+  {
+    "name": "超写实",
+    "tags": "ultra realistic",
+    "category": "渲染技术"
+  },
+  {
+    "name": "照片级写实",
+    "tags": "photorealistic",
+    "category": "渲染技术"
+  },
+  {
+    "name": "超精细",
+    "tags": "hyperdetailed",
+    "category": "渲染技术"
+  },
+  {
+    "name": "电影级渲染",
+    "tags": "cinematic render",
+    "category": "渲染技术"
+  },
+  {
+    "name": "HDR光照",
+    "tags": "hdr lighting",
+    "category": "渲染技术"
+  },
+  {
     "name": "虚幻5引擎",
     "tags": "unreal engine 5",
     "category": "渲染技术"
@@ -80,11 +115,6 @@
     "category": "渲染技术"
   },
   {
-    "name": "次表面散射",
-    "tags": "SSS",
-    "category": "渲染技术"
-  },
-  {
     "name": "半透明材质",
     "tags": "translucent material",
     "category": "渲染技术"
@@ -122,41 +152,6 @@
   {
     "name": "高细节皮肤",
     "tags": "high detail skin",
-    "category": "渲染技术"
-  },
-  {
-    "name": "菲涅尔效应",
-    "tags": "fresnel effect",
-    "category": "渲染技术"
-  },
-  {
-    "name": "各向异性反射",
-    "tags": "anisotropic reflection",
-    "category": "渲染技术"
-  },
-  {
-    "name": "超写实",
-    "tags": "ultra realistic",
-    "category": "渲染技术"
-  },
-  {
-    "name": "照片级写实",
-    "tags": "photorealistic",
-    "category": "渲染技术"
-  },
-  {
-    "name": "超精细",
-    "tags": "hyperdetailed",
-    "category": "渲染技术"
-  },
-  {
-    "name": "电影级渲染",
-    "tags": "cinematic render",
-    "category": "渲染技术"
-  },
-  {
-    "name": "HDR光照",
-    "tags": "hdr lighting",
     "category": "渲染技术"
   }
 ]

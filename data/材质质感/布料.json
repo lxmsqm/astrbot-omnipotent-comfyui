@@ -1,22 +1,22 @@
 [
   {
     "name": "缎面丝绸",
-    "tags": "satin silk",
+    "tags": "satin",
     "category": "布料"
   },
   {
     "name": "透明薄纱",
-    "tags": "sheer translucent",
+    "tags": "sheer",
     "category": "布料"
   },
   {
     "name": "蕾丝面料",
-    "tags": "lace fabric",
+    "tags": "lace",
     "category": "布料"
   },
   {
     "name": "丝带",
-    "tags": "silk ribbon",
+    "tags": "ribbon",
     "category": "布料"
   },
   {
@@ -31,32 +31,32 @@
   },
   {
     "name": "哑光布料",
-    "tags": "matte cloth",
+    "tags": "matte",
     "category": "布料"
   },
   {
     "name": "厚天鹅绒",
-    "tags": "thick velvet",
+    "tags": "velvet",
     "category": "布料"
   },
   {
     "name": "棉质纹理",
-    "tags": "cotton texture",
+    "tags": "cotton",
     "category": "布料"
   },
   {
     "name": "羊毛织物",
-    "tags": "wool fabric",
+    "tags": "wool",
     "category": "布料"
   },
   {
     "name": "亚麻面料",
-    "tags": "linen fabric",
+    "tags": "linen",
     "category": "布料"
   },
   {
     "name": "牛仔布纹理",
-    "tags": "denim texture",
+    "tags": "denim",
     "category": "布料"
   },
   {

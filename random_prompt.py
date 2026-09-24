@@ -20,7 +20,10 @@ NSFW_BODY_GROUPS = [
     ["young", "mature", "old", "teen", "adult", "elderly", "middle-aged"],
     ["solo", "1girl", "1boy", "threesome", "foursome", "gangbang", "orgy", "group sex",
      "double penetration", "bukkake", "3girls", "4girls", "5girls",
-     "6+girls", "multiple girls", "multiple boys", "2girls", "2boys", "hetero"],
+     "6+girls", "multiple girls", "multiple boys", "2girls", "2boys", "hetero",
+     # ★ 补充：人数相关（duo/情侣/多人 与 solo 冲突）
+     "duo", "couple", "1girl 1boy", "girl and boy", "two girls", "two boys",
+     "multiple views", "crowd", "group", "friends"],
     ["yuri", "yaoi", "hetero"],
     ["virgin", "sex", "fuck", "penis", "cock", "dick", "cum", "creampie", "semen", "sperm"],
     # 发色互斥
@@ -75,7 +78,81 @@ NSFW_BODY_GROUPS = [
     ["PBR texturing", "subsurface scattering", "ray tracing", "global illumination",
      "physically based rendering", "octane render", "unreal engine", "3d render",
      "redshift render", "vray", "cycles", "arnold"],
+    # ★ 肤质/质感互斥（新分类"肤质"与"光泽"引入的矛盾）
+    ["soft skin", "smooth skin", "silky skin", "porcelain skin", "glowing skin"],
+    ["rough", "rough skin", "matte skin", "oily", "oily skin", "shiny skin", "wet skin"],
+    # ★ 光泽类互斥
+    ["matte", "matte skin", "frosted"],
+    ["glossy", "shiny", "polished", "metallic", "iridescence", "fluorescent"],
+    # ★ 天气互斥（新分类"天气效果"）
+    ["sunny", "clear sky", "sunrise", "sunset", "day"],
+    ["rainy", "heavy rain", "light rain", "rain", "thunderstorm", "snow", "blizzard",
+     "hail", "fog", "misty", "cloudy", "overcast"],
 ]
+
+# ★ NSFW 关键词【宽松档】：只过滤「明确色情」内容
+#   保留：内衣/泳装/比基尼/透视/乳沟等擦边（用户选择宽松档）
+#   过滤：裸体、性行为、性器官、体液、BDSM 等明确内容
+# 匹配方式：子串匹配（覆盖 "bondage sex position"、"seated oral sex" 这类组合标签）
+# 用途：anima_nsfw 开关关闭时，抽取阶段跳过这些标签（从同分类抽下一个，保证产出）
+NSFW_KEYWORDS = (
+    # 裸体
+    "nude", "naked", "no clothes", "topless", "bottomless",
+    "no panties", "no bra", "clothed sex", "undressing", "undressed",
+    "partially undressed", "completely undressed", "clothes lift",
+    # 尺度标记
+    "nsfw", "explicit",
+    # 性行为（含组合标签，如 "seated oral sex"）
+    "sex", "fuck", "fucking", "vaginal", "anal", "oral sex", "fellatio",
+    "cunnilingus", "paizuri", "masturbat", "sex toy", "dildo", "vibrator",
+    "bukkake", "gangbang", "orgy", "double penetration", "group sex",
+    "threesome", "foursome", "creampie", "cum", "semen", "sperm", "facial",
+    "sex position", "missionary", "doggy style", "cowgirl position",
+    "spread legs", "spread pussy", "presenting", "after sex", "during sex",
+    "rape", "molestation", "tentacle",
+    # 性器官
+    "penis", "cock", "dick", "pussy", "vagina", "labia", "clitoris",
+    "nipple", "areola",
+    # BDSM
+    "bondage", "bdsm", "shibari", "restrained", "bound wrist", "gagged",
+    "ball gag", "handcuff", "leash", "hogtie", "suspension",
+)
+
+
+def _is_nsfw_tag(tag: str) -> bool:
+    """判断标签是否属于 NSFW（子串匹配，覆盖组合标签）"""
+    t = (tag or "").strip().lower()
+    if not t:
+        return False
+    return any(kw in t for kw in NSFW_KEYWORDS)
+
+
+# ★ 低质量标签黑名单：随机抽取时跳过（只保留最高质量档，避免拉低出图质量）
+#   规范里质量标签分档（masterpiece > best > good > normal > low > worst；
+#   score_9 > ... > score_1），随机抽到低档会拖后腿
+LOW_QUALITY_TAGS = {
+    # 人类评分系：低档
+    "normal quality", "low quality", "worst quality",
+    # 美学评分系：低档（Base 版用）
+    "score_1", "score_2", "score_3", "score_4", "score_5", "score_6",
+    # 其它负面/中性质量标记
+    "bad quality", "poor quality", "amateur", "blurry", "lowres",
+}
+
+
+def _is_low_quality(tag: str) -> bool:
+    """判断是否为低质量标签（应跳过）"""
+    t = (tag or "").strip().lower()
+    if not t:
+        return False
+    if t in LOW_QUALITY_TAGS:
+        return True
+    # 组合标签（如 "low quality, worst quality" 已拆分，无需处理）
+    return False
+
+
+# 兼容旧引用（集合形式，精确匹配用）
+NSFW_TAGS = set(NSFW_KEYWORDS)
 
 # 触发词-提升标签 关联
 TRIGGER_BOOSTS = [
@@ -175,17 +252,19 @@ MODEL_CONFIGS = {
 # 值越小越靠前，同一个 section 内的按原顺序保持
 PROMPT_SECTION_ORDER = {
     "anima": {
-        # 顶级 section
+        # 顶级 section（按 Anima 官方规范排序：
+        #   质量 → 主体数 → 角色 → 系列 → 画师 → 外观 → 姿势 → 镜头 → 环境 → 光照）
         "section_order": [
-            "质量", "画师", "光影",
-            "风格", "人数体型", "角色名", "作品",
+            "质量", "人数体型", "角色名", "作品", "画师",
             "发型", "发色", "面部", "服饰", "材质",
-            "场景", "色彩", "构图", "动作", "其他"
+            "道具", "动作", "情绪",
+            "场景", "色彩", "构图", "光影", "特效", "风格", "其他"
         ],
         # 子分类名 → section 映射
         "subcategory_map": {
-            # 质量
+            # 质量（含官方规范：品质/评分/年代/安全/主体数）
             "品质保证": "质量",
+            "官方规范": "质量",
             # 风格
             "动漫风格": "风格",
             "画风技法": "风格",
@@ -200,6 +279,7 @@ PROMPT_SECTION_ORDER = {
             # 特征——面部
             "眼色": "面部",
             "表情": "面部",
+            "表情细节": "面部",
             # 特征——服饰
             "上衣": "服饰",
             "下装": "服饰",
@@ -212,22 +292,34 @@ PROMPT_SECTION_ORDER = {
             "布料": "材质",
             "皮革": "材质",
             "表面": "材质",
+            "光泽": "材质",
+            # 特征——道具
+            "手持物": "道具",
+            "武器": "道具",
             # 特征——动作
             "站坐卧": "动作",
             "腿部动作": "动作",
             "手臂动作": "动作",
             "全身动作": "动作",
+            "正常动作": "动作",
+            "色情动作": "动作",
+            # 特征——情绪氛围
+            "氛围": "情绪",
             # 特征——光影
             "光影效果": "光影",
             # 特征——场景
             "自然环境": "场景",
             "建筑场景": "场景",
             "天气时间": "场景",
+            "天气效果": "场景",
             # 特征——色彩
             "色彩氛围": "色彩",
-            # 特征——构图
+            # 特征——构图（含视角）
             "构图景别": "构图",
             "镜头效果": "构图",
+            "视角": "构图",
+            # 特征——特效
+            "视觉效果": "特效",
         },
         # 特殊源（非子分类文件）的映射
         "special_source_map": {

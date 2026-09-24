@@ -1,0 +1,192 @@
+[
+  {
+    "name": "太刀",
+    "tags": "holding katana",
+    "category": "手持物"
+  },
+  {
+    "name": "短刀",
+    "tags": "holding dagger",
+    "category": "手持物"
+  },
+  {
+    "name": "武士刀",
+    "tags": "holding sword",
+    "category": "手持物"
+  },
+  {
+    "name": "手枪",
+    "tags": "holding gun",
+    "category": "手持物"
+  },
+  {
+    "name": "步枪",
+    "tags": "holding rifle",
+    "category": "手持物"
+  },
+  {
+    "name": "弓箭",
+    "tags": "holding bow",
+    "category": "手持物"
+  },
+  {
+    "name": "狙击枪",
+    "tags": "holding sniper rifle",
+    "category": "手持物"
+  },
+  {
+    "name": "狙击步枪",
+    "tags": "holding sniping rifle",
+    "category": "手持物"
+  },
+  {
+    "name": "长矛",
+    "tags": "holding spear",
+    "category": "手持物"
+  },
+  {
+    "name": "链锯剑",
+    "tags": "holding chainsaw sword",
+    "category": "手持物"
+  },
+  {
+    "name": "斧头",
+    "tags": "holding axe",
+    "category": "手持物"
+  },
+  {
+    "name": "钥匙",
+    "tags": "holding key",
+    "category": "手持物"
+  },
+  {
+    "name": "伞",
+    "tags": "holding umbrella",
+    "category": "手持物"
+  },
+  {
+    "name": "阳伞",
+    "tags": "holding parasol",
+    "category": " handheld物"
+  },
+  {
+    "name": "折扇",
+    "tags": "holding folding fan",
+    "category": "手持物"
+  },
+  {
+    "name": "团扇",
+    "tags": "holding fan",
+    "category": "手持物"
+  },
+  {
+    "name": "书",
+    "tags": "holding book",
+    "category": "手持物"
+  },
+  {
+    "name": "杂志",
+    "tags": "holding magazine",
+    "category": " handheld物"
+  },
+  {
+    "name": "相机",
+    "tags": "holding camera",
+    "category": "手持物"
+  },
+  {
+    "name": "手机",
+    "tags": "holding phone",
+    "category": "手持物"
+  },
+  {
+    "name": "笔记本",
+    "tags": "holding laptop",
+    "category": "手持物"
+  },
+  {
+    "name": "吉他",
+    "tags": "holding guitar",
+    "category": " handheld物"
+  },
+  {
+    "name": "钢琴",
+    "tags": "holding piano",
+    "category": " handheld物"
+  },
+  {
+    "name": "小提琴",
+    "tags": "holding violin",
+    "category": "手持物"
+  },
+  {
+    "name": "长笛",
+    "tags": "holding flute",
+    "category": "手持物"
+  },
+  {
+    "name": "鼓",
+    "tags": "holding drumsticks",
+    "category": "手持物"
+  },
+  {
+    "name": "口琴",
+    "tags": "holding harmonica",
+    "category": "手持物"
+  },
+  {
+    "name": "口哨",
+    "tags": "holding whistle",
+    "category": " handheld物"
+  },
+  {
+    "name": "网球拍",
+    "tags": "holding tennis racket",
+    "category": " handheld物"
+  },
+  {
+    "name": "高尔夫球杆",
+    "tags": "holding golf club",
+    "category": "手持物"
+  },
+  {
+    "name": "棒球棒",
+    "tags": "holding baseball bat",
+    "category": " handheld物"
+  },
+  {
+    "name": "篮球",
+    "tags": "holding basketball",
+    "category": "手持物"
+  },
+  {
+    "name": "足球",
+    "tags": "holding soccer ball",
+    "category": " handheld物"
+  },
+  {
+    "name": "足球",
+    "tags": "holding football",
+    "category": "手持物"
+  },
+  {
+    "name": "冰球棍",
+    "tags": "holding hockey stick",
+    "category": "手持物"
+  },
+  {
+    "name": "曲棍球棍",
+    "tags": "holding croquet mallet",
+    "category": "手持物"
+  },
+  {
+    "name": "棒球手套",
+    "tags": "holding baseball glove",
+    "category": "手持物"
+  },
+  {
+    "name": "冰淇淋",
+    "tags": "holding ice cream",
+    "category": "手持物"
+  }
+]

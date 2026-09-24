@@ -1,0 +1,117 @@
+[
+  {
+    "name": "花瓣飘落",
+    "tags": "falling petals",
+    "category": "视觉效果"
+  },
+  {
+    "name": "光斑",
+    "tags": "light bokeh",
+    "category": "视觉效果"
+  },
+  {
+    "name": "镜头光晕",
+    "tags": "lens flare",
+    "category": "视觉效果"
+  },
+  {
+    "name": "粒子",
+    "tags": "particle effect",
+    "category": "视觉效果"
+  },
+  {
+    "name": "星光",
+    "tags": "sparkles",
+    "category": "视觉效果"
+  },
+  {
+    "name": "速度线",
+    "tags": "speed lines",
+    "category": "视觉效果"
+  },
+  {
+    "name": "动态模糊",
+    "tags": "motion blur",
+    "category": "视觉效果"
+  },
+  {
+    "name": "景深虚化",
+    "tags": "depth of field",
+    "category": "视觉效果"
+  },
+  {
+    "name": "水花",
+    "tags": "water splash",
+    "category": "视觉效果"
+  },
+  {
+    "name": "火花",
+    "tags": "sparks",
+    "category": "视觉效果"
+  },
+  {
+    "name": "烟雾",
+    "tags": "smoke",
+    "category": "视觉效果"
+  },
+  {
+    "name": "电流",
+    "tags": "electricity",
+    "category": "视觉效果"
+  },
+  {
+    "name": "能量波",
+    "tags": "energy wave",
+    "category": "视觉效果"
+  },
+  {
+    "name": "魔法阵",
+    "tags": "magic circle",
+    "category": "视觉效果"
+  },
+  {
+    "name": "光翼",
+    "tags": "wings of light",
+    "category": "视觉效果"
+  },
+  {
+    "name": "破碎",
+    "tags": "shattered glass",
+    "category": "视觉效果"
+  },
+  {
+    "name": "镜头脏污",
+    "tags": "dirty lens",
+    "category": "视觉效果"
+  },
+  {
+    "name": "胶片颗粒",
+    "tags": "film grain",
+    "category": "视觉效果"
+  },
+  {
+    "name": "色差",
+    "tags": "chromatic aberration",
+    "category": "视觉效果"
+  },
+  {
+    "name": "运动轨迹",
+    "tags": "motion trail",
+    "category": "视觉效果"
+  },
+  {
+    "name": "背景虚化",
+    "tags": "bokeh background",
+    "category": "视觉效果"
+  },
+  {
+    "name": "发光",
+    "tags": "glowing",
+    "category": "视觉效果"
+  },
+  {
+    "name": "阴影",
+    "tags": "shadows",
+    "category": "视觉效果"
+  }
+]

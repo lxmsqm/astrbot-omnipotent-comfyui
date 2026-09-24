@@ -1,5 +1,10 @@
 [
   {
+    "name": "苹果形",
+    "tags": "apple shaped",
+    "category": "体型"
+  },
+  {
     "name": "小胸",
     "tags": "small breasts",
     "category": "体型"
@@ -26,7 +31,7 @@
   },
   {
     "name": "苗条",
-    "tags": "slender",
+    "tags": "slim",
     "category": "体型"
   },
   {
@@ -41,17 +46,7 @@
   },
   {
     "name": "娇小",
-    "tags": "short",
-    "category": "体型"
-  },
-  {
-    "name": "娇小",
     "tags": "petite",
-    "category": "体型"
-  },
-  {
-    "name": "苗条",
-    "tags": "slim",
     "category": "体型"
   },
   {
@@ -75,11 +70,6 @@
     "category": "体型"
   },
   {
-    "name": "巨乳体型",
-    "tags": "busty",
-    "category": "体型"
-  },
-  {
     "name": "宽肩",
     "tags": "broad shoulders",
     "category": "体型"
@@ -100,18 +90,8 @@
     "category": "体型"
   },
   {
-    "name": "肌肉女",
-    "tags": "muscular female",
-    "category": "体型"
-  },
-  {
     "name": "粗腿",
     "tags": "thick thighs",
-    "category": "体型"
-  },
-  {
-    "name": "厚实身材",
-    "tags": "thick body",
     "category": "体型"
   },
   {
@@ -122,11 +102,6 @@
   {
     "name": "梨形",
     "tags": "pear-shaped",
-    "category": "体型"
-  },
-  {
-    "name": "苹果形",
-    "tags": "apple-shaped",
     "category": "体型"
   }
 ]

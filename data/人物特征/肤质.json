@@ -13,5 +13,115 @@
     "name": "深色肌肤",
     "tags": "dark skin",
     "category": "肤质"
+  },
+  {
+    "name": "冷白皮",
+    "tags": "porcelain skin",
+    "category": "肤质"
+  },
+  {
+    "name": "哑光肌肤",
+    "tags": "matte skin",
+    "category": "肤质"
+  },
+  {
+    "name": "油光肌肤",
+    "tags": "shiny skin",
+    "category": "肤质"
+  },
+  {
+    "name": "红润脸颊",
+    "tags": "blush",
+    "category": "肤质"
+  },
+  {
+    "name": "雀斑",
+    "tags": "freckles",
+    "category": "肤质"
+  },
+  {
+    "name": "美人痣",
+    "tags": "mole under eye",
+    "category": "肤质"
+  },
+  {
+    "name": "痣",
+    "tags": "mole",
+    "category": "肤质"
+  },
+  {
+    "name": "汗珠",
+    "tags": "sweat",
+    "category": "肤质"
+  },
+  {
+    "name": "汗湿肌肤",
+    "tags": "wet skin",
+    "category": "肤质"
+  },
+  {
+    "name": "水珠肌肤",
+    "tags": "wet body",
+    "category": "肤质"
+  },
+  {
+    "name": "发光肌肤",
+    "tags": "glowing skin",
+    "category": "肤质"
+  },
+  {
+    "name": "丝滑肌肤",
+    "tags": "smooth skin",
+    "category": "肤质"
+  },
+  {
+    "name": "柔软肌肤",
+    "tags": "soft skin",
+    "category": "肤质"
+  },
+  {
+    "name": "肌肉线条",
+    "tags": "toned",
+    "category": "肤质"
+  },
+  {
+    "name": "腹肌",
+    "tags": "abs",
+    "category": "肤质"
+  },
+  {
+    "name": "锁骨折痕",
+    "tags": "collarbone",
+    "category": "肤质"
+  },
+  {
+    "name": "颈部线条",
+    "tags": "neck",
+    "category": "肤质"
+  },
+  {
+    "name": "泪痕",
+    "tags": "tear tracks",
+    "category": "肤质"
+  },
+  {
+    "name": "脸红",
+    "tags": "blushing",
+    "category": "肤质"
+  },
+  {
+    "name": "雀斑脸颊",
+    "tags": "freckled cheeks",
+    "category": "肤质"
+  },
+  {
+    "name": "晒痕",
+    "tags": "tanlines",
+    "category": "肤质"
+  },
+  {
+    "name": "纹身",
+    "tags": "tattoo",
+    "category": "肤质"
   }
 ]

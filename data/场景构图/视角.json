@@ -1,0 +1,107 @@
+[
+  {
+    "name": "正面视角",
+    "tags": "front view",
+    "category": "视角"
+  },
+  {
+    "name": "背面视角",
+    "tags": "rear view",
+    "category": "视角"
+  },
+  {
+    "name": "侧面视角",
+    "tags": "side view",
+    "category": "视角"
+  },
+  {
+    "name": "俯视视角",
+    "tags": "top-down view",
+    "category": "视角"
+  },
+  {
+    "name": "仰视视角",
+    "tags": "low angle view",
+    "category": "视角"
+  },
+  {
+    "name": "平视视角",
+    "tags": "eye level view",
+    "category": "视角"
+  },
+  {
+    "name": "第一人称",
+    "tags": "first person view",
+    "category": "视角"
+  },
+  {
+    "name": "过肩视角",
+    "tags": "over the shoulder view",
+    "category": "视角"
+  },
+  {
+    "name": "鸟瞰视角",
+    "tags": "birds eye view",
+    "category": "视角"
+  },
+  {
+    "name": "仰角视角",
+    "tags": "low angle shot",
+    "category": "视角"
+  },
+  {
+    "name": "俯角视角",
+    "tags": "high angle shot",
+    "category": "视角"
+  },
+  {
+    "name": "特写镜头",
+    "tags": "close-up",
+    "category": "视角"
+  },
+  {
+    "name": "全身镜头",
+    "tags": "full body",
+    "category": "视角"
+  },
+  {
+    "name": "半身镜头",
+    "tags": "half body",
+    "category": "视角"
+  },
+  {
+    "name": "大头照",
+    "tags": "headshot",
+    "category": "视角"
+  },
+  {
+    "name": "远景镜头",
+    "tags": "long shot",
+    "category": "视角"
+  },
+  {
+    "name": "斜角镜头",
+    "tags": "dutch angle",
+    "category": "视角"
+  },
+  {
+    "name": "荷兰角",
+    "tags": "dutch tilt",
+    "category": "视角"
+  },
+  {
+    "name": "镜面反射",
+    "tags": "mirror reflection",
+    "category": "视角"
+  },
+  {
+    "name": "透过玻璃",
+    "tags": "through glass",
+    "category": "视角"
+  },
+  {
+    "name": "从下往上",
+    "tags": "worm's eye view",
+    "category": "视角"
+  }
+]

@@ -1,0 +1,192 @@
+[
+  {
+    "name": "NSFW",
+    "tags": "nsfw",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "露骨",
+    "tags": "explicit",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "一个女孩",
+    "tags": "1girl",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "两个女孩",
+    "tags": "2girls",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "三个女孩",
+    "tags": "3girls",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "一个男孩",
+    "tags": "1boy",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "两个男孩",
+    "tags": "2boys",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "多个女孩",
+    "tags": "multiple girls",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "多个男孩",
+    "tags": "multiple boys",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "单人",
+    "tags": "solo",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "双人",
+    "tags": "duo",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "无人",
+    "tags": "no humans",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "其他主体",
+    "tags": "1other",
+    "category": "画质与渲染"
+  },
+  {
+    "name": "杰作",
+    "tags": "masterpiece",
+    "category": "官方规范"
+  },
+  {
+    "name": "最佳质量",
+    "tags": "best quality",
+    "category": "官方规范"
+  },
+  {
+    "name": "优质",
+    "tags": "good quality",
+    "category": "官方规范"
+  },
+  {
+    "name": "普通质量",
+    "tags": "normal quality",
+    "category": "官方规范"
+  },
+  {
+    "name": "低质量",
+    "tags": "low quality",
+    "category": "官方规范"
+  },
+  {
+    "name": "最差质量",
+    "tags": "worst quality",
+    "category": "官方规范"
+  },
+  {
+    "name": "评分9",
+    "tags": "score_9",
+    "category": "官方规范"
+  },
+  {
+    "name": "评分8",
+    "tags": "score_8",
+    "category": "官方规范"
+  },
+  {
+    "name": "评分7",
+    "tags": "score_7",
+    "category": "官方规范"
+  },
+  {
+    "name": "评分6",
+    "tags": "score_6",
+    "category": "官方规范"
+  },
+  {
+    "name": "评分5",
+    "tags": "score_5",
+    "category": "官方规范"
+  },
+  {
+    "name": "2025年",
+    "tags": "year 2025",
+    "category": "官方规范"
+  },
+  {
+    "name": "2024年",
+    "tags": "year 2024",
+    "category": "官方规范"
+  },
+  {
+    "name": "最新",
+    "tags": "newest",
+    "category": "官方规范"
+  },
+  {
+    "name": "近期",
+    "tags": "recent",
+    "category": "官方规范"
+  },
+  {
+    "name": "中期",
+    "tags": "mid",
+    "category": "官方规范"
+  },
+  {
+    "name": "早期",
+    "tags": "early",
+    "category": "官方规范"
+  },
+  {
+    "name": "古早",
+    "tags": "old",
+    "category": "官方规范"
+  },
+  {
+    "name": "高分辨率",
+    "tags": "highres",
+    "category": "官方规范"
+  },
+  {
+    "name": "超高分辨率",
+    "tags": "absurdres",
+    "category": "官方规范"
+  },
+  {
+    "name": "动漫截图",
+    "tags": "anime screenshot",
+    "category": "官方规范"
+  },
+  {
+    "name": "官方艺术",
+    "tags": "official art",
+    "category": "官方规范"
+  },
+  {
+    "name": "详细背景",
+    "tags": "detailed background",
+    "category": "官方规范"
+  },
+  {
+    "name": "安全",
+    "tags": "safe",
+    "category": "官方规范"
+  },
+  {
+    "name": "敏感",
+    "tags": "sensitive",
+    "category": "官方规范"
+  }
+]

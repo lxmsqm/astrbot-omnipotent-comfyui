@@ -1,0 +1,177 @@
+[
+  {
+    "name": "浪漫",
+    "tags": "romantic",
+    "category": "氛围"
+  },
+  {
+    "name": "温馨",
+    "tags": "warm atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "忧郁",
+    "tags": "sad",
+    "category": "氛围"
+  },
+  {
+    "name": "神秘",
+    "tags": "mysterious",
+    "category": "氛围"
+  },
+  {
+    "name": "紧张",
+    "tags": "tense atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "放松",
+    "tags": "relaxed",
+    "category": "氛围"
+  },
+  {
+    "name": "梦幻",
+    "tags": "dreamlike",
+    "category": "氛围"
+  },
+  {
+    "name": "诡异",
+    "tags": "eerie",
+    "category": "氛围"
+  },
+  {
+    "name": "肃杀",
+    "tags": "bleak atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "欢乐",
+    "tags": "cheerful",
+    "category": "氛围"
+  },
+  {
+    "name": "孤独",
+    "tags": "lonely",
+    "category": "氛围"
+  },
+  {
+    "name": "宁静",
+    "tags": "serene",
+    "category": "氛围"
+  },
+  {
+    "name": "热烈",
+    "tags": "intense atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "慵懒",
+    "tags": "lazy",
+    "category": "氛围"
+  },
+  {
+    "name": "庄严",
+    "tags": "solemn",
+    "category": "氛围"
+  },
+  {
+    "name": "怀旧",
+    "tags": "nostalgic",
+    "category": "氛围"
+  },
+  {
+    "name": "治愈",
+    "tags": "healing",
+    "category": "氛围"
+  },
+  {
+    "name": "废土",
+    "tags": "post-apocalyptic atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "宁静",
+    "tags": "calm atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "温馨",
+    "tags": "cozy",
+    "category": "氛围"
+  },
+  {
+    "name": "梦幻",
+    "tags": "ethereal",
+    "category": "氛围"
+  },
+  {
+    "name": "欢乐",
+    "tags": "festive",
+    "category": "氛围"
+  },
+  {
+    "name": "忧郁",
+    "tags": "melancholic",
+    "category": "氛围"
+  },
+  {
+    "name": "紧张",
+    "tags": "anxious atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "放松",
+    "tags": "peaceful",
+    "category": "氛围"
+  },
+  {
+    "name": "神秘",
+    "tags": "enigmatic",
+    "category": "氛围"
+  },
+  {
+    "name": "诡异",
+    "tags": "haunted",
+    "category": "氛围"
+  },
+  {
+    "name": "肃杀",
+    "tags": "menacing atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "热烈",
+    "tags": "vibrant atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "慵懒",
+    "tags": "leisurely",
+    "category": "氛围"
+  },
+  {
+    "name": "庄严",
+    "tags": "majestic atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "怀旧",
+    "tags": "vintage",
+    "category": "氛围"
+  },
+  {
+    "name": "治愈",
+    "tags": "comforting atmosphere",
+    "category": "氛围"
+  },
+  {
+    "name": "浪漫",
+    "tags": "dreamy romance",
+    "category": "氛围"
+  },
+  {
+    "name": "孤独",
+    "tags": "solitary atmosphere",
+    "category": "氛围"
+  }
+]

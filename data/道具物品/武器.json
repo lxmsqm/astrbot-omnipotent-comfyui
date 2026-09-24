@@ -1,0 +1,162 @@
+[
+  {
+    "name": "双剑",
+    "tags": "holding dual swords",
+    "category": "武器"
+  },
+  {
+    "name": "法杖",
+    "tags": "holding staff",
+    "category": "武器"
+  },
+  {
+    "name": "手枪",
+    "tags": "holding pistol",
+    "category": "武器"
+  },
+  {
+    "name": "机枪",
+    "tags": "holding machine gun",
+    "category": "武器"
+  },
+  {
+    "name": "火箭筒",
+    "tags": "holding rocket launcher",
+    "category": "武器"
+  },
+  {
+    "name": "盾",
+    "tags": "holding shield",
+    "category": "武器"
+  },
+  {
+    "name": "战斧",
+    "tags": "holding battle axe",
+    "category": "武器"
+  },
+  {
+    "name": "镰刀",
+    "tags": "holding sickle",
+    "category": "武器"
+  },
+  {
+    "name": "鞭",
+    "tags": "holding whip",
+    "category": "武器"
+  },
+  {
+    "name": "拳套",
+    "tags": "holding boxing gloves",
+    "category": "武器"
+  },
+  {
+    "name": "苦无",
+    "tags": "holding kunai",
+    "category": "武器"
+  },
+  {
+    "name": "飞镖",
+    "tags": "holding shuriken",
+    "category": "武器"
+  },
+  {
+    "name": "长剑剑士",
+    "tags": "holding greatsword",
+    "category": "武器"
+  },
+  {
+    "name": "武士刀",
+    "tags": "holding tantō",
+    "category": "武器"
+  },
+  {
+    "name": "砍刀",
+    "tags": "holding machete",
+    "category": "武器"
+  },
+  {
+    "name": "曲剑",
+    "tags": "holding curved sword",
+    "category": "武器"
+  },
+  {
+    "name": "十字弓",
+    "tags": "holding crossbow",
+    "category": "武器"
+  },
+  {
+    "name": "三叉戟",
+    "tags": "holding trident",
+    "category": "武器"
+  },
+  {
+    "name": "战锤",
+    "tags": "holding warhammer",
+    "category": "武器"
+  },
+  {
+    "name": "巨剑",
+    "tags": "holding zweihänder",
+    "category": "武器"
+  },
+  {
+    "name": "投矛",
+    "tags": "holding javelin",
+    "category": "武器"
+  },
+  {
+    "name": "光剑",
+    "tags": "holding lightsaber",
+    "category": "武器"
+  },
+  {
+    "name": "激光枪",
+    "tags": "holding laser gun",
+    "category": "武器"
+  },
+  {
+    "name": "等离子枪",
+    "tags": "holding plasma gun",
+    "category": "武器"
+  },
+  {
+    "name": "能量刃",
+    "tags": "holding energy blade",
+    "category": "武器"
+  },
+  {
+    "name": "双持手枪",
+    "tags": "holding dual pistols",
+    "category": "武器"
+  },
+  {
+    "name": "冲锋枪",
+    "tags": "holding submachine gun",
+    "category": "武器"
+  },
+  {
+    "name": "加农炮",
+    "tags": "holding cannon",
+    "category": "武器"
+  },
+  {
+    "name": "弯刀",
+    "tags": "holding scimitar",
+    "category": "武器"
+  },
+  {
+    "name": "短弓",
+    "tags": "holding shortbow",
+    "category": "武器"
+  },
+  {
+    "name": "钉枪",
+    "tags": "holding nail gun",
+    "category": "武器"
+  },
+  {
+    "name": "霰弹枪",
+    "tags": "holding shotgun",
+    "category": "武器"
+  }
+]

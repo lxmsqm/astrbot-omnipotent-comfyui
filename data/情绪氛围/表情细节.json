@@ -1,0 +1,112 @@
+[
+  {
+    "name": "微笑",
+    "tags": "smiling",
+    "category": "表情细节"
+  },
+  {
+    "name": "大笑",
+    "tags": "laughing",
+    "category": "表情细节"
+  },
+  {
+    "name": "坏笑",
+    "tags": "smug grin",
+    "category": "表情细节"
+  },
+  {
+    "name": "冷笑",
+    "tags": "smirk",
+    "category": "表情细节"
+  },
+  {
+    "name": "害羞",
+    "tags": "shy",
+    "category": "表情细节"
+  },
+  {
+    "name": "脸红",
+    "tags": "blushing",
+    "category": "表情细节"
+  },
+  {
+    "name": "哭泣",
+    "tags": "crying",
+    "category": "表情细节"
+  },
+  {
+    "name": "流泪",
+    "tags": "tears",
+    "category": "表情细节"
+  },
+  {
+    "name": "愤怒",
+    "tags": "angry",
+    "category": "表情细节"
+  },
+  {
+    "name": "皱眉",
+    "tags": "frowning",
+    "category": "表情细节"
+  },
+  {
+    "name": "惊讶",
+    "tags": "surprised",
+    "category": "表情细节"
+  },
+  {
+    "name": "困惑",
+    "tags": "confused",
+    "category": "表情细节"
+  },
+  {
+    "name": "无聊",
+    "tags": "bored",
+    "category": "表情细节"
+  },
+  {
+    "name": "疲惫",
+    "tags": "tired",
+    "category": "表情细节"
+  },
+  {
+    "name": "痛苦",
+    "tags": "suffering",
+    "category": "表情细节"
+  },
+  {
+    "name": "陶醉",
+    "tags": "blissful",
+    "category": "表情细节"
+  },
+  {
+    "name": "戏谑",
+    "tags": "teasing",
+    "category": "表情细节"
+  },
+  {
+    "name": "挑衅",
+    "tags": "provocative",
+    "category": "表情细节"
+  },
+  {
+    "name": "温柔",
+    "tags": "gentle smile",
+    "category": "表情细节"
+  },
+  {
+    "name": "冷漠",
+    "tags": "emotionless",
+    "category": "表情细节"
+  },
+  {
+    "name": "恐惧",
+    "tags": "fearful",
+    "category": "表情细节"
+  },
+  {
+    "name": "绝望",
+    "tags": "despairing",
+    "category": "表情细节"
+  }
+]
