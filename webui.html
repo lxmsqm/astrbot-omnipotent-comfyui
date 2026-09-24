@@ -4726,16 +4726,16 @@ textarea:focus-visible,
             </div>
           </div>
 
-          <!-- 分组 3.5：云端数据库同步（v4.3.0） -->
+          <!-- 分组 3.5：云端数据库同步（v4.3.0，v4.3.5 起 GitHub 公开镜像） -->
           <div class="settings-group">
-            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库（Gitee 私有仓库）</div>
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库（GitHub 公开镜像）</div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">私人令牌</span>
-              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="可选：公开仓库无需填写；私有仓库才需要" style="flex:1;min-width:150px" autocomplete="off">
+              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="可选：仅同步私有仓库时需要；GitHub 公开镜像无需填写" style="flex:1;min-width:150px" autocomplete="off">
             </div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">仓库名</span>
-              <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="heigulin/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off">
+              <input type="text" id="cfg_gitee_repo" class="settings-input" placeholder="lxmsqm/astrbot-comfyui-data" style="flex:1;min-width:150px" autocomplete="off">
             </div>
             <div class="settings-row" style="justify-content:flex-start;gap:14px;flex-wrap:wrap">
               <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
@@ -4749,7 +4749,7 @@ textarea:focus-visible,
               <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
               <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
             </div>
-            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 Gitee 仓库拉取最新词库（39 个分类 + K2）覆盖本地；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。公开仓库无需令牌，私有仓库需填私人令牌。同步完成自动重载词库，无需重启。</div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，无需任何令牌；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
           </div>
 
           <!-- 分组 4：危险操作 -->
@@ -6384,7 +6384,7 @@ async function runGiteeSync() {
   if (tokenEl && tokenEl.value.trim()) body.gitee_token = tokenEl.value.trim();
   if (repoEl && repoEl.value.trim()) body.gitee_repo = repoEl.value.trim();
   if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（首次含缓存约 2-5 分钟，勿关页面）'; }
-  if (stEl) stEl.textContent = '⏳ 正在从 Gitee 拉取词库与缓存…';
+  if (stEl) stEl.textContent = '⏳ 正在从 GitHub 镜像拉取词库与缓存…';
   try {
     // ★ 超时给足 12 分钟（28MB 缓存 + 手机网络）；旧版 30s 必超时
     const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body), timeoutMs: 720000 }, true);
