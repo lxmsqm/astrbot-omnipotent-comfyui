@@ -1,4 +1,4 @@
-# Python
+﻿# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -45,9 +45,4 @@ data/cache/
 # Local user data (runtime)
 data/user/
 
-# K2 engine toolchain test scripts (dev only)
-k2gen/test/
 
-# Dev/test artifacts (keep repo clean)
-check_webui_local.js
-k2gen.tar.gz
