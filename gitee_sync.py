@@ -32,7 +32,10 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REPO = "heigulin/astrbot-comfyui-data"
+DEFAULT_REPO = "heigulin/astrbot-comfyui-data-pub"
+"""v4.3.3 起默认指向公开镜像仓库（匿名拉取）。
+原仓库 heigulin/astrbot-comfyui-data 被 Gitee 打「涉嫌外链滥用(RAW)」标记禁止转公开，
+保留作私有备份；pub 仓库由用户绑定手机后转公开。"""
 API_BASE = "https://gitee.com/api/v5/repos"
 
 
