@@ -1663,9 +1663,31 @@ class WebUIMixin:
         return resp
 
     async def _serve_favicon(self, r):
+        # v4.3.8: 优先回 AI 生成的多尺寸 PNG ico；无则回 SVG 兜底
+        ico = Path(__file__).parent / 'favicon.ico'
+        if ico.exists():
+            resp = web.FileResponse(ico, headers={'Cache-Control': 'public, max-age=86400'})
+            return resp
         resp = web.FileResponse(Path(__file__).parent / 'favicon.svg', content_type='image/svg+xml')
         resp.headers['Cache-Control'] = 'public, max-age=86400'
         return resp
+
+    async def _serve_favicon_png(self, r):
+        """v4.3.8: 伺服 favicon-16x16/32x32/192.png（白名单校验防路径穿越）"""
+        size = r.match_info.get('size', '')
+        if size not in ('16x16', '32x32', '192', '512'):
+            raise web.HTTPNotFound()
+        f = Path(__file__).parent / f'favicon-{size}.png'
+        if not f.exists():
+            raise web.HTTPNotFound()
+        return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
+
+    async def _serve_apple_icon(self, r):
+        """v4.3.8: iOS 添加到主屏用 180x180 图标"""
+        f = Path(__file__).parent / 'apple-touch-icon.png'
+        if not f.exists():
+            raise web.HTTPNotFound()
+        return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
 
     async def _webui_k2gen_data(self, request):
         """返回 K2 完整词库数据块（k2gen/data.js 的 UTF-8 源码），供前端 new Function 构造后自动组句"""
@@ -1785,6 +1807,8 @@ class WebUIMixin:
         # K2 NSFW 开关（前端切换时同步保存，QQ /随机图 后端组句遵循）
         app.router.add_post('/api/k2-nsfw', self._webui_save_k2_nsfw)
         app.router.add_get('/favicon.ico', self._serve_favicon)  # 返回真正的图标文件
+        app.router.add_get('/favicon-{size}.png', self._serve_favicon_png)  # v4.3.8 多尺寸 PNG
+        app.router.add_get('/apple-touch-icon.png', self._serve_apple_icon)
         app.router.add_get('/api/config', lambda r: web.json_response({
             "comfyui_url": self.comfyui_url,
             "workflow_dir": str(self.workflow_dir) if self.workflow_dir.parts else "",
