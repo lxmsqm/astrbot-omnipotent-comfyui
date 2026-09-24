@@ -1071,12 +1071,24 @@ class AnimaDataManager:
         return items
 
     def _read_anima_artist_cache(self, path, limit: int) -> list[dict]:
-        """读本地缓存（不存在/损坏返回空）。limit<=0 = 返回全部。"""
+        """读本地缓存（不存在/损坏返回空）。limit<=0 = 返回全部。
+        v4.3.1: 损坏的缓存（如云端同步被截断的文件）改名隔离并返回空 —— 让上层
+        走 API 重拉而不是每次启动都解析失败；成功重拉后会写回完整缓存。"""
         try:
             p = Path(path)
             if not p.exists():
                 return []
-            data = json.loads(p.read_text(encoding="utf-8"))
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+            except Exception as jerr:
+                # 损坏缓存：改名隔离（.corrupt 后缀），不阻塞启动
+                try:
+                    bad = p.with_suffix(p.suffix + ".corrupt")
+                    p.replace(bad)
+                    logger.warning(f"[AnimaData] 缓存损坏已隔离: {p.name} → {bad.name} ({jerr})")
+                except Exception:
+                    pass
+                return []
             items = data.get("items") if isinstance(data, dict) else data
             if not isinstance(items, list) or not items:
                 return []

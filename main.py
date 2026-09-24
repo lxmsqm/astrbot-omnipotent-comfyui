@@ -2096,6 +2096,14 @@ class WebUIMixin:
         if updates:
             self._save_local_config(updates)
         syncer = GiteeSync(self)
+        # 防重入：同步是长任务（全量 2-5 分钟），重复点击会并发拉 Gitee 浪费流量
+        import threading as _sync_threading
+        lock = getattr(self, "_gitee_sync_lock", None)
+        if lock is None:
+            lock = _sync_threading.Lock()
+            self._gitee_sync_lock = lock
+        if not lock.acquire(blocking=False):
+            return web.json_response({"ok": False, "error": "已有同步任务在进行中，请等它完成（约 2-5 分钟）"})
         loop = asyncio.get_running_loop()
         try:
             # 同步是纯阻塞 IO（urllib），丢线程池避免卡事件循环
@@ -2108,6 +2116,8 @@ class WebUIMixin:
                 ))
         except Exception as e:
             return web.json_response({"ok": False, "error": f"同步异常: {e}"})
+        finally:
+            lock.release()
         return web.json_response(res)
 
     async def _webui_data_layout(self, request):

@@ -5515,13 +5515,17 @@ function hideModal(id) {
 async function apiFetch(url, options = {}, silent = false) {
   try {
     const isFormData = options.body instanceof FormData;
-    // 添加 30 秒超时（AbortController），防止后端死锁导致永久挂起
+    // 添加超时（AbortController），防止后端死锁导致永久挂起
+    // v4.3.1: 支持调用方用 options.timeoutMs 覆盖（云端同步拉 28MB 缓存需 10 分钟，
+    // 旧版写死 30s 导致同步被浏览器掐断、前端报"未知错误"而后端实际成功）
+    const timeoutMs = Number(options.timeoutMs) || 30000;
+    const { timeoutMs: _omit, ...fetchOpts } = options;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const r = await fetch(url, {
       ...(isFormData ? {} : { headers: { 'Content-Type': 'application/json' } }),
       signal: controller.signal,
-      ...options,
+      ...fetchOpts,
     });
     clearTimeout(timeoutId);
     const text = await r.text();
@@ -6379,10 +6383,11 @@ async function runGiteeSync() {
   };
   if (tokenEl && tokenEl.value.trim()) body.gitee_token = tokenEl.value.trim();
   if (repoEl && repoEl.value.trim()) body.gitee_repo = repoEl.value.trim();
-  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（缓存约 1-3 分钟）'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（首次含缓存约 2-5 分钟，勿关页面）'; }
   if (stEl) stEl.textContent = '⏳ 正在从 Gitee 拉取词库与缓存…';
   try {
-    const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body) }, true);
+    // ★ 超时给足 12 分钟（28MB 缓存 + 手机网络）；旧版 30s 必超时
+    const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body), timeoutMs: 720000 }, true);
     if (r && r.ok) {
       if (stEl) stEl.textContent = `✅ 同步完成 ${r.finished_at || ''}（词库 ${r.words_ok} 个${r.cache_ok ? '，缓存 ' + r.cache_ok + ' 个' : ''}）`;
       toast(`✅ 云端数据库同步完成：词库 ${r.words_ok} 个` + (r.cache_ok ? `，缓存 ${r.cache_ok} 个` : ''), 'success', 5000);

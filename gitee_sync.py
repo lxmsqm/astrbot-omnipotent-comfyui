@@ -95,20 +95,35 @@ class GiteeSync:
         except Exception:
             return []
 
+    def _get_file_bytes(self, repo: str, repo_path: str, token: str):
+        """下载文件原始字节。
+        ★ 实测坑：contents 接口对大文件会静默截断 base64 content（28MB 文件只回
+          恰好 10MB 解码字节，且不报错）——所以先取元数据（size/sha），解码后
+          长度对不上就走 git/blobs 接口（无截断，实测可取完整 28MB）。"""
+        meta = json.loads(self._fetch(self._api_url(repo, repo_path, token)))
+        size = int(meta.get("size") or 0)
+        raw = base64.b64decode((meta.get("content") or "").replace("\n", ""))
+        if len(raw) != size:
+            sha = meta.get("sha")
+            if not sha:
+                raise RuntimeError(f"{repo_path}: 内容不完整且无 sha（无法走 blobs 兜底）")
+            logger.info(f"[GiteeSync] {repo_path} contents 截断({len(raw)}/{size})，改走 blobs API")
+            blob = json.loads(self._fetch(
+                f"{API_BASE}/{repo}/git/blobs/{sha}?access_token={token}", timeout=600))
+            raw = base64.b64decode((blob.get("content") or "").replace("\n", ""))
+        return raw, size
+
     def _download_file(self, repo: str, repo_path: str, token: str, dest: Path,
                        expect_size: int = 0) -> bool:
         """下载单个文件到 dest（先写 .tmp 再原子替换，防中断损坏）。
-        ★ 实测：私有仓库 raw 地址（/raw/master/...?access_token=）返回 403 Access denied，
-          必须走 API contents 接口拿 base64 content 再解码。"""
+        ★ 大小校验失败绝不落盘：旧版"仍写入"曾把 contents 截断的 10MB 坏缓存
+          存进用户目录，导致下次启动 JSON 解析失败回退 API 重拉（10-20 分钟）。"""
         try:
             dest.parent.mkdir(parents=True, exist_ok=True)
             tmp = dest.with_suffix(dest.suffix + ".tmp")
-            data = json.loads(self._fetch(self._api_url(repo, repo_path, token)))
-            content_b64 = data.get("content") or ""
-            # Gitee 对较大文件 content 可能带换行，先去掉再解码
-            raw = base64.b64decode(content_b64.replace("\n", ""))
+            raw, size = self._get_file_bytes(repo, repo_path, token)
             if expect_size and len(raw) != expect_size:
-                logger.warning(f"[GiteeSync] {repo_path} 大小不符({len(raw)}!={expect_size})，仍写入")
+                raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
             tmp.write_bytes(raw)
             tmp.replace(dest)
             return True
