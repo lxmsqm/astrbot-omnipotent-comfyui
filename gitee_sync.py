@@ -92,8 +92,8 @@ class GiteeSync:
         return f"{GITEE_API}/{repo}/contents/{_quote_path(path)}?{q}"
 
     def _fetch(self, url: str, binary: bool = False, retries: int = 3,
-               timeout: int = 300):
-        """GET 下载（重试 3 次，退避 5/10/15s）"""
+               timeout: int = 300, on_chunk=None):
+        """GET 下载（重试 3 次，退避 5/10/15s；on_chunk(n) 供大文件字节进度回调）"""
         last_err = None
         for attempt in range(1, retries + 1):
             try:
@@ -102,6 +102,15 @@ class GiteeSync:
                     "Accept": "*/*",
                 })
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    if binary and on_chunk:
+                        chunks = []
+                        while True:
+                            block = resp.read(256 * 1024)
+                            if not block:
+                                break
+                            chunks.append(block)
+                            on_chunk(len(block))
+                        return b"".join(chunks)
                     data = resp.read()
                 return data if binary else data.decode("utf-8")
             except Exception as e:
@@ -121,7 +130,7 @@ class GiteeSync:
 
     # ------------------------------------------------------------------
     def _download_token_mode(self, repo: str, repo_path: str, token: str,
-                             dest: Path, expect_size: int = 0) -> bool:
+                             dest: Path, expect_size: int = 0, on_chunk=None) -> bool:
         """令牌模式下载：contents API → 截断时 blobs 兜底 → 严格大小校验"""
         try:
             meta = json.loads(self._fetch(self._api_url(repo, repo_path, token)))
@@ -133,10 +142,12 @@ class GiteeSync:
                     raise RuntimeError(f"内容不完整且无 sha（无法走 blobs 兜底）")
                 logger.info(f"[GiteeSync] {repo_path} contents 截断({len(raw)}/{size})，改走 blobs API")
                 blob = json.loads(self._fetch(
-                    f"{API_BASE}/{repo}/git/blobs/{sha}?access_token={token}", timeout=600))
+                    f"{GITEE_API}/{repo}/git/blobs/{sha}?access_token={token}", timeout=600))
                 raw = base64.b64decode((blob.get("content") or "").replace("\n", ""))
             if expect_size and len(raw) != expect_size:
                 raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
+            if on_chunk and len(raw):
+                on_chunk(len(raw))
             self._atomic_write(dest, raw)
             return True
         except Exception as e:
@@ -144,10 +155,12 @@ class GiteeSync:
             return False
 
     def _download_anon_mode(self, repo: str, repo_path: str, dest: Path,
-                            expect_size: int = 0, provider: str = "gitee") -> bool:
+                            expect_size: int = 0, provider: str = "gitee",
+                            on_chunk=None) -> bool:
         """匿名模式下载：raw 直链（公开仓库）→ 大小校验（manifest 提供期望值）"""
         try:
-            raw = self._fetch(self._raw_url(repo, repo_path, provider), binary=True, timeout=600)
+            raw = self._fetch(self._raw_url(repo, repo_path, provider),
+                              binary=True, timeout=600, on_chunk=on_chunk)
             if expect_size and len(raw) != expect_size:
                 raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
             self._atomic_write(dest, raw)
@@ -186,6 +199,11 @@ class GiteeSync:
             from data_paths import data_dir_resolver, user_data_dir_resolver
 
         # ① 匿名模式可达性探测（github raw 国内直连可能被重置，重试已内置）
+        self._progress.clear()
+        self._progress.update({"phase": "downloading", "total_files": 0,
+                               "done_files": 0, "fail_files": 0,
+                               "total_bytes": 0, "downloaded_bytes": 0,
+                               "current_file": "manifest.json", "speed_bps": 0})
         if anon:
             try:
                 self._fetch(self._raw_url(repo, "manifest.json", provider), timeout=60)
@@ -255,10 +273,49 @@ class GiteeSync:
                     continue
                 cache_tasks.append((f"anima_cache/{fname}", user_dir / fname, f.get("size") or 0))
 
+        # ③.5 进度上报：总任务数与总字节数（供前端进度条/网速显示）
+        all_tasks = words_tasks + cache_tasks
+        total_files = len(all_tasks)
+        total_bytes = sum(sz for _, _, sz in all_tasks)
+        prog = self._progress
+        prog.update({
+            "total_files": total_files, "done_files": 0, "fail_files": 0,
+            "total_bytes": total_bytes, "downloaded_bytes": 0,
+            "current_file": "", "current_bytes": 0, "current_total": 0,
+            "speed_bps": 0, "phase": "downloading",
+        })
+
+        def _report_file_done(repo_path: str, n_bytes: int, ok: bool):
+            """单文件完成回调（带网速滑动窗口）"""
+            now = time.time()
+            prog["done_files"] += 1
+            if not ok:
+                prog["fail_files"] += 1
+            prog["downloaded_bytes"] += n_bytes
+            prog["current_file"] = repo_path
+            prog["current_bytes"] = 0
+            prog["current_total"] = 0
+            # 网速：最近 5 个完成事件的时间戳窗口（文件粒度，足够平滑）
+            hist = prog.setdefault("_speed_hist", [])
+            hist.append((now, n_bytes))
+            while len(hist) > 6:
+                hist.pop(0)
+            if len(hist) >= 2:
+                dt = hist[-1][0] - hist[0][0]
+                if dt > 0.2:
+                    prog["speed_bps"] = sum(b for _, b in hist[1:]) / dt
+
+        def _report_chunk(n_bytes: int):
+            """单文件内字节进度（大文件用；网速按整文件计，这里只推进度）"""
+            prog["current_bytes"] = prog.get("current_bytes", 0) + n_bytes
+
         # ④ 下载词库 → 插件内 data/
         for rp, dest, size in words_tasks:
-            ok = (self._download_anon_mode(repo, rp, dest, size, provider) if anon
-                  else self._download_token_mode(repo, rp, token, dest, size))
+            prog["current_file"] = rp
+            prog["current_total"] = size
+            ok = (self._download_anon_mode(repo, rp, dest, size, provider, _report_chunk) if anon
+                  else self._download_token_mode(repo, rp, token, dest, size, _report_chunk))
+            _report_file_done(rp, size if ok else 0, ok)
             if ok:
                 res["words_ok"] += 1
             else:
@@ -270,9 +327,13 @@ class GiteeSync:
             if dest.exists() and size and dest.stat().st_size == size:
                 logger.info(f"[GiteeSync] {dest.name} 本地已是最新，跳过")
                 res["cache_ok"] += 1
+                _report_file_done(rp, 0, True)  # 跳过也计入完成数（0 字节）
                 continue
-            ok = (self._download_anon_mode(repo, rp, dest, size, provider) if anon
-                  else self._download_token_mode(repo, rp, token, dest, size))
+            prog["current_file"] = rp
+            prog["current_total"] = size
+            ok = (self._download_anon_mode(repo, rp, dest, size, provider, _report_chunk) if anon
+                  else self._download_token_mode(repo, rp, token, dest, size, _report_chunk))
+            _report_file_done(rp, size if ok else 0, ok)
             if ok:
                 res["cache_ok"] += 1
             else:
@@ -284,10 +345,46 @@ class GiteeSync:
                      and (res["words_ok"] + res["cache_ok"]) > 0)
         res["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         self._write_state(res)
+        prog["phase"] = "done" if res["ok"] else "error"
+        prog["result"] = res
 
         if res["words_ok"]:
             self._reload_after_sync()
         return res
+
+    # ------------------------------------------------------------------
+    # 进度上报（v4.3.7：前端轮询 /api/gitee-sync/progress 显示进度条+网速）
+    # ------------------------------------------------------------------
+    _progress: dict = {}
+    """类级共享：{phase, total_files, done_files, fail_files, total_bytes,
+    downloaded_bytes, current_file, current_bytes, current_total, speed_bps}
+    phase: idle | downloading | reloading | done | error"""
+
+    def progress(self) -> dict:
+        """当前进度快照（前端轮询用；含 phase 与派生的百分比）"""
+        p = dict(self._progress)
+        phase = p.get("phase", "idle")
+        total = p.get("total_files") or 0
+        done = p.get("done_files") or 0
+        if phase == "idle":
+            p["percent"] = 0
+        elif phase in ("done", "error"):
+            p["percent"] = 100
+        else:
+            # 字节权重优先（大缓存占比真实），无字节数时退回文件数
+            tb = p.get("total_bytes") or 0
+            db = p.get("downloaded_bytes") or 0
+            if tb > 0 and db > 0:
+                p["percent"] = min(99, int(db * 100 / tb))
+            elif total > 0:
+                p["percent"] = min(99, int(done * 100 / total))
+            else:
+                p["percent"] = 0
+        p.pop("_speed_hist", None)  # 内部滑动窗口不外泄
+        return p
+
+    def is_running(self) -> bool:
+        return self._progress.get("phase") in ("downloading", "reloading")
 
     def _reload_after_sync(self):
         """同步词库后刷新内存里的魔导书数据（不重启也能用上新城库）"""

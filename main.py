@@ -1807,9 +1807,10 @@ class WebUIMixin:
         }))
         app.router.add_post('/api/config', self._webui_save_config)
         app.router.add_post('/api/generate', self._webui_generate)
-        # v4.3.0 云端数据库同步（Gitee 私有仓库 words/ + anima_cache/）
+        # v4.3.0 云端数据库同步（GitHub 公开镜像 words/ + anima_cache/）
         app.router.add_get('/api/gitee-sync/status', self._webui_gitee_sync_status)
         app.router.add_post('/api/gitee-sync/run', self._webui_gitee_sync_run)
+        app.router.add_get('/api/gitee-sync/progress', self._webui_gitee_sync_progress)
         # v4.3.0 数据分离状态（外部数据目录布局/插件体积）
         app.router.add_get('/api/data-layout', self._webui_data_layout)
         app.router.add_post('/api/deploy-mode', self._webui_set_deploy_mode)
@@ -2061,18 +2062,21 @@ class WebUIMixin:
         }
 
     async def _webui_gitee_sync_status(self, request):
-        """同步状态（上次结果 + 当前配置掩码 + 数据分离布局）"""
+        """同步状态（上次结果 + 当前配置掩码 + 数据分离布局 + 实时进度）"""
         from .gitee_sync import GiteeSync, DEFAULT_REPO
         try:
-            st = GiteeSync(self).last_state()
+            syncer = GiteeSync(self)
+            st = syncer.last_state()
+            prog = syncer.progress()
         except Exception:
             st = {}
+            prog = {}
         cfg = self._get_gitee_cfg()
         token = cfg.get("gitee_token", "")
         return web.json_response({
             "ok": True,
             "last": st,
-            # v4.3.2: 公开仓库可匿名同步，token 只是私有仓库才需要
+            "progress": prog,
             "configured": True,
             "token_masked": (token[:6] + "…" + token[-4:]) if len(token) > 12 else ("已填写" if token else "未填写(公开仓库无需)"),
             "repo": cfg.get("gitee_repo") or DEFAULT_REPO,
@@ -2080,6 +2084,15 @@ class WebUIMixin:
             "sync_characters": cfg.get("sync_characters", True),
             "layout": _data_migration_status(),
         })
+
+    async def _webui_gitee_sync_progress(self, request):
+        """v4.3.7 同步实时进度（前端 1s 轮询）：文件数/字节数/当前文件/网速"""
+        from .gitee_sync import GiteeSync
+        try:
+            prog = GiteeSync(self).progress()
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e), "phase": "idle"})
+        return web.json_response({"ok": True, "progress": prog})
 
     async def _webui_gitee_sync_run(self, request):
         """执行云端同步：POST {sync_artists?, sync_characters?}
@@ -2103,29 +2116,32 @@ class WebUIMixin:
         if updates:
             self._save_local_config(updates)
         syncer = GiteeSync(self)
-        # 防重入：同步是长任务（全量 2-5 分钟），重复点击会并发拉 Gitee 浪费流量
+        # 防重入 + 后台执行（v4.3.7）：立即返回，前端轮询 /api/gitee-sync/progress
+        # 旧版同步阻塞请求直到完成——前端 30s 超时掐断过一次（v4.3.1 教训），
+        # 且无法显示进度；现在跑线程池，进度走独立轮询端点
         import threading as _sync_threading
         lock = getattr(self, "_gitee_sync_lock", None)
         if lock is None:
             lock = _sync_threading.Lock()
             self._gitee_sync_lock = lock
         if not lock.acquire(blocking=False):
-            return web.json_response({"ok": False, "error": "已有同步任务在进行中，请等它完成（约 2-5 分钟）"})
+            return web.json_response({"ok": False, "error": "已有同步任务在进行中，请看进度条"})
         loop = asyncio.get_running_loop()
-        try:
-            # 同步是纯阻塞 IO（urllib），丢线程池避免卡事件循环
-            res = await loop.run_in_executor(
-                None,
-                lambda: syncer.sync(
+
+        def _run_sync():
+            try:
+                return syncer.sync(
                     token, repo,
-                    include_artists=bool(updates.get("sync_artists", cfg.get("sync_artists", True))),
-                    include_characters=bool(updates.get("sync_characters", cfg.get("sync_characters", True))),
-                ))
-        except Exception as e:
-            return web.json_response({"ok": False, "error": f"同步异常: {e}"})
-        finally:
-            lock.release()
-        return web.json_response(res)
+                    include_artists=bool(cfg.get("sync_artists", True)),
+                    include_characters=bool(cfg.get("sync_characters", True)),
+                )
+            finally:
+                lock.release()
+
+        # 后台线程执行（不 await），进度由 /api/gitee-sync/progress 暴露
+        loop.run_in_executor(None, _run_sync)
+        return web.json_response({"ok": True, "started": True,
+                                  "progress": syncer.progress()})
 
     async def _webui_data_layout(self, request):
         """数据分离布局状态（插件体积/外部目录/各目录实际生效位置）"""

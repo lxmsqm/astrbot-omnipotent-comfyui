@@ -4741,6 +4741,12 @@ textarea:focus-visible,
               <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
               <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
             </div>
+            <div id="gitee_progress_box" style="display:none;margin-top:4px">
+              <div style="height:8px;border-radius:4px;background:var(--card-border,#333);overflow:hidden">
+                <div id="gitee_progress_bar" style="height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--primary-2,#7c6cff));transition:width .4s"></div>
+              </div>
+              <div id="gitee_progress_text" style="font-size:10px;color:var(--text-sub);margin-top:3px;word-break:break-all"></div>
+            </div>
             <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从官方 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，开箱即用无需任何配置；缓存体积大，仅勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
           </div>
 
@@ -6365,25 +6371,57 @@ async function runGiteeSync() {
   const stEl = document.getElementById('gitee_sync_state');
   const taEl = document.getElementById('cfg_sync_artists');
   const tcEl = document.getElementById('cfg_sync_characters');
+  const boxEl = document.getElementById('gitee_progress_box');
+  const barEl = document.getElementById('gitee_progress_bar');
+  const txtEl = document.getElementById('gitee_progress_text');
   // v4.3.6: 数据源固定为内置 GitHub 公开镜像，前端不再传 repo/token
   const body = {
     sync_artists: taEl ? !!taEl.checked : true,
     sync_characters: tcEl ? !!tcEl.checked : true,
   };
-  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…（首次含缓存约 2-5 分钟，勿关页面）'; }
-  if (stEl) stEl.textContent = '⏳ 正在从官方镜像拉取词库与缓存…';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<svg class="icon-sm" aria-hidden="true"><use href="#icon-loader"/></svg> 同步中…'; }
+  if (boxEl) boxEl.style.display = '';
+  if (barEl) barEl.style.width = '0%';
+  if (stEl) stEl.textContent = '';
   try {
-    // ★ 超时给足 12 分钟（28MB 缓存 + 手机网络）；旧版 30s 必超时
-    const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body), timeoutMs: 720000 }, true);
-    if (r && r.ok) {
-      if (stEl) stEl.textContent = `✅ 同步完成 ${r.finished_at || ''}（词库 ${r.words_ok} 个${r.cache_ok ? '，缓存 ' + r.cache_ok + ' 个' : ''}）`;
-      toast(`✅ 云端数据库同步完成：词库 ${r.words_ok} 个` + (r.cache_ok ? `，缓存 ${r.cache_ok} 个` : ''), 'success', 5000);
+    // v4.3.7: run 立即返回，后台线程执行；前端 1s 轮询进度
+    const r = await apiFetch('/api/gitee-sync/run', { method: 'POST', body: JSON.stringify(body) }, true);
+    if (!r || !r.ok) {
+      const msg = (r && r.error) || '无法启动同步';
+      if (boxEl) boxEl.style.display = 'none';
+      if (stEl) stEl.textContent = '❌ ' + msg;
+      toast('❌ ' + msg, 'error', 8000);
+      return;
+    }
+    const fmtMB = (b) => b >= 1048576 ? (b / 1048576).toFixed(1) + 'MB' : Math.round(b / 1024) + 'KB';
+    let lastResult = null;
+    while (true) {
+      await new Promise(res => setTimeout(res, 1000));
+      let p = null;
+      try { p = (await apiFetch('/api/gitee-sync/progress', {}, true))?.progress; } catch (e) {}
+      if (!p) continue;
+      const pct = p.percent ?? 0;
+      if (barEl) barEl.style.width = pct + '%';
+      const speed = p.speed_bps ? ' · ' + fmtMB(p.speed_bps) + '/s' : '';
+      const cur = p.current_file ? p.current_file.split('/').pop() : '';
+      const curSize = p.current_total ? ` (${fmtMB(p.current_bytes || 0)}/${fmtMB(p.current_total)})` : '';
+      if (txtEl) txtEl.textContent = `${pct}% · ${p.done_files || 0}/${p.total_files || 0} 个文件 · 累计 ${fmtMB(p.downloaded_bytes || 0)}${speed}${cur ? ' · ' + cur + curSize : ''}`;
+      if (p.phase === 'done' || p.phase === 'error') { lastResult = p.result || { ok: p.phase === 'done' }; break; }
+      if (p.phase === 'idle') break;
+    }
+    const r2 = lastResult || {};
+    if (r2.ok) {
+      if (barEl) barEl.style.width = '100%';
+      if (stEl) stEl.textContent = `✅ 同步完成 ${r2.finished_at || ''}（词库 ${r2.words_ok} 个${r2.cache_ok ? '，缓存 ' + r2.cache_ok + ' 个' : ''}）`;
+      toast(`✅ 云端数据库同步完成：词库 ${r2.words_ok} 个` + (r2.cache_ok ? `，缓存 ${r2.cache_ok} 个` : ''), 'success', 5000);
       // 刷新魔导书数据源列表（词库已重载）
       if (typeof loadGrimoireData === 'function') loadGrimoireData().catch(() => {});
+      setTimeout(() => { if (boxEl) boxEl.style.display = 'none'; }, 4000);
     } else {
-      const msg = (r && (r.error || (r.errors && r.errors.join('; ')))) || '未知错误';
+      const msg = (r2.error || (r2.errors && r2.errors.join('; '))) || '同步失败';
       if (stEl) stEl.textContent = '❌ 同步失败';
       toast('❌ 同步失败: ' + msg, 'error', 8000);
+      if (boxEl) boxEl.style.display = 'none';
     }
   } catch (e) {
     if (stEl) stEl.textContent = '❌ 同步异常';
