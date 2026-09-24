@@ -2044,12 +2044,14 @@ class WebUIMixin:
     # ── v4.3.0 云端数据库同步（Gitee 私有仓库） ─────────────────────────
     def _get_gitee_cfg(self) -> dict:
         """从本地配置读 Gitee 同步参数（token/repo/缓存下载开关）
-        v4.3.3: 默认仓库切换到公开镜像 -pub（匿名拉取）；用户配置过的 repo 值优先"""
-        from .gitee_sync import GiteeSync, DEFAULT_REPO
+        v4.3.4: 默认源切换 GitHub 公开镜像（匿名）；旧 gitee repo 配置值全部迁移；
+        gitee_repo 配置键保留兼容，新值形如 owner/repo（GitHub 或 Gitee 均可）"""
+        from .gitee_sync import DEFAULT_REPO
         lc = self._load_local_config()
         saved_repo = str(lc.get("gitee_repo", "") or "").strip()
-        # 旧默认值（被 RAW 标记的私有仓库）不再作为保存值使用 → 用新默认覆盖
-        if saved_repo in ("heigulin/astrbot-comfyui-data",):
+        # 历史默认值（gitee 私有/pub 仓库）→ 全部迁到 GitHub 镜像
+        if saved_repo in ("heigulin/astrbot-comfyui-data",
+                          "heigulin/astrbot-comfyui-data-pub"):
             saved_repo = ""
         return {
             "gitee_token": lc.get("gitee_token", ""),

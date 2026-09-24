@@ -32,11 +32,15 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REPO = "heigulin/astrbot-comfyui-data-pub"
-"""v4.3.3 起默认指向公开镜像仓库（匿名拉取）。
-原仓库 heigulin/astrbot-comfyui-data 被 Gitee 打「涉嫌外链滥用(RAW)」标记禁止转公开，
-保留作私有备份；pub 仓库由用户绑定手机后转公开。"""
-API_BASE = "https://gitee.com/api/v5/repos"
+DEFAULT_REPO = "lxmsqm/astrbot-comfyui-data"
+DEFAULT_PROVIDER = "github"
+"""v4.3.4 起默认走 GitHub 公开镜像（lxmsqm/astrbot-comfyui-data，匿名 raw）。
+Gitee 通道废弃原因：原仓库被 Gitee 打「涉嫌外链滥用(RAW)」标记禁止转公开，
+新建公开仓库也被帐号级限制拦截（要求绑手机+复审），公开路线在 Gitee 走不通。
+GitHub raw 对国内直连不稳定，下载失败会自动重试，必要时用户可自行挂代理；
+令牌模式保留（gitee 私有仓库个人备份仍可用）。"""
+GITEE_API = "https://gitee.com/api/v5/repos"
+GH_RAW = "https://raw.githubusercontent.com"
 
 
 def _quote_path(p: str) -> str:
@@ -73,17 +77,19 @@ class GiteeSync:
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _raw_url(repo: str, path: str) -> str:
-        """raw 直链（公开仓库免认证；私有仓库 403）"""
+    def _raw_url(repo: str, path: str, provider: str = "gitee") -> str:
+        """raw 直链（公开仓库免认证；gitee 私有仓库 403）"""
+        if provider == "github":
+            return f"{GH_RAW}/{repo}/master/{_quote_path(path)}"
         return f"https://gitee.com/{repo}/raw/master/{_quote_path(path)}"
 
     @staticmethod
     def _api_url(repo: str, path: str, token: str) -> str:
-        """contents API（token 可为空 → 匿名，公开仓库可用）"""
+        """contents API（gitee 专用；token 可为空 → 匿名，公开仓库可用）"""
         q = "ref=master"
         if token:
             q = f"access_token={token}&ref=master"
-        return f"{API_BASE}/{repo}/contents/{_quote_path(path)}?{q}"
+        return f"{GITEE_API}/{repo}/contents/{_quote_path(path)}?{q}"
 
     def _fetch(self, url: str, binary: bool = False, retries: int = 3,
                timeout: int = 300):
@@ -138,10 +144,10 @@ class GiteeSync:
             return False
 
     def _download_anon_mode(self, repo: str, repo_path: str, dest: Path,
-                            expect_size: int = 0) -> bool:
+                            expect_size: int = 0, provider: str = "gitee") -> bool:
         """匿名模式下载：raw 直链（公开仓库）→ 大小校验（manifest 提供期望值）"""
         try:
-            raw = self._fetch(self._raw_url(repo, repo_path), binary=True, timeout=600)
+            raw = self._fetch(self._raw_url(repo, repo_path, provider), binary=True, timeout=600)
             if expect_size and len(raw) != expect_size:
                 raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
             self._atomic_write(dest, raw)
@@ -160,13 +166,16 @@ class GiteeSync:
 
     # ------------------------------------------------------------------
     def sync(self, token: str, repo: str = DEFAULT_REPO,
-             include_artists: bool = True, include_characters: bool = True) -> dict:
+             include_artists: bool = True, include_characters: bool = True,
+             provider: str = DEFAULT_PROVIDER) -> dict:
         """执行同步。token 为空 → 匿名模式（要求仓库已公开）。
+        provider: "github"（默认，匿名 raw）/ "gitee"（匿名 raw 或令牌 contents）。
         返回 {ok, words_ok, words_fail, cache_ok, cache_fail, updated_at, errors[], mode}"""
         token = (token or "").strip()
         repo = (repo or "").strip() or DEFAULT_REPO
+        provider = (provider or DEFAULT_PROVIDER).strip().lower()
         anon = not token
-        res = {"ok": False, "mode": "anon(公开仓库)" if anon else "token(认证)",
+        res = {"ok": False, "mode": f"anon@{provider}" if anon else f"token@{provider}",
                "words_ok": 0, "words_fail": 0, "cache_ok": 0,
                "cache_fail": 0, "updated_at": "", "repo": repo,
                "errors": [], "started_at": time.strftime("%Y-%m-%d %H:%M:%S")}
@@ -176,24 +185,31 @@ class GiteeSync:
         except ImportError:
             from data_paths import data_dir_resolver, user_data_dir_resolver
 
-        # ① 先做一次可达性探测：匿名模式要求仓库已公开
+        # ① 匿名模式可达性探测（github raw 国内直连可能被重置，重试已内置）
         if anon:
             try:
-                self._fetch(self._raw_url(repo, "manifest.json"), timeout=60)
+                self._fetch(self._raw_url(repo, "manifest.json", provider), timeout=60)
             except Exception as e:
-                return {"ok": False, "mode": res["mode"], "repo": repo, "error":
-                        "仓库无法匿名访问（可能未公开或不存在）。请在 Gitee 仓库「管理→基本信息→开源」"
-                        "设为公开；或回 WebUI 填写私人令牌（私有仓库模式）。"}
+                hint = ("GitHub raw 拉取失败（国内网络对 raw.githubusercontent.com 不稳定，"
+                        "可稍后重试或配置系统代理）；仓库 " + repo)
+                if provider == "gitee":
+                    hint = ("仓库无法匿名访问（可能未公开或不存在）。请在 Gitee 仓库"
+                            "「管理→基本信息→开源」设为公开；或回 WebUI 填写私人令牌。")
+                return {"ok": False, "mode": res["mode"], "repo": repo,
+                        "error": f"{hint}｜最后错误: {e}"}
 
         # ② manifest（匿名模式已探测过一次，这里带清单解析）
         manifest_files = {}
         try:
             if anon:
-                manifest = json.loads(self._fetch(self._raw_url(repo, "manifest.json"), timeout=60))
-            else:
+                manifest = json.loads(self._fetch(self._raw_url(repo, "manifest.json", provider), timeout=60))
+            elif provider == "gitee":
                 _m = json.loads(self._fetch(self._api_url(repo, "manifest.json", token)))
                 manifest = json.loads(base64.b64decode(
                     (_m.get("content") or "").replace("\n", "")).decode("utf-8"))
+            else:
+                manifest = json.loads(self._fetch(
+                    self._raw_url(repo, "manifest.json", "github"), timeout=60))
             res["updated_at"] = manifest.get("updated_at", "")
             manifest_files = manifest.get("files") or {}
         except Exception as e:
@@ -241,7 +257,7 @@ class GiteeSync:
 
         # ④ 下载词库 → 插件内 data/
         for rp, dest, size in words_tasks:
-            ok = (self._download_anon_mode(repo, rp, dest, size) if anon
+            ok = (self._download_anon_mode(repo, rp, dest, size, provider) if anon
                   else self._download_token_mode(repo, rp, token, dest, size))
             if ok:
                 res["words_ok"] += 1
@@ -255,7 +271,7 @@ class GiteeSync:
                 logger.info(f"[GiteeSync] {dest.name} 本地已是最新，跳过")
                 res["cache_ok"] += 1
                 continue
-            ok = (self._download_anon_mode(repo, rp, dest, size) if anon
+            ok = (self._download_anon_mode(repo, rp, dest, size, provider) if anon
                   else self._download_token_mode(repo, rp, token, dest, size))
             if ok:
                 res["cache_ok"] += 1
