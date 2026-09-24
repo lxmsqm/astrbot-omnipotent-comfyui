@@ -2064,8 +2064,9 @@ class WebUIMixin:
         return web.json_response({
             "ok": True,
             "last": st,
-            "configured": bool(token),
-            "token_masked": (token[:6] + "…" + token[-4:]) if len(token) > 12 else ("已填写" if token else ""),
+            # v4.3.2: 公开仓库可匿名同步，token 只是私有仓库才需要
+            "configured": True,
+            "token_masked": (token[:6] + "…" + token[-4:]) if len(token) > 12 else ("已填写" if token else "未填写(公开仓库无需)"),
             "repo": cfg.get("gitee_repo") or DEFAULT_REPO,
             "sync_artists": cfg.get("sync_artists", True),
             "sync_characters": cfg.get("sync_characters", True),

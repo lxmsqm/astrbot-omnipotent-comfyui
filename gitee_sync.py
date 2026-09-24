@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-gitee_sync.py — 从 Gitee 私有仓库拉取云端词库/缓存（v4.3.0「📥 同步云端数据库」后端）
+gitee_sync.py — 从 Gitee 仓库拉取云端词库/缓存（v4.3.2「📥 同步云端数据库」后端）
 
 仓库布局（由 PC 端 gitee_upload_v2.py 上传生成）：
   words/<大分类>/<子分类>.json   ← 39 个词库（含 k2/）
@@ -8,13 +8,18 @@ gitee_sync.py — 从 Gitee 私有仓库拉取云端词库/缓存（v4.3.0「�
   anima_cache/*.json            ← 角色/画师大缓存（按需下载）
   manifest.json                 ← {updated_at, files:{path:size}, ...}
 
-下载规则：
-  - words/ 下的词库 → 覆盖到插件内 data/（词库是插件数据源，必须在插件内）
-  - anima_cache/ 下的缓存 → 只下载 config 里勾选的（默认两个都下）→ 外部 user/ 目录
-  - 单文件 GET raw 下载（私有仓库走 access_token 参数），失败重试 3 次
+两种模式（v4.3.2 起）：
+  ★ 匿名模式（无 token，公开仓库）：
+    - 下载/清单全部走 raw 直链（raw/master/...），不占 API 限额
+    - 文件清单优先读 manifest.json；manifest 缺失时回退 contents API 匿名列举
+    - 仓库若仍是私有 → raw 返回 403，报错提示「设为开源或填令牌」
+  ★ 令牌模式（有 token，私有/公开均可）：
+    - 走 api/v5/contents 接口（base64 content），大文件截断时自动改 git/blobs
 
-用法（WebUI API 调）：
-  GiteeSync(plugin).sync(token, repo, include_cache) → dict 结果
+实测坑（勿回退）：
+  - 私有仓库 raw 地址带 token 也 403（Access denied）→ 私有必须走 contents API
+  - contents 接口对大文件静默截断 base64 content 到恰好 10MB → 必须核对 size，
+    不一致走 git/blobs；大小校验失败绝不落盘
 """
 
 import base64
@@ -37,7 +42,7 @@ def _quote_path(p: str) -> str:
 
 
 class GiteeSync:
-    """云端数据库同步器（一次实例只跑一次 sync；状态存外部数据目录）"""
+    """云端数据库同步器（状态存用户数据目录 gitee_sync.json）"""
 
     def __init__(self, plugin):
         self.plugin = plugin  # ComfyUILocalPlugin 实例（取 user_data_dir / 刷数据）
@@ -65,10 +70,20 @@ class GiteeSync:
 
     # ------------------------------------------------------------------
     @staticmethod
-    def _api_url(repo: str, path: str, token: str) -> str:
-        return f"{API_BASE}/{repo}/contents/{_quote_path(path)}?access_token={token}&ref=master"
+    def _raw_url(repo: str, path: str) -> str:
+        """raw 直链（公开仓库免认证；私有仓库 403）"""
+        return f"https://gitee.com/{repo}/raw/master/{_quote_path(path)}"
 
-    def _fetch(self, url: str, binary: bool = False, retries: int = 3, timeout: int = 300):
+    @staticmethod
+    def _api_url(repo: str, path: str, token: str) -> str:
+        """contents API（token 可为空 → 匿名，公开仓库可用）"""
+        q = "ref=master"
+        if token:
+            q = f"access_token={token}&ref=master"
+        return f"{API_BASE}/{repo}/contents/{_quote_path(path)}?{q}"
+
+    def _fetch(self, url: str, binary: bool = False, retries: int = 3,
+               timeout: int = 300):
         """GET 下载（重试 3 次，退避 5/10/15s）"""
         last_err = None
         for attempt in range(1, retries + 1):
@@ -88,74 +103,96 @@ class GiteeSync:
         raise last_err
 
     def _list_dir(self, repo: str, path: str, token: str) -> list:
-        """列目录 → [{name,type,size}]；目录不存在返回 []"""
+        """contents API 列目录 → [{name,type,size}]；失败返回 []"""
         try:
             data = json.loads(self._fetch(self._api_url(repo, path, token)))
             return data if isinstance(data, list) else []
         except Exception:
             return []
 
-    def _get_file_bytes(self, repo: str, repo_path: str, token: str):
-        """下载文件原始字节。
-        ★ 实测坑：contents 接口对大文件会静默截断 base64 content（28MB 文件只回
-          恰好 10MB 解码字节，且不报错）——所以先取元数据（size/sha），解码后
-          长度对不上就走 git/blobs 接口（无截断，实测可取完整 28MB）。"""
-        meta = json.loads(self._fetch(self._api_url(repo, repo_path, token)))
-        size = int(meta.get("size") or 0)
-        raw = base64.b64decode((meta.get("content") or "").replace("\n", ""))
-        if len(raw) != size:
-            sha = meta.get("sha")
-            if not sha:
-                raise RuntimeError(f"{repo_path}: 内容不完整且无 sha（无法走 blobs 兜底）")
-            logger.info(f"[GiteeSync] {repo_path} contents 截断({len(raw)}/{size})，改走 blobs API")
-            blob = json.loads(self._fetch(
-                f"{API_BASE}/{repo}/git/blobs/{sha}?access_token={token}", timeout=600))
-            raw = base64.b64decode((blob.get("content") or "").replace("\n", ""))
-        return raw, size
-
-    def _download_file(self, repo: str, repo_path: str, token: str, dest: Path,
-                       expect_size: int = 0) -> bool:
-        """下载单个文件到 dest（先写 .tmp 再原子替换，防中断损坏）。
-        ★ 大小校验失败绝不落盘：旧版"仍写入"曾把 contents 截断的 10MB 坏缓存
-          存进用户目录，导致下次启动 JSON 解析失败回退 API 重拉（10-20 分钟）。"""
+    # ------------------------------------------------------------------
+    def _download_token_mode(self, repo: str, repo_path: str, token: str,
+                             dest: Path, expect_size: int = 0) -> bool:
+        """令牌模式下载：contents API → 截断时 blobs 兜底 → 严格大小校验"""
         try:
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            tmp = dest.with_suffix(dest.suffix + ".tmp")
-            raw, size = self._get_file_bytes(repo, repo_path, token)
+            meta = json.loads(self._fetch(self._api_url(repo, repo_path, token)))
+            size = int(meta.get("size") or 0)
+            raw = base64.b64decode((meta.get("content") or "").replace("\n", ""))
+            if len(raw) != size:
+                sha = meta.get("sha")
+                if not sha:
+                    raise RuntimeError(f"内容不完整且无 sha（无法走 blobs 兜底）")
+                logger.info(f"[GiteeSync] {repo_path} contents 截断({len(raw)}/{size})，改走 blobs API")
+                blob = json.loads(self._fetch(
+                    f"{API_BASE}/{repo}/git/blobs/{sha}?access_token={token}", timeout=600))
+                raw = base64.b64decode((blob.get("content") or "").replace("\n", ""))
             if expect_size and len(raw) != expect_size:
                 raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
-            tmp.write_bytes(raw)
-            tmp.replace(dest)
+            self._atomic_write(dest, raw)
             return True
         except Exception as e:
             logger.warning(f"[GiteeSync] 下载 {repo_path} 失败: {e}")
             return False
 
+    def _download_anon_mode(self, repo: str, repo_path: str, dest: Path,
+                            expect_size: int = 0) -> bool:
+        """匿名模式下载：raw 直链（公开仓库）→ 大小校验（manifest 提供期望值）"""
+        try:
+            raw = self._fetch(self._raw_url(repo, repo_path), binary=True, timeout=600)
+            if expect_size and len(raw) != expect_size:
+                raise RuntimeError(f"大小校验失败(得到 {len(raw)}B, 期望 {expect_size}B)")
+            self._atomic_write(dest, raw)
+            return True
+        except Exception as e:
+            logger.warning(f"[GiteeSync] 下载 {repo_path} 失败: {e}")
+            return False
+
+    @staticmethod
+    def _atomic_write(dest: Path, raw: bytes):
+        """先写 .tmp 再原子替换（防中断损坏）；写入前确保目录存在"""
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
+        tmp.write_bytes(raw)
+        tmp.replace(dest)
+
     # ------------------------------------------------------------------
     def sync(self, token: str, repo: str = DEFAULT_REPO,
              include_artists: bool = True, include_characters: bool = True) -> dict:
-        """执行同步。返回 {ok, words_ok, words_fail, cache_ok, cache_fail, updated_at, errors[]}"""
+        """执行同步。token 为空 → 匿名模式（要求仓库已公开）。
+        返回 {ok, words_ok, words_fail, cache_ok, cache_fail, updated_at, errors[], mode}"""
         token = (token or "").strip()
-        if not token:
-            return {"ok": False, "error": "未填写 Gitee 私人令牌（gitee_token）"}
         repo = (repo or "").strip() or DEFAULT_REPO
-        res = {"ok": False, "words_ok": 0, "words_fail": 0, "cache_ok": 0,
+        anon = not token
+        res = {"ok": False, "mode": "anon(公开仓库)" if anon else "token(认证)",
+               "words_ok": 0, "words_fail": 0, "cache_ok": 0,
                "cache_fail": 0, "updated_at": "", "repo": repo,
                "errors": [], "started_at": time.strftime("%Y-%m-%d %H:%M:%S")}
 
         try:
             from .data_paths import data_dir_resolver, user_data_dir_resolver
         except ImportError:
-            # 独立脚本/导入校验场景（非包上下文）回退直接导入
             from data_paths import data_dir_resolver, user_data_dir_resolver
 
-        # 1) manifest（拿文件清单与更新时间；没有也能继续）
-        manifest = {}
+        # ① 先做一次可达性探测：匿名模式要求仓库已公开
+        if anon:
+            try:
+                self._fetch(self._raw_url(repo, "manifest.json"), timeout=60)
+            except Exception as e:
+                return {"ok": False, "mode": res["mode"], "repo": repo, "error":
+                        "仓库无法匿名访问（可能未公开或不存在）。请在 Gitee 仓库「管理→基本信息→开源」"
+                        "设为公开；或回 WebUI 填写私人令牌（私有仓库模式）。"}
+
+        # ② manifest（匿名模式已探测过一次，这里带清单解析）
+        manifest_files = {}
         try:
-            _m = json.loads(self._fetch(self._api_url(repo, "manifest.json", token)))
-            manifest = json.loads(base64.b64decode(
-                (_m.get("content") or "").replace("\n", "")).decode("utf-8"))
+            if anon:
+                manifest = json.loads(self._fetch(self._raw_url(repo, "manifest.json"), timeout=60))
+            else:
+                _m = json.loads(self._fetch(self._api_url(repo, "manifest.json", token)))
+                manifest = json.loads(base64.b64decode(
+                    (_m.get("content") or "").replace("\n", "")).decode("utf-8"))
             res["updated_at"] = manifest.get("updated_at", "")
+            manifest_files = manifest.get("files") or {}
         except Exception as e:
             res["errors"].append(f"manifest.json 读取失败(继续用目录列举): {e}")
 
@@ -165,47 +202,65 @@ class GiteeSync:
         if include_characters:
             want_cache.add("anima_characters_cache.json")
 
-        # 2) 遍历 words/ 下载词库 → 插件内 data/
         data_dir = Path(data_dir_resolver())
-        top_dirs = self._list_dir(repo, "words", token)
-        words_tasks = []  # (repo_path, dest, expect_size)
-        for entry in top_dirs:
-            if entry.get("type") != "dir":
-                continue
-            dname = entry.get("name", "")
-            for f in self._list_dir(repo, f"words/{dname}", token):
-                if f.get("type") != "file" or not str(f.get("name", "")).endswith(".json"):
+        user_dir = Path(user_data_dir_resolver())
+
+        # ③ 组任务清单：优先 manifest（匿名零列举成本），否则 contents 列举
+        words_tasks = []   # (repo_path, dest, expect_size)
+        cache_tasks = []   # (repo_path, dest, expect_size)
+        if manifest_files:
+            for rp, sz in manifest_files.items():
+                sz = int(sz or 0)
+                if rp.startswith("words/"):
+                    # words/ 下的相对结构即插件 data/ 下的结构（含 k2/）
+                    rel = rp[len("words/"):]
+                    words_tasks.append((rp, data_dir / rel, sz))
+                elif rp.startswith("anima_cache/"):
+                    fname = rp[len("anima_cache/"):]
+                    if fname in want_cache:
+                        cache_tasks.append((rp, user_dir / fname, sz))
+        else:
+            # 回退：contents 列举（匿名模式下此调用不占多少限额：13 个目录）
+            for entry in self._list_dir(repo, "words", token):
+                if entry.get("type") != "dir":
                     continue
-                dest = (data_dir / "k2" if dname == "k2" else data_dir / dname) / f["name"]
-                words_tasks.append((f"words/{dname}/{f['name']}", dest, f.get("size") or 0))
+                dname = entry.get("name", "")
+                for f in self._list_dir(repo, f"words/{dname}", token):
+                    if f.get("type") != "file" or not str(f.get("name", "")).endswith(".json"):
+                        continue
+                    rel = f"{dname}/{f['name']}"
+                    words_tasks.append((f"words/{rel}", data_dir / rel, f.get("size") or 0))
+            for f in self._list_dir(repo, "anima_cache", token):
+                fname = f.get("name", "")
+                if f.get("type") != "file" or fname not in want_cache:
+                    continue
+                cache_tasks.append((f"anima_cache/{fname}", user_dir / fname, f.get("size") or 0))
+
+        # ④ 下载词库 → 插件内 data/
         for rp, dest, size in words_tasks:
-            if self._download_file(repo, rp, token, dest, size):
+            ok = (self._download_anon_mode(repo, rp, dest, size) if anon
+                  else self._download_token_mode(repo, rp, token, dest, size))
+            if ok:
                 res["words_ok"] += 1
             else:
                 res["words_fail"] += 1
                 res["errors"].append(f"词库下载失败: {rp}")
 
-        # 3) 缓存下载 → 外部 user/ 目录（大小检查，28MB 级别）
-        user_dir = Path(user_data_dir_resolver())
-        cache_entries = self._list_dir(repo, "anima_cache", token)
-        for f in cache_entries:
-            fname = f.get("name", "")
-            if f.get("type") != "file" or fname not in want_cache:
-                continue
-            size = f.get("size") or 0
-            local = user_dir / fname
-            # 本地已有同大小文件 → 跳过（28MB 重复下载没必要）
-            if local.exists() and size and local.stat().st_size == size:
-                logger.info(f"[GiteeSync] {fname} 本地已是最新，跳过")
+        # ⑤ 缓存 → 外部 user/ 目录（本地同大小自动跳过）
+        for rp, dest, size in cache_tasks:
+            if dest.exists() and size and dest.stat().st_size == size:
+                logger.info(f"[GiteeSync] {dest.name} 本地已是最新，跳过")
                 res["cache_ok"] += 1
                 continue
-            if self._download_file(repo, f"anima_cache/{fname}", token, local, size):
+            ok = (self._download_anon_mode(repo, rp, dest, size) if anon
+                  else self._download_token_mode(repo, rp, token, dest, size))
+            if ok:
                 res["cache_ok"] += 1
             else:
                 res["cache_fail"] += 1
-                res["errors"].append(f"缓存下载失败: {fname}")
+                res["errors"].append(f"缓存下载失败: {dest.name}")
 
-        # 4) 记录状态 + 刷新内存数据
+        # ⑥ 记录状态 + 刷新内存数据
         res["ok"] = (res["words_fail"] == 0 and res["cache_fail"] == 0
                      and (res["words_ok"] + res["cache_ok"]) > 0)
         res["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")

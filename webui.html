@@ -4731,7 +4731,7 @@ textarea:focus-visible,
             <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库（Gitee 私有仓库）</div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">私人令牌</span>
-              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="Gitee 私人令牌（首次填写后自动保存）" style="flex:1;min-width:150px" autocomplete="off">
+              <input type="password" id="cfg_gitee_token" class="settings-input" placeholder="可选：公开仓库无需填写；私有仓库才需要" style="flex:1;min-width:150px" autocomplete="off">
             </div>
             <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
               <span class="settings-label" style="min-width:auto">仓库名</span>
@@ -4749,7 +4749,7 @@ textarea:focus-visible,
               <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
               <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
             </div>
-            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 Gitee 私有仓库拉取最新词库（39 个分类 + K2）覆盖本地；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。同步完成自动重载词库，无需重启。</div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从 Gitee 仓库拉取最新词库（39 个分类 + K2）覆盖本地；缓存文件体积大，仅在勾选时下载且本地已一致会自动跳过。公开仓库无需令牌，私有仓库需填私人令牌。同步完成自动重载词库，无需重启。</div>
           </div>
 
           <!-- 分组 4：危险操作 -->
