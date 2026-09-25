@@ -1682,6 +1682,16 @@ class WebUIMixin:
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
 
+    async def _serve_theme_bg(self, r):
+        """v4.4.0: 伺服「心」主题昼夜背景横幅（白名单校验防路径穿越）"""
+        mode = r.match_info.get('mode', '')
+        if mode not in ('day', 'night') and not mode.startswith('icon-'):
+            raise web.HTTPNotFound()
+        f = Path(__file__).parent / f'theme-xin-{mode}.webp'
+        if not f.exists():
+            raise web.HTTPNotFound()
+        return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=604800', 'Content-Type': 'image/webp'})
+
     async def _serve_apple_icon(self, r):
         """v4.3.8: iOS 添加到主屏用 180x180 图标"""
         f = Path(__file__).parent / 'apple-touch-icon.png'
@@ -1809,6 +1819,7 @@ class WebUIMixin:
         app.router.add_get('/favicon.ico', self._serve_favicon)  # 返回真正的图标文件
         app.router.add_get('/favicon-{size}.png', self._serve_favicon_png)  # v4.3.8 多尺寸 PNG
         app.router.add_get('/apple-touch-icon.png', self._serve_apple_icon)
+        app.router.add_get('/theme-xin-{mode}.webp', self._serve_theme_bg)  # v4.4.0 心主题昼夜横幅
         app.router.add_get('/api/config', lambda r: web.json_response({
             "comfyui_url": self.comfyui_url,
             "workflow_dir": str(self.workflow_dir) if self.workflow_dir.parts else "",
