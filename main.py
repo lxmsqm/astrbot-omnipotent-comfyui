@@ -1887,6 +1887,8 @@ class WebUIMixin:
         app.router.add_get('/api/workflow-params', self._webui_get_workflow_params)
         app.router.add_get('/api/workflow-params-config', self._webui_get_workflow_params_config)
         app.router.add_post('/api/workflow-params', self._webui_save_workflow_params)
+        app.router.add_get('/api/llm-templates', self._webui_get_llm_templates)
+        app.router.add_post('/api/llm-templates', self._webui_save_llm_templates)
         app.router.add_get('/api/workflow-bind', self._webui_get_bindings)
         app.router.add_post('/api/workflow-bind', self._webui_save_binding)
         app.router.add_post('/api/workflow-bind/delete', self._webui_delete_binding)
@@ -2560,6 +2562,99 @@ class WebUIMixin:
             self.workflow_config['__category_order__'] = order
         await self._save_workflow_config()
         return web.json_response({"ok": True, "order": order})
+
+    def _llm_template_text(self, ttype: str) -> str:
+        """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
+        tpl = self.workflow_config.get('__llm_prompt_templates__', {}) or {}
+        act = (self.workflow_config.get('__llm_template_active__', {}) or {}).get(ttype, '')
+        for t in (tpl.get(ttype) or []):
+            if t.get('name') == act:
+                return (t.get('content') or '').strip()
+        return ''
+
+    def _apply_llm_templates(self):
+        """v4.4.3: 把启用的提示词规则注入生成类工具描述。
+        t2i → comfyui_draw；imgrev → comfyui_img2img / comfyui_video。
+        add_llm_tools 注册时框架会拷贝 description，须同时更新插件实例与框架 wrapper。
+        标签化词库 / K2 不在此列：AI 可按用户需求自行选择调用对应工具。"""
+        try:
+            pairs = {
+                'comfyui_draw': self._llm_template_text('t2i'),
+                'comfyui_img2img': self._llm_template_text('imgrev'),
+                'comfyui_video': self._llm_template_text('imgrev'),
+            }
+            applied = {}
+            for name, content in pairs.items():
+                obj = next((o for o in (getattr(self, '_tool_objs', []) or []) if o.name == name), None)
+                if obj is None:
+                    continue
+                desc = type(obj).description  # 类级原始描述，重复应用不叠加
+                if content:
+                    snippet = f"【提示词规则（魔导书）——写 prompt 前必须严格按此把用户需求改写；用户明确要求随机词库/K2 成句时改走对应工具】\n{content}"
+                    if len(snippet) > 1800:
+                        snippet = snippet[:1800] + '…(规则过长已截断)'
+                    desc = f"{desc}\n\n{snippet}"
+                applied[name] = len(desc)
+                obj.description = desc
+                try:
+                    for ft in self.context.provider_manager.llm_tools.func_list:
+                        if ft.name == name:
+                            ft.description = desc
+                except Exception:
+                    pass
+            self._llm_tpl_applied = applied
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 提示词规则注入失败: {e}")
+
+    async def _webui_get_llm_templates(self, r):
+        """v4.4.3: LLM 提示词规则库（魔导书规则页数据源）。首次访问播种两个内置规则。"""
+        store = self.workflow_config.get('__llm_prompt_templates__') or {}
+        if not store.get('t2i') and not store.get('imgrev'):
+            store = {
+                't2i': [{'name': '文生图·纯文字规划', 'content': "把用户需求改写成一段可直接用于文生图模型的中文自然语言描述（用户用英文则输出英文）。\n1) 首句点明媒介风格与主体（如「一张动漫风格插画，一位少女……」）；\n2) 按空间顺序展开：背景环境 → 主体位置与姿态 → 头部与表情 → 服装细节 → 手持物 → 边缘点缀，每处一两句；\n3) 照明单独一句（光源、方向、软硬）；\n4) 结尾一句总括构图与色调；\n5) 禁止质量词堆砌（masterpiece 等）、禁止分辨率/比例字样；画面中不出现任何文字或水印；\n6) 只输出改写后的提示词本身，不要任何解释。"}],
+                'imgrev': [{'name': '图片反推·多图结构化', 'content': "用户会提供参考图（按顺序对应 <图片1>、<图片2>……），把需求改写为结构化提示词。\n1) <主体 N>：逐个定义主体，外观要素锁定自对应参考图（发型/瞳色/服装/持物/饰件），写明完整保留；\n2) 摘要：一句话概括任务类型（参考生成/动作迁移/风格统一）与画面主线；\n3) 保留分析：逐图说明保留什么、改写什么；\n4) 详细描述：按时间或空间顺序展开镜头（景别、运镜、动作节拍），说明各参考图承担的角色；\n5) 音效与配乐各一段（工作流需要时）；\n6) 画面中不出现任何文字、字幕、水印，不得复刻参考图中的 UI/水印；\n7) 只输出改写后的提示词本身，语言跟随用户输入。"}],
+            }
+            self.workflow_config['__llm_prompt_templates__'] = store
+            await self._save_workflow_config()
+        self._apply_llm_templates()
+        return web.json_response({
+            't2i': store.get('t2i', []),
+            'imgrev': store.get('imgrev', []),
+            'active': self.workflow_config.get('__llm_template_active__', {}) or {},
+            'applied': getattr(self, '_llm_tpl_applied', {}),
+        })
+
+    async def _webui_save_llm_templates(self, r):
+        """v4.4.3: 保存规则（op=save 整表替换 / op=active 切换启用），保存后立即重新注入工具描述。"""
+        try:
+            data = await r.json()
+            op = data.get('op')
+            ttype = data.get('type')
+            if ttype not in ('t2i', 'imgrev'):
+                return web.json_response({"ok": False, "error": "type 必须是 t2i 或 imgrev"})
+            store = self.workflow_config.setdefault('__llm_prompt_templates__', {'t2i': [], 'imgrev': []})
+            if op == 'save':
+                lst = []
+                for x in (data.get('list') or []):
+                    if isinstance(x, dict) and str(x.get('name', '')).strip():
+                        lst.append({'name': str(x['name']).strip()[:60], 'content': str(x.get('content', ''))[:6000]})
+                store[ttype] = lst
+                act = self.workflow_config.setdefault('__llm_template_active__', {})
+                if act.get(ttype) and not any(t.get('name') == act[ttype] for t in lst):
+                    act.pop(ttype, None)
+            elif op == 'active':
+                name = str(data.get('name', ''))
+                if not any(t.get('name') == name for t in store.get(ttype, [])):
+                    return web.json_response({"ok": False, "error": "模板不存在"})
+                self.workflow_config.setdefault('__llm_template_active__', {})[ttype] = name
+            else:
+                return web.json_response({"ok": False, "error": "未知操作"})
+            self.workflow_config['__llm_prompt_templates__'] = store
+            await self._save_workflow_config()
+            self._apply_llm_templates()
+            return web.json_response({"ok": True, "applied": getattr(self, '_llm_tpl_applied', {})})
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
 
     def _migrate_group_binding_to_store(self) -> bool:
         """v4.4.2: 旧版 ROOT 三元组（__groups_source__/__bind_target__/__groups_data__/__disabled_groups__）
@@ -6461,9 +6556,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIRandomTool(),
                      ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool(),
                      ComfyUIReversePromptTool(), ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool()]
+            self._tool_objs = tools
             for t in tools:
                 t._plugin = self
                 self.context.add_llm_tools(t)
+            self._apply_llm_templates()
             # 诊断：打印注册后的 func_list 内容
             mgr = self.context.provider_manager.llm_tools
             names = [ft.name for ft in mgr.func_list]

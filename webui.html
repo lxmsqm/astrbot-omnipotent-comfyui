@@ -5132,6 +5132,7 @@ textarea:focus-visible,
         <!-- ★ Anima 随机 NSFW 开关（放在魔导书里，手机端同样可见）
              关闭（默认）= 过滤裸体/性行为/性器官/BDSM（内衣/泳装/透视保留）
              开启 = 完全放开，不做任何过滤 -->
+        <button class="btn btn-xs btn-secondary" id="grm_rules_btn" onclick="toggleGrimoireRules()" title="LLM 提示词规则：文生图规划 / 图片反推（QQ/飞书对话生成时注入给 AI）">📜 <span class="desktop-only">规则</span></button>
         <button class="btn btn-xs btn-secondary" id="grm_anima_nsfw_btn" onclick="toggleAnimaNsfw()" title="Anima 随机是否允许 NSFW：关闭时过滤裸体/性行为/性器官/BDSM（内衣泳装保留），开启后完全放开">🔞 <span id="grm_anima_nsfw_text">SFW</span></button>
         <input type="text" class="grimoire-detail-search desktop-only" id="grimoire_data_search" placeholder="搜索条目..." oninput="filterGrimoireData()">
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_edit_toggle" onclick="toggleGrimoireEditMode()" title="切换编辑模式"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> <span id="grm_edit_toggle_text">编辑</span></button>
@@ -5147,6 +5148,32 @@ textarea:focus-visible,
         <input type="number" id="grimoire_page_jump" class="grm-page-jump" min="1" value="1" placeholder="页" onkeydown="if(event.key==='Enter')jumpGrimoirePage()">
         <button class="btn btn-xs btn-secondary" onclick="jumpGrimoirePage()">跳转</button>
         <button class="btn btn-xs btn-secondary" id="btn_grimoire_next" onclick="grimoirePage(1)">下一页 →</button>
+      </div>
+    </div>
+    <!-- 【LLM 提示词规则】规则库管理（文生图规划 / 图片反推·多图结构化），覆盖式面板 -->
+    <div class="grimoire-rules-panel" id="grimoire_rules_panel" style="display:none;flex:1;min-height:0;overflow:auto;padding:10px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-weight:700;font-size:13px">📜 LLM 提示词规则</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-secondary" onclick="toggleGrimoireRules()">关闭</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-xs btn-primary" id="grm_rules_tab_t2i" onclick="grimRulesTab('t2i')">文生图·纯文字规划</button>
+        <button class="btn btn-xs btn-secondary" id="grm_rules_tab_imgrev" onclick="grimRulesTab('imgrev')">图片反推·多图结构化</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-primary" onclick="grimRulesAdd()">＋新增规则</button>
+      </div>
+      <div id="grm_rules_list" style="display:flex;flex-direction:column;gap:4px"></div>
+      <div id="grm_rules_editor" style="display:none;flex-direction:column;gap:6px;margin-top:8px">
+        <input type="text" id="grm_rule_name" placeholder="规则名称" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px">
+        <textarea id="grm_rule_content" rows="12" placeholder="规则内容：写给 AI 的提示词改写规则（对话生成时注入）" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;line-height:1.6"></textarea>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-xs btn-primary" onclick="grimRulesSave()">保存</button>
+          <button class="btn btn-xs btn-secondary" onclick="grimRulesCancel()">取消</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--text-sub2);border-top:1px solid var(--card-border)">
+        启用中的规则会在 QQ/飞书对话要求生成时注入给 AI（文生图规则 → comfyui_draw；图片反推规则 → comfyui_img2img / comfyui_video）。标签化词库与 K2 仍可由 AI 自行选择使用。
       </div>
     </div>
     <!-- 【K2 控制】K2 模式专属控制面板（替代 anima 标签浏览，仅 K2 模式显示；对应 JS 见【K2 控制 · 前端】） -->
@@ -8653,6 +8680,146 @@ function renderNodes() {
   document.getElementById('node_grid').innerHTML = h || '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-sub)">无节点</div>';
   // 重建后重新应用搜索过滤，保持当前搜索关键词
   filterNodes();
+}
+
+// ========================================================================
+// 魔导书·LLM 提示词规则页（文生图规划 / 图片反推·多图结构化）
+// ========================================================================
+let _grimRules = { t2i: [], imgrev: [] };
+let _grimRulesActive = {};
+let _grimRulesTab = 't2i';
+let _grimRulesEditIdx = null;
+let _grimRulesOpen = false;
+
+async function toggleGrimoireRules() {
+  _grimRulesOpen = !_grimRulesOpen;
+  const panel = document.getElementById('grimoire_rules_panel');
+  const srcArea = document.querySelector('.grimoire-sources');
+  const detailArea = document.querySelector('.grimoire-detail');
+  const k2Panel = document.getElementById('grimoire_k2_panel');
+  if (panel) panel.style.display = _grimRulesOpen ? 'block' : 'none';
+  const hideBody = _grimRulesOpen ? 'none' : '';
+  if (srcArea) srcArea.style.display = hideBody;
+  if (detailArea) detailArea.style.display = hideBody;
+  if (k2Panel && _k2ComposeMode === 'k2') k2Panel.style.display = _grimRulesOpen ? 'none' : 'block';
+  if (_grimRulesOpen) await loadGrimRules();
+}
+
+async function loadGrimRules() {
+  try {
+    const d = await apiFetch('/api/llm-templates', {}, true);
+    _grimRules.t2i = d.t2i || [];
+    _grimRules.imgrev = d.imgrev || [];
+    _grimRulesActive = d.active || {};
+    grimRulesRender();
+  } catch (e) { toast('规则加载失败', 'error'); }
+}
+
+function grimRulesTab(t) {
+  _grimRulesTab = t;
+  _grimRulesEditIdx = null;
+  const t1 = document.getElementById('grm_rules_tab_t2i');
+  const t2 = document.getElementById('grm_rules_tab_imgrev');
+  if (t1) t1.className = 'btn btn-xs ' + (t === 't2i' ? 'btn-primary' : 'btn-secondary');
+  if (t2) t2.className = 'btn btn-xs ' + (t === 'imgrev' ? 'btn-primary' : 'btn-secondary');
+  const ed = document.getElementById('grm_rules_editor');
+  if (ed) ed.style.display = 'none';
+  grimRulesRender();
+}
+
+function grimRulesRender() {
+  const list = document.getElementById('grm_rules_list');
+  if (!list) return;
+  const arr = _grimRules[_grimRulesTab] || [];
+  if (!arr.length) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text-sub2);padding:8px">暂无规则，点「＋新增规则」创建</div>';
+    return;
+  }
+  list.innerHTML = arr.map((t, i) => {
+    const on = _grimRulesActive[_grimRulesTab] === t.name;
+    const preview = (t.content || '').replace(/\n/g, ' ').slice(0, 60);
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg)">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;flex:1;min-width:0" title="${esc(preview)}">
+        <input type="radio" name="grm_rule_active" ${on ? 'checked' : ''} onchange="grimRulesSetActive(${i})" style="accent-color:var(--primary)">
+        <span style="font-weight:600;white-space:nowrap">${esc(t.name)}</span>
+        <span style="color:var(--text-sub2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(preview)}</span>
+      </label>
+      <button class="btn btn-xs btn-secondary" onclick="grimRulesEdit(${i})">编辑</button>
+      <button class="btn btn-xs btn-secondary" onclick="grimRulesDel(${i})">删</button>
+    </div>`;
+  }).join('');
+}
+
+async function grimRulesPost(payload) {
+  const r = await apiFetch('/api/llm-templates', { method: 'POST', body: JSON.stringify(payload) }, true);
+  if (!r || r.ok === false) { toast((r && r.error) || '操作失败', 'error'); return false; }
+  return true;
+}
+
+async function grimRulesSetActive(i) {
+  const t = (_grimRules[_grimRulesTab] || [])[i];
+  if (!t) return;
+  if (await grimRulesPost({ op: 'active', type: _grimRulesTab, name: t.name })) {
+    _grimRulesActive[_grimRulesTab] = t.name;
+    toast('✅ 已启用，下次对话生成即生效');
+    grimRulesRender();
+  }
+}
+
+function grimRulesAdd() {
+  _grimRulesEditIdx = -1;
+  const ed = document.getElementById('grm_rules_editor');
+  document.getElementById('grm_rule_name').value = '';
+  document.getElementById('grm_rule_content').value = '';
+  if (ed) ed.style.display = 'flex';
+}
+
+function grimRulesEdit(i) {
+  const t = (_grimRules[_grimRulesTab] || [])[i];
+  if (!t) return;
+  _grimRulesEditIdx = i;
+  document.getElementById('grm_rule_name').value = t.name;
+  document.getElementById('grm_rule_content').value = t.content || '';
+  const ed = document.getElementById('grm_rules_editor');
+  if (ed) ed.style.display = 'flex';
+  ed && ed.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function grimRulesCancel() {
+  _grimRulesEditIdx = null;
+  const ed = document.getElementById('grm_rules_editor');
+  if (ed) ed.style.display = 'none';
+}
+
+async function grimRulesSave() {
+  const name = document.getElementById('grm_rule_name').value.trim();
+  const content = document.getElementById('grm_rule_content').value;
+  if (!name || !content.trim()) { toast('名称和内容都要填', 'error'); return; }
+  const arr = [...(_grimRules[_grimRulesTab] || [])];
+  if (_grimRulesEditIdx !== null && _grimRulesEditIdx >= 0) arr[_grimRulesEditIdx] = { name, content };
+  else {
+    if (arr.some(t => t.name === name)) { toast('同名规则已存在', 'error'); return; }
+    arr.push({ name, content });
+  }
+  if (await grimRulesPost({ op: 'save', type: _grimRulesTab, list: arr })) {
+    _grimRules[_grimRulesTab] = arr;
+    _grimRulesEditIdx = null;
+    document.getElementById('grm_rules_editor').style.display = 'none';
+    toast('✅ 规则已保存并注入');
+    grimRulesRender();
+  }
+}
+
+async function grimRulesDel(i) {
+  const t = (_grimRules[_grimRulesTab] || [])[i];
+  if (!t || !confirm(`确定删除规则「${t.name}」？`)) return;
+  const arr = (_grimRules[_grimRulesTab] || []).filter((x, j) => j !== i);
+  if (await grimRulesPost({ op: 'save', type: _grimRulesTab, list: arr })) {
+    _grimRules[_grimRulesTab] = arr;
+    if (_grimRulesActive[_grimRulesTab] === t.name) delete _grimRulesActive[_grimRulesTab];
+    toast('已删除');
+    grimRulesRender();
+  }
 }
 
 // ========================================================================
