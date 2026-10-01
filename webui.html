@@ -6316,9 +6316,10 @@ function _cropImage(src, x, y, w, h, cb) {
 // 配置加载
 // ========================================================================
 let allParamsData = null, promptNodeId = '', resNodeId = '', loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''], negativeNodeId = '', expandedTextNodeId = '';
+let _slotOrderAuto = false; // 图片槽位顺序是否来自自动探测（true 时按标题编号自动对号入座；手动排序保存后转 false）
 let loadAudioNodeIds = ['', '', '', '', '', '', '', '', '', ''];
 let loadVideoNodeIds = ['', '', '', '', '', '', '', '', '', ''];
-let emptyLoadNodes = [];  // 标记为「不使用」的加载节点 id 列表（生成时即使有文件也移除）
+let emptyLoadNodes = [];  // 已废弃「不使用」勾选：恒为空，仅保留 saveParams 空值覆盖旧配置的自愈通道
 let promptInputKey = '', negativeInputKey = '';
 let modelLists = {}, disabledGroups = {}, groupsSource = '', isBound = false, bindTarget = '', allWorkflows = [];
 let disabledNodes = [];
@@ -6326,6 +6327,7 @@ let disabledNodes = [];
 // （避免切换工作流时未初始化的空值误清后端已保存的节点角色）
 let _explicitClear = {};
 let officialResNodes = [], officialDurationNodes = [];
+let _officialResSig = ''; // 官方分辨率面板已构建的节点签名（工作流/节点集变化才重建，避免重渲染打断编辑）
 let loraNodesConfig = {};     // 各节点的 Lora 配置 {nodeId: [{on, lora_name, strength_model, strength_clip, trigger_words_selected?}, ...]}
 let availableLoras = [];      // 从 ComfyUI 获取的可用 Lora 列表
 let loraMetadata = {};        // Lora 元数据缓存 {lora_path: {trigger_words, preview_url, model_name, tags, file_path}}
@@ -7338,6 +7340,7 @@ async function loadParams() {
     const imgIds = (wf.__load_image_nodes__ || '').split(',').map(s => s.trim()).filter(Boolean);
     loadImageNodeIds = ['', '', '', '', '', '', '', '', '', ''];
     imgIds.forEach((id, i) => { if (i < 10) loadImageNodeIds[i] = id; });
+    _slotOrderAuto = imgIds.length === 0; // 无保存顺序=自动探测，允许按标题编号对号入座
     // 自动识别工作流中所有 LoadImage 节点：无手动配置时按节点顺序自动分配槽位（双重确认：类型名 + image 输入槽）
     if (allParamsData && allParamsData.nodes) {
       const loadImgNodes = allParamsData.nodes.filter(n => /loadimage/i.test(n.class_type || '') && n.params && n.params.some(p => p.key === 'image'));
@@ -7369,30 +7372,26 @@ async function loadParams() {
       }
     }
     // 「不使用」加载节点：生成时即使文件存在也移除（前端 checkbox 勾选）
-    emptyLoadNodes = (wf.__empty_load_nodes__ || '').split(',').map(s => s.trim()).filter(Boolean);
+    // 「不使用」机制已废弃：空槽（无有效文件）生成时后端自动移除跳过，有图自动加载。
+    // 不再读取存量 __empty_load_nodes__，saveParams 以空值覆盖旧配置（自愈清雷）。
+    emptyLoadNodes = [];
     negativeNodeId = wf.__negative_node__ || '';
     expandedTextNodeId = wf.__expanded_text_node__ || '';
     // 自动检测正负面提示词的输入字段
     promptInputKey = promptNodeId ? _getNodeFirstStringKey(promptNodeId) : '';
     negativeInputKey = negativeNodeId ? _getNodeFirstStringKey(negativeNodeId) : '';
     disabledGroups = c.__disabled_groups__ || {};
-    // v4.4.1 串台修复：组绑定三元组必须完整（source + bindTarget + groups_data）才有效；
-    // source 为空的孤儿状态（切工作流 bug 遗留）直接作废，防止别的工作流的组显示在这里
+    // v4.4.2: 组数据按绑定目标分桶自包含——源工作流删除后 source 为空，但绑定与组数据保留
+    //（v4.4.1 的三元组强校验+孤儿清理会连坐删掉用户绑定数据，为本版修正）。串台由分桶机制根治。
     const _gs = c.__groups_source__ || '';
     const _bt = c.__bind_target__ || '';
     const _gd = c.__groups_data__ || [];
-    if (_gs && _gd.length && _bt) {
+    if (_gd.length && _bt) {
       groupsSource = _gs; bindTarget = _bt;
     } else {
       groupsSource = ''; bindTarget = ''; disabledGroups = {};
-      if (_gd.length && !_gs) {
-        // 通知后端清理孤儿数据（一次性，失败无碍）
-        apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
-          __groups_source__: '', __bind_target__: '', __disabled_groups__: {}, __groups_data__: []
-        }) }, true);
-      }
     }
-    isBound = !!(groupsSource && bindTarget && _gd.length > 0);
+    isBound = !!(bindTarget && _gd.length > 0);
     disabledNodes = c.__disabled_nodes__ || [];
 
     // 先清空 textarea，避免旧工作流的残留数据
@@ -7556,6 +7555,22 @@ function updateNodeDisplay() {
     groups.forEach((g) => {
       const gNodes = nodes.filter(n => g.cls.test(n.class_type || '') && hasInputSlot(n, g.inputKey));
       if (!gNodes.length) return;
+      // 自动对号入座：工作流 API 自身已编号（节点标题 图N / 尾部数字）→ 按编号排序并同步槽位顺序，
+      // 免手动排序；编号不齐全或用户已有手动排序（_slotOrderAuto=false）时不干预
+      if (_slotOrderAuto && g.prefix === 'image' && gNodes.length > 1) {
+        const _numOf = (n) => { const m = String(n.title || '').match(/(\d+)\s*$/); return m ? parseInt(m[1], 10) : null; };
+        const _nums = gNodes.map(_numOf);
+        if (_nums.every(x => x !== null) && new Set(_nums).size === _nums.length) {
+          gNodes.sort((a, b) => _numOf(a) - _numOf(b));
+          const derived = gNodes.map(n => n.id);
+          const curOrder = g.nodeIds.filter(id => id);
+          if (JSON.stringify(derived) !== JSON.stringify(curOrder)) {
+            for (let i = 0; i < 10; i++) g.nodeIds[i] = (derived[i] !== undefined) ? derived[i] : '';
+            _slotOrderAuto = false; // 已对号入座并持久化，之后尊重手动排序
+            setTimeout(() => { saveParams().catch(() => {}); }, 80);
+          }
+        }
+      }
       // 当前节点 → 槽位映射（槽位下标 = 序号-1）
       const slotOf = {};
       g.nodeIds.forEach((id, i) => { if (id) slotOf[id] = i; });
@@ -7603,7 +7618,6 @@ function updateNodeDisplay() {
           </div>
           <div class="ua169-meta">
             <input type="number" class="order-input" id="${g.prefix}_order_${idx}" data-nodeid="${n.id}" min="1" max="10" value="${orderVal}" onclick="event.stopPropagation()" onchange="${g.orderFn}('${n.id}', this.value)" title="优先级序号：1=最先加载，数字越小越优先">
-            <label class="load-empty-check" onclick="event.stopPropagation()" title="勾选后生成时跳过此节点（即使有文件也不加载）"><input type="checkbox" data-nodeid="${n.id}" ${emptyLoadNodes.includes(n.id) ? 'checked' : ''} onchange="toggleEmptyLoadNode('${n.id}', this.checked)"> 不使用</label>
           </div>
         </div>`;
       });
@@ -8511,15 +8525,6 @@ function reorderUploadCards(fromNode, toNode) {
   setTimeout(() => saveParams(), 50);
 }
 
-/** 勾选「不使用」：把节点加入 emptyLoadNodes（生成时即使有文件也移除） */
-function toggleEmptyLoadNode(nodeId, checked) {
-  if (checked) {
-    if (!emptyLoadNodes.includes(nodeId)) emptyLoadNodes.push(nodeId);
-  } else {
-    emptyLoadNodes = emptyLoadNodes.filter(id => id !== nodeId);
-  }
-  setTimeout(() => saveParams(), 50);
-}
 
 /** 清空加载节点的输入（图片 X 按钮）：调后端置空 + 清理 saved_texts + 重渲染 */
 function clearNodeMedia(nodeId, key) {
@@ -9346,7 +9351,7 @@ function showNodeDetail(nid) {
     // 跳过对象类型的值（由新 UI 管理）
     if (typeof p.value === 'object') return;
     const modelKey = `${node.class_type  }_${  p.key}`;
-    const elId = `param_${  node.id  }_${  p.key}`;
+    const elId = `mparam_${  node.id  }_${  p.key}`; // mparam_ 前缀：避免与主面板重命名的 param_* id 撞车（曾导致弹窗改动被面板旧值覆盖）
     // 实时同步：改动即回写内存缓存 allParamsData，避免"关掉卡片再打开还是旧值"
     const syncAttr = ` onchange="syncParamValue('${node.id}','${String(p.key).replace(/'/g, "\\'")}',this.value)"`;
     html += `<div class="param-row"><label for="${  elId  }">${  p.key  }</label>`;
@@ -9398,18 +9403,18 @@ function closeNodeModal() {
   const nid = body && body.dataset.nodeId;
   if (nid && allParamsData && allParamsData.nodes) {
     const saveData = {};
-    // 收集当前弹窗中所有表单元素的值
-    allParamsData.nodes.forEach((n) => {
-      if (n.id === nid) {
-        n.params.forEach((p) => {
-          const e = document.getElementById(`param_${n.id}_${p.key}`);
-          if (e) {
-            saveData[`${n.id}_${p.key}`] = e.value;
-            // ★ 同步回写内存缓存，否则再次打开卡片会用旧值渲染（表现为"改了不刷新"）
-            p.value = e.value;
-          }
-        });
-      }
+    // 只收集弹窗内部的 mparam_* 控件。param_* 是主面板（调度器/UNet 等）重命名后的 id，
+    // 与弹窗 id 曾撞车：getElementById 永远命中面板元素 → 弹窗里改参数存回去的是面板旧值
+    //（表现为"步数怎么调都锁死"）。解析 id 的 mparam_{nid}_{key}，key 可含点/下划线。
+    document.querySelectorAll('#node_modal_body [id^="mparam_"]').forEach((e) => {
+      const rest = e.id.slice('mparam_'.length);
+      const dot = rest.indexOf('_');
+      if (dot < 1) return;
+      const nid2 = rest.slice(0, dot), key2 = rest.slice(dot + 1);
+      saveData[`${nid2}_${key2}`] = e.value;
+      const n2 = allParamsData.nodes.find(x => String(x.id) === String(nid2));
+      const p2 = n2 && n2.params && n2.params.find(x => x.key === key2);
+      if (p2) p2.value = e.value; // ★ 回写内存缓存，重开弹窗不回退
     });
     // 如果有 Lora 配置，也保存
     if (loraNodesConfig[nid]) {
@@ -9440,10 +9445,11 @@ function closeNodeModal() {
 // 保存参数
 // ========================================================================
 let _saving = false;
+let _savePending = false; // saveParams 进行中再次触发 → 排队（原先直接丢弃，编辑值静默丢失）
 
 async function saveParams() {
   if (!allParamsData) { await loadParams(); if (!allParamsData) return; }
-  if (_saving) { console.warn('saveParams: _saving locked, skipping'); return; }
+  if (_saving) { _savePending = true; console.warn('saveParams: busy, queued'); return; }
   _saving = true;
   try {
     const c = await apiFetch('/api/workflow-params-config');
@@ -9507,6 +9513,7 @@ async function saveParams() {
     toast('保存失败: ' + (e.message || e), 'error');
   } finally {
     _saving = false;
+    if (_savePending) { _savePending = false; setTimeout(() => { saveParams().catch(() => {}); }, 50); }
   }
 }
 
@@ -9659,8 +9666,8 @@ function toggleGroupTag(g, el) {
 }
 
 function loadBoundGroups() {
-  // v4.4.1 串台修复：绑定三元组完整性校验（source 空 = 孤儿绑定，不渲染别的工作流的组）
-  if (getCurrentWF() !== bindTarget || !groupsSource || !isBound) return;
+  // v4.4.2: 分桶后数据按目标自包含，source 可为空（源已删除仍渲染）
+  if (getCurrentWF() !== bindTarget || !isBound) return;
   apiFetch('/api/workflow-params-config', {}).then((c) => {
     if (!c) return;
     const g = c.__groups_data__ || [];
@@ -10529,7 +10536,12 @@ function renderBasicScheduler() {
   const stepsInput = document.getElementById('bs_steps_input');
   if (stepsInput && curSteps !== undefined) stepsInput.value = curSteps;
   const denoiseInput = document.getElementById('bs_denoise_input');
-  if (denoiseInput && curDenoise !== undefined) denoiseInput.value = Number(curDenoise.toFixed(6));
+  if (denoiseInput && curDenoise !== undefined && curDenoise !== null && curDenoise !== '') {
+    // 先转数值再取精度：saved_texts 回填的是字符串，"1".toFixed 会抛 TypeError
+    // 炸掉整个 renderBasicScheduler → id 不重命名 → 面板改动永远收集不到（步数锁死根因）
+    const dn = Number(curDenoise);
+    if (!isNaN(dn)) denoiseInput.value = dn;
+  }
   // 控件 id 用 param_{nid}_{key}，复用 saveParams() 自动收集写回
   if (sel) sel.id = `param_${n.id}_scheduler`;
   if (stepsInput) stepsInput.id = `param_${n.id}_steps`;
@@ -10561,42 +10573,55 @@ function updateResPanels() {
 
 function _initOfficialResPanel() {
   const panel = document.getElementById('official_res_panel');
-  const legacy = document.getElementById('legacy_res_panel');
   if (!panel) return;
   const hasOfficial = officialResNodes.length > 0;
-  // 面板显隐统一由 updateResPanels() 控制；此函数只负责官方控件回填
-  if (!hasOfficial) return;
-  // 填充宽高比下拉
-  const sel = document.getElementById('official_aspect_ratio');
-  if (sel && sel.options.length === 0) {
-    OFFICIAL_ASPECT_OPTIONS.forEach((opt) => {
-      const o = document.createElement('option');
-      o.value = opt; o.textContent = opt;
-      sel.appendChild(o);
-    });
-  }
-  // 从当前工作流读取官方分辨率节点当前值并回显（避免刷新后恢复默认）
+  if (!hasOfficial) { _officialResSig = ''; return; }
+  // 工作流可能有多个官方分辨率节点（如 H3 的 一采/二采）——每个渲染一组，标题作组名。
+  // 写回统一走 param_{nid}_{key} + saveParams()（与调度器面板同通道）。
+  const sig = officialResNodes.join(',') + '@' + (getCurrentWF() || '');
+  if (sig === _officialResSig) return; // 已构建：保留当前 DOM（不打断正在编辑的输入框）
+  _officialResSig = sig;
   const nodes = (allParamsData && allParamsData.nodes) || [];
-  const resNode = nodes.find(n => /ResolutionSelector/i.test(n.class_type));
-  if (!resNode || !resNode.params) return;
-  const getP = (k) => { const p = resNode.params.find(x => x.key === k); return p ? p.value : undefined; };
-  const curAspect = getP('aspect_ratio');
-  const curMp = getP('megapixels');
-  const curMult = getP('multiple');
-  // 兼容简写比例（"9:16"）：官方面板选项是长格式（"9:16 (Portrait Widescreen)"）——做匹配归一
-  if (curAspect !== undefined && sel) {
-    if (OFFICIAL_ASPECT_OPTIONS.indexOf(curAspect) >= 0) {
-      sel.value = curAspect;
-    } else {
-      const short = String(curAspect).split(' ')[0];
-      const match = OFFICIAL_ASPECT_OPTIONS.find(o => o.split(' ')[0] === short);
-      if (match) sel.value = match;
+  const num = (v, fb) => { const x = Number(v); return (v !== undefined && v !== null && v !== '' && !isNaN(x)) ? x : fb; };
+  const build = (nid) => {
+    const node = nodes.find(n => String(n.id) === String(nid));
+    if (!node || !node.params) return '';
+    const getP = (k) => { const p = node.params.find(x => x.key === k); return p ? p.value : undefined; };
+    const curAspect = getP('aspect_ratio');
+    let aspectOpts = '';
+    let hasExact = false;
+    aspectOpts = OFFICIAL_ASPECT_OPTIONS.map((o) => {
+      const sel = String(o) === String(curAspect);
+      if (sel) hasExact = true;
+      return `<option${sel ? ' selected' : ''}>${o}</option>`;
+    }).join('');
+    if (curAspect !== undefined && !hasExact) {
+      // 兼容简写比例（"9:16" → "9:16 (Portrait Widescreen)"）
+      const shortA = String(curAspect).split(' ')[0];
+      const match = OFFICIAL_ASPECT_OPTIONS.find(o => o.split(' ')[0] === shortA);
+      aspectOpts = OFFICIAL_ASPECT_OPTIONS.map((o) => `<option${o === match ? ' selected' : ''}>${o}</option>`).join('');
+      if (!match) aspectOpts += `<option selected>${esc(String(curAspect))}</option>`;
     }
-  }
-  const mpInput = document.getElementById('official_megapixels');
-  if (curMp !== undefined && mpInput) mpInput.value = Number(Number(curMp).toFixed(6));
-  const multInput = document.getElementById('official_multiple');
-  if (curMult !== undefined && multInput) multInput.value = Number(Number(curMult).toFixed(6));
+    const title = esc(node.title || '');
+    const header = officialResNodes.length > 1
+      ? `<div class="official-res-label" style="margin:8px 0 2px;font-weight:700">${title ? title + ' ' : ''}#${nid}</div>`
+      : '';
+    return header + `
+      <div class="official-res-row">
+        <label class="official-res-label">宽高比</label>
+        <select id="param_${nid}_aspect_ratio" class="official-res-select" onchange="saveParams()">${aspectOpts}</select>
+      </div>
+      <div class="official-res-row">
+        <label class="official-res-label">百万像素</label>
+        <input type="number" id="param_${nid}_megapixels" class="official-res-input" min="0.1" max="16" step="0.1" value="${num(getP('megapixels'), 1)}" onchange="saveParams()">
+        <span class="official-res-unit">MP</span>
+      </div>
+      <div class="official-res-row">
+        <label class="official-res-label">倍数</label>
+        <input type="number" id="param_${nid}_multiple" class="official-res-input" min="8" max="128" step="4" value="${num(getP('multiple'), 32)}" onchange="saveParams()">
+      </div>`;
+  };
+  panel.innerHTML = officialResNodes.map(build).join('');
 }
 
 function _initOfficialDurationPanel() {

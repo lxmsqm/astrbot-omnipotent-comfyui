@@ -2442,6 +2442,34 @@ class WebUIMixin:
                 if rk in data:
                     logger.info(f"[ComfyUI]   save role {rk}={data[rk]!r}")
             async with self._config_lock:
+                # ★ v4.4.2: 组绑定键重定向到分桶存储（桶键 = 绑定目标 || 当前工作流）。
+                # 数据自包含：删除源工作流不再连坐清除；空 groups_data = 解绑删桶。
+                self._migrate_group_binding_to_store()
+                if any(k in data for k in ('__groups_source__', '__bind_target__', '__groups_data__', '__disabled_groups__')):
+                    _gstore = self.workflow_config.get('__group_bindings_store__', {}) or {}
+                    _bkey = (str(data.get('__bind_target__', '') or '').strip() or wf_name)
+                    _gbucket = dict(_gstore.get(_bkey) or {})
+                    if '__groups_data__' in data:
+                        _gd_in = data.pop('__groups_data__') or []
+                        if isinstance(_gd_in, list) and _gd_in:
+                            _gbucket['data'] = _gd_in
+                            _gbucket['source'] = str(data.pop('__groups_source__', _gbucket.get('source', '')) or '')
+                            _gbucket['target'] = _bkey
+                            _gbucket['disabled'] = data.pop('__disabled_groups__', _gbucket.get('disabled', {})) or {}
+                        else:
+                            _gbucket = None  # 空 groups_data = 解绑/清除该目标的桶
+                    else:
+                        if '__groups_source__' in data:
+                            _gbucket['source'] = str(data.pop('__groups_source__') or '')
+                        if '__bind_target__' in data:
+                            _gbucket['target'] = str(data.pop('__bind_target__') or '')
+                        if '__disabled_groups__' in data:
+                            _gbucket['disabled'] = data.pop('__disabled_groups__') or {}
+                    if _gbucket and _gbucket.get('data'):
+                        _gstore[_bkey] = _gbucket
+                    else:
+                        _gstore.pop(_bkey, None)
+                    self.workflow_config['__group_bindings_store__'] = _gstore
                 for key_name in ['__prompt_node__', '__resolution_node__', '__load_image_node__', '__load_image_nodes__', '__load_audio_nodes__', '__load_video_nodes__', '__empty_load_nodes__', '__negative_node__', '__expanded_text_node__', '__disabled_nodes__', '__lora_nodes__']:
                     if key_name in data:
                         wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
@@ -2533,6 +2561,30 @@ class WebUIMixin:
         await self._save_workflow_config()
         return web.json_response({"ok": True, "order": order})
 
+    def _migrate_group_binding_to_store(self) -> bool:
+        """v4.4.2: 旧版 ROOT 三元组（__groups_source__/__bind_target__/__groups_data__/__disabled_groups__）
+        迁移到按绑定目标分桶的 __group_bindings_store__。数据自包含：删除源工作流只清 source 引用，
+        不再连坐清除组数据（v4.4.1 的孤儿清理误伤绑定数据，为本版修正）。幂等，仅改内存，由调用方落盘。"""
+        gd = self.workflow_config.get('__groups_data__')
+        if not (isinstance(gd, list) and gd):
+            return False
+        bt = (self.workflow_config.get('__bind_target__') or '').strip()
+        if not bt:
+            return False
+        store = self.workflow_config.get('__group_bindings_store__', {}) or {}
+        prev = store.get(bt) if isinstance(store.get(bt), dict) else {}
+        store[bt] = {
+            'source': (self.workflow_config.get('__groups_source__') or '').strip(),
+            'target': bt,
+            'data': gd,
+            'disabled': (prev.get('disabled') if prev else None) or self.workflow_config.get('__disabled_groups__') or {},
+        }
+        self.workflow_config['__group_bindings_store__'] = store
+        for k in ('__groups_source__', '__bind_target__', '__groups_data__', '__disabled_groups__'):
+            self.workflow_config.pop(k, None)
+        logger.info(f"[ComfyUI] 组绑定已迁移到分桶存储: target={bt!r}, groups={len(gd)}")
+        return True
+
     async def _webui_delete_workflow(self, r):
         """删除工作流文件"""
         data = await r.json()
@@ -2562,26 +2614,21 @@ class WebUIMixin:
                     elif isinstance(d, list) and name in d: d.remove(name)
                 # 清理内存中会话上下文
                 self._context_workflows = {k: v for k, v in self._context_workflows.items() if v != name}
-                # 清理组相关配置（v4.4.1: 补孤儿绑定清理——source 空但 bindTarget 悬空时一并清除）
-                gs = self.workflow_config.get('__groups_source__', '')
-                bt = self.workflow_config.get('__bind_target__', '')
-                if gs == name:
-                    # 删除的是组源工作流：源没了，整条绑定链失效（旧版保留组数据导致孤儿绑定串台）
-                    self.workflow_config['__groups_source__'] = ''
-                    self.workflow_config['__disabled_groups__'] = {}
-                    self.workflow_config['__groups_data__'] = []
-                    if bt:
-                        self.workflow_config['__bind_target__'] = ''
-                elif bt == name:
-                    # 删除的是绑定目标工作流：目标没了，组数据/绑定随之失效
-                    self.workflow_config['__disabled_groups__'] = {}
-                    self.workflow_config['__groups_data__'] = []
-                    self.workflow_config['__bind_target__'] = ''
-                # 兜底：source 已空但 bind_target 还挂着（历史孤儿状态）→ 清除
-                if not self.workflow_config.get('__groups_source__') and self.workflow_config.get('__bind_target__'):
-                    self.workflow_config['__bind_target__'] = ''
-                    self.workflow_config['__disabled_groups__'] = {}
-                    self.workflow_config['__groups_data__'] = []
+                # 清理组相关配置（v4.4.2: 分桶自包含——删目标删桶；删源仅清 source 引用，组数据保留。
+                # v4.4.1 的"删源连坐清除"会误伤已绑定目标的组数据，为本版修正）
+                self._migrate_group_binding_to_store()
+                _gstore = self.workflow_config.get('__group_bindings_store__', {}) or {}
+                for _bt_key in list(_gstore.keys()):
+                    _gb = _gstore.get(_bt_key) or {}
+                    if _bt_key == name:
+                        _gstore.pop(_bt_key, None)
+                    elif isinstance(_gb, dict) and _gb.get('source') == name:
+                        _gb['source'] = ''
+                        _gstore[_bt_key] = _gb
+                if _gstore:
+                    self.workflow_config['__group_bindings_store__'] = _gstore
+                else:
+                    self.workflow_config.pop('__group_bindings_store__', None)
                 # 清理 __current_workflow__（v4.4.1 新键）
                 if self.workflow_config.get('__current_workflow__') == name:
                     self.workflow_config['__current_workflow__'] = ''
@@ -3332,6 +3379,10 @@ class WebUIMixin:
                 official_duration_nodes = self._find_official_duration_nodes(wf_now)
         except Exception as e:
             logger.warning(f"[ComfyUI] 官方节点检测失败: {e}")
+        # ★ v4.4.2: 组绑定分桶——迁移旧三元组并注入当前工作流的桶（键名保持旧格式，前端无感）
+        if self._migrate_group_binding_to_store():
+            await self._save_workflow_config()
+        _gbucket = (self.workflow_config.get('__group_bindings_store__', {}) or {}).get(self.current_workflow_name) or {}
         return web.json_response({
             "__prompt_node__": wf_config.get("__prompt_node__", "") or self.workflow_config.get("__prompt_node__", ""),
             "__resolution_node__": wf_config.get("__resolution_node__", "") or self.workflow_config.get("__resolution_node__", ""),
@@ -3339,12 +3390,12 @@ class WebUIMixin:
             "__load_image_nodes__": wf_config.get("__load_image_nodes__", "") or self.workflow_config.get("__load_image_nodes__", ""),
             "__negative_node__": wf_config.get("__negative_node__", "") or self.workflow_config.get("__negative_node__", ""),
             "__commands__": self.workflow_config.get("__commands__", {}),
-            "__groups_source__": self.workflow_config.get("__groups_source__", ""),
-            "__disabled_groups__": self.workflow_config.get("__disabled_groups__", {}),
+            "__groups_source__": _gbucket.get("source", ""),
+            "__disabled_groups__": _gbucket.get("disabled", {}),
             "__disabled_nodes__": wf_config.get("__disabled_nodes__", []),
-            "__bind_target__": self.workflow_config.get("__bind_target__", ""),
+            "__bind_target__": _gbucket.get("target", ""),
             "__current_workflow__": self.workflow_config.get("__current_workflow__", ""),
-            "__groups_data__": self.workflow_config.get("__groups_data__", []),
+            "__groups_data__": _gbucket.get("data", []),
             "__hidden_workflows__": self.workflow_config.get("__hidden_workflows__", []),
             "__workflow_aliases__": self.workflow_config.get("__workflow_aliases__", {}),
             "__category_order__": self.workflow_config.get("__category_order__", []),
