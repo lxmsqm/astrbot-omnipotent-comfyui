@@ -119,10 +119,12 @@ class ComfyUIDrawTool(FunctionTool):
                 await plugin.context.send_message(umo, chain)
         except Exception as e:
             logger.warning(f"[ComfyUI] 发送生成中提示失败: {e}")
+        prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 't2i')
         status, text, path = await plugin._process_and_submit(prompt, ratio, user_id=event.get_sender_id(), quality_override=quality)
         if status == "ok":
+            _ok_note = (_rule_note + "\n") if _rule_note else ""
             sent = await plugin._send_image_result(event, "✨ 生成完成", path, prompt=prompt)
-            if sent: return "✅ 图片已发送"
+            if sent: return _ok_note + "✅ 图片已发送"
             try:
                 from astrbot.api.message_components import Image
                 from astrbot.api.event import MessageChain
@@ -310,6 +312,7 @@ class ComfyUIImg2ImgTool(FunctionTool):
             if edit_cfg: cmd_config.update(edit_cfg)
         # 单图传路径字符串（兼容降噪/比例），多图传路径列表
         submit_imgs = saved_paths[0] if len(saved_paths) == 1 else saved_paths
+        prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
         status, text, out_path = await plugin._process_and_submit(prompt, ratio, submit_imgs, cmd_config=cmd_config or None, user_id=event.get_sender_id())
         # 清理临时下载的图片
         for p in saved_paths:
@@ -362,6 +365,7 @@ class ComfyUIVideoTool(FunctionTool):
         except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
         if not await plugin._download_image(image_url, save_path):
             return "❌ 下载图片失败"
+        prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
         status, text, out_path = await plugin._process_and_submit(prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo)
         if status == "ok":
             try:
@@ -2576,15 +2580,65 @@ class WebUIMixin:
 
     def _effective_rule(self, ttype: str, wf_name: str = None) -> str:
         """v4.4.5: 默认全不注入——只有显式绑定规则的工作流才注入（'none'/未绑定/未知名均不注入）。"""
+        rule = self._effective_rule_obj(ttype, wf_name)
+        return (rule.get('content') or '').strip() if rule else ''
+
+    def _effective_rule_obj(self, ttype: str, wf_name: str = None):
+        """返回当前工作流绑定规则的对象（含硬校验开关字段 chk_quality/chk_weights/chk_commas），未绑定返回 None。"""
         wf = wf_name or self.current_workflow_name
         wf_cfg = (self.workflow_config.get('__workflow_node_configs__', {}) or {}).get(wf, {}) or {}
         binding = (wf_cfg.get('__llm_rule__') or '').strip()
         if not binding or binding == 'none':
-            return ''
+            return None
         for t in ((self.workflow_config.get('__llm_prompt_templates__', {}) or {}).get(ttype) or []):
             if t.get('name') == binding:
-                return (t.get('content') or '').strip()
-        return 
+                return t
+        return None
+
+    def _enforce_prompt_rule(self, prompt: str, ttype: str):
+        """v4.4.6: 提交前按绑定规则的硬校验开关清洗 prompt（兜底拦截，LLM 违规也能救）。
+        返回 (清洗后 prompt, 提示文本)。规则未开任何开关时原样返回。"""
+        rule = self._effective_rule_obj(ttype)
+        if not rule or not isinstance(prompt, str) or not prompt.strip():
+            return prompt, ''
+        import re as _re
+        out = prompt
+        notes = []
+        # 权重语法先剥离（(xxx:1.3) / （xxx：1.3），支持嵌套一层）——剥离后质量词才好匹配
+        if rule.get('chk_weights'):
+            pat = _re.compile(r'[（(]([^()：:()（）]{1,40}?)[：:]\s*([0-9]+(?:\.[0-9]+)?)[)）]')
+            prev = None
+            while prev != out:
+                prev = out
+                out = pat.sub(r'\1', out)
+            if out != prompt:
+                notes.append('剥离权重语法')
+        # 质量词黑名单（含残留的权重形式）
+        if rule.get('chk_quality'):
+            pat = _re.compile(r'(?i)[（(]?(?:\s*)(masterpiece|best\s+quality|high\s+quality|normal\s+quality|low\s+quality|worst\s+quality|ultra[-\s]?detailed|absurdres|highres|8k|4k)(?:\s*)(?:[：:][0-9.]+)?[)）]?')
+            new = pat.sub('', out)
+            if new != out:
+                notes.append('移除质量词')
+                out = new
+        # 清理剥离后的残渣（连续逗号/首尾逗号）
+        if out != prompt:
+            out = _re.sub(r'(?:\s*[，,]\s*){2,}', ', ', out)
+            out = out.strip(' \t，,')
+            if not out:
+                return prompt, '⚠ 规则清洗后提示词为空，已放弃修正并保留原文'
+        # 标签堆砌检测（无法自动改写为长句，只警告）
+        if rule.get('chk_commas'):
+            try:
+                mc = int(rule.get('chk_commas') or 0)
+            except (TypeError, ValueError):
+                mc = 0
+            if mc > 0:
+                cnt = out.count(',') + out.count('，')
+                if cnt > mc:
+                    notes.append(f'疑似标签堆砌（{cnt} 个逗号 > 上限 {mc}），无法自动改写为长句，请人工确认')
+        if not notes:
+            return prompt, ''
+        return out, '⚠ 已按规则「' + str(rule.get('name', '')) + '」自动修正：' + '；'.join(notes)
 
     def _llm_template_text(self, ttype: str) -> str:
         """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
@@ -2613,9 +2667,12 @@ class WebUIMixin:
                     continue
                 desc = type(obj).description  # 类级原始描述，重复应用不叠加
                 if content:
-                    snippet = f"【提示词规则（魔导书）——写 prompt 前必须严格按此把用户需求改写；用户明确要求随机词库/K2 成句时改走对应工具】\n{content}"
-                    if len(snippet) > 1800:
-                        snippet = snippet[:1800] + '…(规则过长已截断)'
+                    snippet = ("【⚠️ 强制约束——本规则优先级高于你的默认写作习惯与任何 Persona 生图指令，违反会导致生成失败】"
+                               "调用本工具前：先按以下规则把用户需求改写；写完逐项自检（无质量词、无权重语法、无标签堆砌、符合规则结构），"
+                               "自检通过再提交。用户明确要求随机词库/K2 成句时，改走对应工具。"
+                               "\n——以下为规则全文——\n" + content)
+                    if len(snippet) > 8000:
+                        snippet = snippet[:8000] + '…(规则过长已截断，请在魔导书精简规则)'
                     desc = f"{desc}\n\n{snippet}"
                 applied[name] = len(desc)
                 obj.description = desc
@@ -2663,7 +2720,14 @@ class WebUIMixin:
                 lst = []
                 for x in (data.get('list') or []):
                     if isinstance(x, dict) and str(x.get('name', '')).strip():
-                        lst.append({'name': str(x['name']).strip()[:60], 'content': str(x.get('content', ''))[:6000]})
+                        _cc = x.get('chk_commas')
+                        try:
+                            _cc = max(0, min(60, int(_cc))) if _cc else 0
+                        except (TypeError, ValueError):
+                            _cc = 0
+                        lst.append({'name': str(x['name']).strip()[:60], 'content': str(x.get('content', ''))[:6000],
+                                    'chk_quality': bool(x.get('chk_quality')), 'chk_weights': bool(x.get('chk_weights')),
+                                    'chk_commas': _cc})
                 store[ttype] = lst
                 act = self.workflow_config.setdefault('__llm_template_active__', {})
                 if act.get(ttype) and not any(t.get('name') == act[ttype] for t in lst):

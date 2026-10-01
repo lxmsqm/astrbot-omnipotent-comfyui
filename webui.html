@@ -5168,6 +5168,12 @@ textarea:focus-visible,
       <div id="grm_rules_editor" style="display:none;flex-direction:column;gap:6px;margin-top:8px">
         <input type="text" id="grm_rule_name" placeholder="规则名称" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px">
         <textarea id="grm_rule_content" rows="12" placeholder="规则内容：写给 AI 的提示词改写规则（对话生成时注入）" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;line-height:1.6"></textarea>
+        <div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--text-sub);flex-wrap:wrap">
+          <span style="font-weight:600">提交前硬校验（插件自动修正/警告，LLM 违规兜底）：</span>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="grm_rule_chk_quality" style="accent-color:var(--primary)"> 剥离质量词</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="grm_rule_chk_weights" style="accent-color:var(--primary)"> 剥离权重语法</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer">逗号上限(0=关) <input type="number" id="grm_rule_chk_commas" min="0" max="60" value="0" style="width:52px;padding:2px 4px;border-radius:6px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text)"></label>
+        </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-xs btn-primary" onclick="grimRulesSave()">保存</button>
           <button class="btn btn-xs btn-secondary" onclick="grimRulesCancel()">取消</button>
@@ -8763,6 +8769,9 @@ function grimRulesRender() {
     return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg)">
       <span style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden" title="${esc(preview)}">
         <span style="font-weight:600;white-space:nowrap">${esc(t.name)}</span>
+        ${t.chk_quality ? '<span style="font-size:9px;padding:1px 4px;border-radius:5px;background:color-mix(in oklch, var(--primary) 15%, transparent);color:var(--primary)">质</span>' : ''}
+        ${t.chk_weights ? '<span style="font-size:9px;padding:1px 4px;border-radius:5px;background:color-mix(in oklch, var(--primary) 15%, transparent);color:var(--primary)">权</span>' : ''}
+        ${t.chk_commas ? `<span style="font-size:9px;padding:1px 4px;border-radius:5px;background:color-mix(in oklch, var(--primary) 15%, transparent);color:var(--primary)">逗≤${t.chk_commas}</span>` : ''}
         <span style="color:var(--text-sub2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(preview)}</span>
       </span>
       <button class="btn btn-xs btn-secondary" onclick="grimRulesEdit(${i})">编辑</button>
@@ -8799,6 +8808,9 @@ function grimRulesAdd() {
   const ed = document.getElementById('grm_rules_editor');
   document.getElementById('grm_rule_name').value = '';
   document.getElementById('grm_rule_content').value = '';
+  document.getElementById('grm_rule_chk_quality').checked = false;
+  document.getElementById('grm_rule_chk_weights').checked = false;
+  document.getElementById('grm_rule_chk_commas').value = 0;
   if (ed) ed.style.display = 'flex';
 }
 
@@ -8808,6 +8820,9 @@ function grimRulesEdit(i) {
   _grimRulesEditIdx = i;
   document.getElementById('grm_rule_name').value = t.name;
   document.getElementById('grm_rule_content').value = t.content || '';
+  document.getElementById('grm_rule_chk_quality').checked = !!t.chk_quality;
+  document.getElementById('grm_rule_chk_weights').checked = !!t.chk_weights;
+  document.getElementById('grm_rule_chk_commas').value = t.chk_commas || 0;
   const ed = document.getElementById('grm_rules_editor');
   if (ed) ed.style.display = 'flex';
   ed && ed.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -8824,10 +8839,14 @@ async function grimRulesSave() {
   const content = document.getElementById('grm_rule_content').value;
   if (!name || !content.trim()) { toast('名称和内容都要填', 'error'); return; }
   const arr = [...(_grimRules[_grimRulesTab] || [])];
-  if (_grimRulesEditIdx !== null && _grimRulesEditIdx >= 0) arr[_grimRulesEditIdx] = { name, content };
+  const entry = { name, content,
+    chk_quality: document.getElementById('grm_rule_chk_quality').checked,
+    chk_weights: document.getElementById('grm_rule_chk_weights').checked,
+    chk_commas: parseInt(document.getElementById('grm_rule_chk_commas').value, 10) || 0 };
+  if (_grimRulesEditIdx !== null && _grimRulesEditIdx >= 0) arr[_grimRulesEditIdx] = entry;
   else {
     if (arr.some(t => t.name === name)) { toast('同名规则已存在', 'error'); return; }
-    arr.push({ name, content });
+    arr.push(entry);
   }
   if (await grimRulesPost({ op: 'save', type: _grimRulesTab, list: arr })) {
     _grimRules[_grimRulesTab] = arr;
