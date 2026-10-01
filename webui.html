@@ -5174,7 +5174,7 @@ textarea:focus-visible,
         </div>
       </div>
       <div style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--text-sub2);border-top:1px solid var(--card-border)">
-        启用中的规则会在 QQ/飞书对话要求生成时注入给 AI（文生图规则 → comfyui_draw；图片反推规则 → comfyui_img2img / comfyui_video）。标签化词库与 K2 仍可由 AI 自行选择使用。
+        默认全部不注入。到「工作流绑定」标签给工作流选定规则后，QQ/飞书对话要求生成时才会注入给 AI（文生图规则 → comfyui_draw；图片反推规则 → comfyui_img2img / comfyui_video）。标签化词库与 K2 仍可由 AI 自行选择使用。
       </div>
     </div>
     <!-- 【K2 控制】K2 模式专属控制面板（替代 anima 标签浏览，仅 K2 模式显示；对应 JS 见【K2 控制 · 前端】） -->
@@ -8741,10 +8741,10 @@ function grimRulesRender() {
     if (!wfs.length) { list.innerHTML = '<div style="font-size:11px;color:var(--text-sub2);padding:8px">无工作流</div>'; return; }
     list.innerHTML = wfs.map((wf) => {
       const val = _grimRuleBindings[wf.name] || '';
+      const bound = val && val !== 'none' ? val : '';
       const names = wf.category === '画' ? (_grimRules.t2i || []) : (_grimRules.imgrev || []);
-      const opts = ['<option value="">继承分类默认（' + (wf.category === '画' ? esc(_grimRulesActive.t2i || '无') : esc(_grimRulesActive.imgrev || '无')) + '）</option>',
-        '<option value="none"' + (val === 'none' ? ' selected' : '') + '>不注入</option>']
-        .concat(names.map((n) => '<option value="' + esc(n) + '"' + (val === n ? ' selected' : '') + '>' + esc(n) + '</option>')).join('');
+      const opts = ['<option value="none"' + (!bound ? ' selected' : '') + '>不注入</option>']
+        .concat(names.map((n) => '<option value="' + esc(n) + '"' + (bound === n ? ' selected' : '') + '>' + esc(n) + '</option>')).join('');
       const wSafe = String(wf.name).replace(/'/g, "\\'");
       return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg)">
         <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(wf.name)} <span style="color:var(--text-sub2)">（${esc(wf.category || '未分类')}）</span></span>
@@ -8759,14 +8759,12 @@ function grimRulesRender() {
     return;
   }
   list.innerHTML = arr.map((t, i) => {
-    const on = _grimRulesActive[_grimRulesTab] === t.name;
     const preview = (t.content || '').replace(/\n/g, ' ').slice(0, 60);
     return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--card-border);border-radius:var(--radius-sm);background:var(--input-bg)">
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;flex:1;min-width:0" title="${esc(preview)}">
-        <input type="radio" name="grm_rule_active" ${on ? 'checked' : ''} onchange="grimRulesSetActive(${i})" style="accent-color:var(--primary)">
+      <span style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden" title="${esc(preview)}">
         <span style="font-weight:600;white-space:nowrap">${esc(t.name)}</span>
         <span style="color:var(--text-sub2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(preview)}</span>
-      </label>
+      </span>
       <button class="btn btn-xs btn-secondary" onclick="grimRulesEdit(${i})">编辑</button>
       <button class="btn btn-xs btn-secondary" onclick="grimRulesDel(${i})">删</button>
     </div>`;

@@ -2575,18 +2575,16 @@ class WebUIMixin:
         return web.json_response({"ok": True, "order": order})
 
     def _effective_rule(self, ttype: str, wf_name: str = None) -> str:
-        """工作流级规则绑定优先：none=不注入；指定名=该规则内容；空/未绑定=继承全局启用规则。"""
+        """v4.4.5: 默认全不注入——只有显式绑定规则的工作流才注入（'none'/未绑定/未知名均不注入）。"""
         wf = wf_name or self.current_workflow_name
         wf_cfg = (self.workflow_config.get('__workflow_node_configs__', {}) or {}).get(wf, {}) or {}
         binding = (wf_cfg.get('__llm_rule__') or '').strip()
-        if binding == 'none':
+        if not binding or binding == 'none':
             return ''
-        if binding:
-            for t in ((self.workflow_config.get('__llm_prompt_templates__', {}) or {}).get(ttype) or []):
-                if t.get('name') == binding:
-                    return (t.get('content') or '').strip()
-            return ''
-        return self._llm_template_text(ttype)
+        for t in ((self.workflow_config.get('__llm_prompt_templates__', {}) or {}).get(ttype) or []):
+            if t.get('name') == binding:
+                return (t.get('content') or '').strip()
+        return 
 
     def _llm_template_text(self, ttype: str) -> str:
         """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
