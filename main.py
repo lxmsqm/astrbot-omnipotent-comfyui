@@ -1879,6 +1879,7 @@ class WebUIMixin:
         app.router.add_post('/api/deploy-mode', self._webui_set_deploy_mode)
         app.router.add_get('/api/groups', self._webui_get_groups)
         app.router.add_post('/api/groups/auto-apply', self._webui_groups_auto_apply)
+        app.router.add_post('/api/debug-group-chain', self._webui_debug_group_chain)
         app.router.add_get('/api/proxy', self._webui_proxy)
         app.router.add_get('/api/workflows', lambda r: web.json_response(self._refresh_workflow_list() or []))
         app.router.add_get('/api/workflows/all', lambda r: web.json_response(self.workflow_list_cache or []))
@@ -2679,6 +2680,38 @@ class WebUIMixin:
         if applied:
             logger.info(f"[ComfyUI] 组控制: 已移除 {applied} 个节点（禁用组: {sorted(disabled)}，启用组不受影响）")
 
+    def _rebuild_jzl_refs(self, workflow):
+        """v4.5.2: 重建 JZL 参考输入——ref_images.* 里仍指向存活 LoadImage 的链接
+        连续重排到 ref_image_0..N-1，消除槽位空洞（ComfyUI 对空洞填 "" 默认值、
+        后方引用错位丢失，导致参考图不生效）。无存活引用时全部清除（JZL 跳过空引用）。"""
+        try:
+            for nid, node in list(workflow.items()):
+                if not isinstance(node, dict):
+                    continue
+                inputs = node.get('inputs', {})
+                if not isinstance(inputs, dict):
+                    continue
+                ref_keys = [k for k in inputs if k.startswith('ref_images.')]
+                if not ref_keys:
+                    continue
+                # v4.5.2b: 工作流键可能是 int（类型归一化后），成员判断必须按 str 归一
+                wf_ids = {str(k) for k in workflow.keys()}
+                links = []
+                for k in ref_keys:
+                    v = inputs.get(k)
+                    if isinstance(v, list) and len(v) >= 2 and str(v[0]) in wf_ids:
+                        links.append(v)
+                for k in ref_keys:
+                    del inputs[k]
+                for i, link in enumerate(links):
+                    inputs[f'ref_images.ref_image_{i}'] = link
+                if ref_keys:
+                    logger.info(f"[ComfyUI] JZL 引用重建: 节点 {nid} 存活引用 {len(links)}/{len(ref_keys)}")
+                self._group_modes_diag = dict(self._group_modes_diag or {}) if isinstance(getattr(self, '_group_modes_diag', None), dict) else {}
+                self._group_modes_diag['rebuild'] = {'节点': nid, '原引用': len(ref_keys), '存活': len(links)}
+        except Exception as e:
+            logger.warning(f"[ComfyUI] JZL 引用重建失败: {e}")
+
     def _llm_template_text(self, ttype: str) -> str:
         """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
         tpl = self.workflow_config.get('__llm_prompt_templates__', {}) or {}
@@ -3284,6 +3317,57 @@ class WebUIMixin:
             return web.json_response({"ok": True, "applied": applied, "skipped": skipped})
         except Exception as e:
             return web.json_response({"ok": False, "error": str(e)})
+
+    async def _webui_debug_group_chain(self, r):
+        """v4.5.2b: 组/图片注入链路干跑——按生成前的真实变换顺序执行，返回每步快照（不提交）。"""
+        try:
+            data = await r.json()
+            wf_name = str(data.get('workflow', '') or self.current_workflow_name)
+            image_path = data.get('image_path') or None
+            wf_file = self._find_workflow_file_path(wf_name) if hasattr(self, '_find_workflow_file_path') else None
+            if not wf_file:
+                for wr in (self._refresh_workflow_list() or []):
+                    if wr.get('name') == wf_name:
+                        wf_file = wr.get('path')
+                        break
+            if not wf_file:
+                return web.json_response({"ok": False, "error": f"找不到工作流 {wf_name}"})
+            with open(wf_file, 'r', encoding='utf-8') as f:
+                wf = json.load(f)
+
+            def snap(tag):
+                lis = {nid: str((n.get('inputs', {}) or {}).get('image', '?'))[:40]
+                       for nid, n in wf.items() if isinstance(n, dict) and n.get('class_type') == 'LoadImage'}
+                jzl = next((n for n in wf.values() if isinstance(n, dict) and 'ReferenceToVideo' in str(n.get('class_type', ''))), None)
+                refs = {}
+                if jzl:
+                    for k, v in (jzl.get('inputs', {}) or {}).items():
+                        if 'ref_images' in k:
+                            refs[k.replace('ref_images.', '')] = ('link[' + str(v[0]) + ']') if isinstance(v, list) else repr(v)[:16]
+                return {'step': tag, 'load': lis, 'refs': refs}
+
+            snaps = [snap('0-文件原始')]
+            # 阶段1：配置应用（含未上传加载节点清理）——与真实流程一致：有图时保护全部 LoadImage
+            _protect = set()
+            if image_path:
+                for _n in (self._find_all_load_image_nodes(wf) or []):
+                    _protect.add(str(_n))
+            self._apply_workflow_config(wf, wf_name=wf_name, protect_nodes=_protect or None)
+            snaps.append(snap('1-配置应用+清理'))
+            # 阶段2：组模式（禁用组移除）
+            self._apply_group_modes(wf, wf_name=wf_name)
+            snaps.append(snap('2-组模式'))
+            # 阶段3：图片注入（可选）
+            if image_path:
+                await self._set_load_image(wf, image_path)
+                snaps.append(snap('3-图片注入'))
+            # 阶段4：引用重建
+            self._rebuild_jzl_refs(wf)
+            snaps.append(snap('4-引用重建'))
+            return web.json_response({"ok": True, "wf": wf_name, "snaps": snaps})
+        except Exception as e:
+            import traceback
+            return web.json_response({"ok": False, "error": str(e), "tb": traceback.format_exc()[-600:]})
 
     async def _webui_proxy(self, r):
         """代理 ComfyUI 请求（支持 GET 和 POST）。白名单精确校验 host:port，防止 SSRF 绕过。"""
@@ -8838,6 +8922,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             if w is not None and h is not None:
                 self._set_resolution(wf, w, h)
             if image_path: await self._set_load_image(wf, image_path)
+            self._rebuild_jzl_refs(wf)
             if prompt:
                 # 合并固定标签到 prompt（有冲突检测），随机图模式跳过（已由 random-pick 合并过）
                 if not skip_pin_merge:
