@@ -3175,13 +3175,21 @@ class WebUIMixin:
             return web.json_response({"groups": []})
 
     def _read_groups_data_from_config(self):
-        """从工作流配置读取组数据：优先 per-workflow（__workflow_node_configs__[当前wf]），再退根级。"""
+        """从工作流配置读取组数据：优先 per-workflow（__workflow_node_configs__[当前wf]），
+        再退分桶存储（v4.4.2 组绑定，当前工作流的桶，与 GET 注入同源），最后根级。"""
         try:
             wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
             wf_cfg = wf_configs.get(self.current_workflow_name, {}) or {}
             per_wf = wf_cfg.get('__groups_data__', []) or []
             if per_wf:
                 return per_wf
+        except Exception:
+            pass
+        try:
+            bucket = (self.workflow_config.get('__group_bindings_store__', {}) or {}).get(self.current_workflow_name) or {}
+            bd = bucket.get('data', []) or []
+            if bd:
+                return bd
         except Exception:
             pass
         return self.workflow_config.get('__groups_data__', []) or []
