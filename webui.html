@@ -13694,23 +13694,20 @@ async function selectAllRandom() {
     toast('所有子分类已在随机池中');
     return;
   }
-  let added = 0, failed = 0;
-  for (const source of toAdd) {
-    const result = await apiFetch('/api/grimoire/rand-pool', {
-      method: 'POST',
-      body: JSON.stringify({ source, action: 'add' })
-    }, true);
-    if (result && result.ok) {
-      _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
-      added++;
-    } else {
-      failed++;
-    }
+  // v4.5.1: 批量一次往返（原先逐分类串行 N 次请求 + N 次全量配置落盘，非常卡）
+  const result = await apiFetch('/api/grimoire/rand-pool', {
+    method: 'POST',
+    body: JSON.stringify({ action: 'add', sources: toAdd })
+  }, true);
+  if (result && result.ok) {
+    _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
+    renderGrimoireSources();
+    updatePinnedBar();
+    updateRandomToggleBtn();
+    toast(`✅ 已将 ${toAdd.length} 个子分类加入随机池`);
+  } else {
+    toast((result && result.error) || '操作失败', 'error');
   }
-  renderGrimoireSources();
-  updatePinnedBar();
-  updateRandomToggleBtn();
-  toast(`✅ 已将 ${added} 个子分类加入随机池${failed > 0 ? `，${failed} 个失败` : ''}`);
 }
 
 /** 全选/取消随机池切换 */
@@ -13723,24 +13720,20 @@ async function toggleAllRandom() {
   const pool = _grimoireRandPool || [];
   const allInPool = allPaths.every(p => pool.includes(p));
   if (allInPool) {
-    // 全部移除
-    let removed = 0, failed = 0;
-    for (const source of allPaths) {
-      const result = await apiFetch('/api/grimoire/rand-pool', {
-        method: 'POST',
-        body: JSON.stringify({ source, action: 'remove' })
-      }, true);
-      if (result && result.ok) {
-        _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
-        removed++;
-      } else {
-        failed++;
-      }
+    // v4.5.1: 批量一次往返
+    const result = await apiFetch('/api/grimoire/rand-pool', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'remove', sources: allPaths })
+    }, true);
+    if (result && result.ok) {
+      _grimoireRandPool = (result.pool || []).map(p => p.replace(/\\/g, '/'));
+      renderGrimoireSources();
+      updatePinnedBar();
+      updateRandomToggleBtn();
+      toast(`已从随机池移除 ${allPaths.length} 个子分类`);
+    } else {
+      toast((result && result.error) || '操作失败', 'error');
     }
-    renderGrimoireSources();
-    updatePinnedBar();
-    updateRandomToggleBtn();
-    toast(`已从随机池移除 ${removed} 个子分类${failed > 0 ? `，${failed} 个失败` : ''}`);
   } else {
     // 全部添加
     selectAllRandom();

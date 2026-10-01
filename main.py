@@ -4822,23 +4822,26 @@ class GrimoireMixin:
             body = await request.json()
         except Exception:
             return web.json_response({"ok": False, "error": "请求体格式错误"})
-        source = body.get('source', '').strip()
+        # v4.5.1: 支持批量 sources（全选随机一次往返），单 source 保持兼容
         action = body.get('action', '')
-        # 统一用正斜杠存储，避免 Windows 反斜杠导致路径不匹配
-        source = source.replace('\\', '/')
-        if not source or not action:
+        sources = [str(x).strip().replace('\\', '/') for x in (body.get('sources') or []) if str(x).strip()]
+        single = str(body.get('source', '')).strip()
+        if single:
+            sources.append(single.replace('\\', '/'))
+        if not sources or not action:
             return web.json_response({"ok": False, "error": "缺少参数"})
         pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
         if action == 'add':
-            if source not in pool:
-                pool.append(source)
+            for src in sources:
+                if src not in pool:
+                    pool.append(src)
         elif action == 'remove':
-            pool = [s for s in pool if s != source]
+            pool = [s for s in pool if s not in sources]
         else:
             return web.json_response({"ok": False, "error": "未知操作"})
         self.workflow_config['__grimoire_rand_pool__'] = pool
         await self._save_workflow_config()
-        return web.json_response({"ok": True, "pool": pool})
+        return web.json_response({"ok": True, "pool": pool, "count": len(sources)})
 
     async def _webui_grimoire_get_stars(self, request):
         """获取收藏标签数据"""
