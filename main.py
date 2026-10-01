@@ -695,11 +695,14 @@ class WorkflowMixin:
             self._context_workflows[context_key] = wf['name']
         self.workflow_path = wf['path']
         self.current_workflow_name = wf['name']
-        # 持久化 __bind_target__：切换后写回 config，重启后 _refresh_workflow_list 才能恢复该工作流
+        # 持久化 __current_workflow__：切换后写回 config，重启后 _refresh_workflow_list 才能恢复该工作流
         # （否则重启后回退到第一个工作流，官方分辨率/时长节点检测错乱）
+        # ★ v4.4.1 修复串台：此前这里写的是 __bind_target__——该键是「组绑定目标」专用，
+        #   被切工作流动作反复改写后，任何工作流都会被当成组绑定目标（孤儿绑定串台）。
+        #   现拆分：__current_workflow__ 只管「上次选中的工作流」，__bind_target__ 只管组绑定。
         wname = wf.get('name') if isinstance(wf, dict) else wf
-        if wname and self.workflow_config.get('__bind_target__') != wname:
-            self.workflow_config['__bind_target__'] = wname
+        if wname and self.workflow_config.get('__current_workflow__') != wname:
+            self.workflow_config['__current_workflow__'] = wname
             self._schedule_save_workflow_config()
         self._refresh_workflow_list()
 
@@ -767,14 +770,24 @@ class WorkflowMixin:
         self.workflow_list_cache = all_files
         visible = [w for w in all_files if not w["hidden"]]
         if not self.workflow_path and visible:
-            # 优先用 __bind_target__ 恢复当前工作流（避免重启后首屏指向第一个工作流，
+            # 优先用 __current_workflow__ 恢复当前工作流（避免重启后首屏指向第一个工作流，
             # 导致官方分辨率/时长节点检测错误、面板不显示）
-            bt = (self.workflow_config.get('__bind_target__') or '').strip()
-            bt_match = next((w for w in visible if w['name'] == bt), None) if bt else None
-            if bt_match:
-                self.workflow_path = bt_match["path"]
-                self.current_workflow_name = bt_match["name"]
-                bt_match["is_current"] = True
+            # ★ v4.4.1: 兼容旧键 __bind_target__（历史版本把当前工作流存在那里）；
+            #   若读到旧键则迁移到新键并清掉旧键，防止组绑定串台残留
+            cur_saved = (self.workflow_config.get('__current_workflow__') or '').strip()
+            if not cur_saved:
+                legacy = (self.workflow_config.get('__bind_target__') or '').strip()
+                if legacy and not self.workflow_config.get('__groups_source__'):
+                    # 无组绑定时旧键才是"当前工作流"，迁移；有组绑定则保留原义
+                    cur_saved = legacy
+                    self.workflow_config['__current_workflow__'] = legacy
+                    self.workflow_config['__bind_target__'] = ''
+                    self._schedule_save_workflow_config()
+            cur_match = next((w for w in visible if w['name'] == cur_saved), None) if cur_saved else None
+            if cur_match:
+                self.workflow_path = cur_match["path"]
+                self.current_workflow_name = cur_match["name"]
+                cur_match["is_current"] = True
             else:
                 self.workflow_path = visible[0]["path"]
                 self.current_workflow_name = visible[0]["name"]
@@ -2435,7 +2448,7 @@ class WebUIMixin:
                         wf_configs[wf_name] = wf_configs.get(wf_name, {})
                         wf_configs[wf_name][key_name] = data.pop(key_name)
                         data['__workflow_node_configs__'] = wf_configs
-                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__bind_target__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
+                preserved_keys = ['__local_config__', '__hidden_workflows__', '__groups_data__', '__groups_source__', '__disabled_groups__', '__bind_target__', '__current_workflow__', '__workflow_node_configs__', '__group_bindings__', '__user_bindings__', '__workflow_aliases__', '__wf_categories__']
                 for key in preserved_keys:
                     if key not in data and key in self.workflow_config: data[key] = self.workflow_config[key]
                 # 清理已迁移到 per-workflow 的根级别旧数据（之前 bug 遗留的）
@@ -2549,19 +2562,29 @@ class WebUIMixin:
                     elif isinstance(d, list) and name in d: d.remove(name)
                 # 清理内存中会话上下文
                 self._context_workflows = {k: v for k, v in self._context_workflows.items() if v != name}
-                # 清理组相关配置
+                # 清理组相关配置（v4.4.1: 补孤儿绑定清理——source 空但 bindTarget 悬空时一并清除）
                 gs = self.workflow_config.get('__groups_source__', '')
                 bt = self.workflow_config.get('__bind_target__', '')
                 if gs == name:
-                    # 删除的是组源工作流：只清源标记，保留组数据与绑定，
-                    # 绑定目标工作流仍可读取组数据（loadBoundGroups 依赖 __groups_data__）
+                    # 删除的是组源工作流：源没了，整条绑定链失效（旧版保留组数据导致孤儿绑定串台）
                     self.workflow_config['__groups_source__'] = ''
                     self.workflow_config['__disabled_groups__'] = {}
+                    self.workflow_config['__groups_data__'] = []
+                    if bt:
+                        self.workflow_config['__bind_target__'] = ''
                 elif bt == name:
                     # 删除的是绑定目标工作流：目标没了，组数据/绑定随之失效
                     self.workflow_config['__disabled_groups__'] = {}
                     self.workflow_config['__groups_data__'] = []
                     self.workflow_config['__bind_target__'] = ''
+                # 兜底：source 已空但 bind_target 还挂着（历史孤儿状态）→ 清除
+                if not self.workflow_config.get('__groups_source__') and self.workflow_config.get('__bind_target__'):
+                    self.workflow_config['__bind_target__'] = ''
+                    self.workflow_config['__disabled_groups__'] = {}
+                    self.workflow_config['__groups_data__'] = []
+                # 清理 __current_workflow__（v4.4.1 新键）
+                if self.workflow_config.get('__current_workflow__') == name:
+                    self.workflow_config['__current_workflow__'] = ''
                 # 清理绑定中引用该工作流的条目
                 for bind_key in ('__group_bindings__', '__user_bindings__'):
                     bd = self.workflow_config.get(bind_key, {}) or {}
@@ -3320,6 +3343,7 @@ class WebUIMixin:
             "__disabled_groups__": self.workflow_config.get("__disabled_groups__", {}),
             "__disabled_nodes__": wf_config.get("__disabled_nodes__", []),
             "__bind_target__": self.workflow_config.get("__bind_target__", ""),
+            "__current_workflow__": self.workflow_config.get("__current_workflow__", ""),
             "__groups_data__": self.workflow_config.get("__groups_data__", []),
             "__hidden_workflows__": self.workflow_config.get("__hidden_workflows__", []),
             "__workflow_aliases__": self.workflow_config.get("__workflow_aliases__", {}),
@@ -8366,9 +8390,14 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             disabled_groups = self.workflow_config.get('__disabled_groups__', {})
             groups_data = self.workflow_config.get('__groups_data__', [])
             bind_target = self.workflow_config.get('__bind_target__', '')
-            # 应用禁用：绑定目标等于当前工作流，或未绑定（组源即当前工作流）时都生效
-            is_bound = bool(bind_target)
-            if disabled_groups and groups_data and (bind_target == wf_name or not is_bound):
+            groups_source = self.workflow_config.get('__groups_source__', '')
+            # 应用禁用（v4.4.1 串台修复）：组禁用只对「组源工作流」或「显式绑定的目标工作流」生效。
+            # 旧版条件 `not is_bound`（无绑定就全局生效）+ 切工作流改写 bind_target 的 bug，
+            # 曾导致 A 工作流提取的组禁用被错误应用到 B 工作流（孤儿绑定串台）。
+            # 现在：source 空 = 组数据无效（孤儿），无论 bind_target 是什么都不应用。
+            group_applies = bool(groups_source) and (
+                bind_target == wf_name or groups_source == wf_name)
+            if disabled_groups and groups_data and group_applies:
                 for g in groups_data:
                     if disabled_groups.get(str(g.get('id', ''))):
                         to_delete = []

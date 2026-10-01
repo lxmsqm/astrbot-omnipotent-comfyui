@@ -7376,9 +7376,23 @@ async function loadParams() {
     promptInputKey = promptNodeId ? _getNodeFirstStringKey(promptNodeId) : '';
     negativeInputKey = negativeNodeId ? _getNodeFirstStringKey(negativeNodeId) : '';
     disabledGroups = c.__disabled_groups__ || {};
-    groupsSource = c.__groups_source__ || '';
-    bindTarget = c.__bind_target__ || '';
-    isBound = !!(c.__groups_data__ && c.__groups_data__.length > 0);
+    // v4.4.1 串台修复：组绑定三元组必须完整（source + bindTarget + groups_data）才有效；
+    // source 为空的孤儿状态（切工作流 bug 遗留）直接作废，防止别的工作流的组显示在这里
+    const _gs = c.__groups_source__ || '';
+    const _bt = c.__bind_target__ || '';
+    const _gd = c.__groups_data__ || [];
+    if (_gs && _gd.length && _bt) {
+      groupsSource = _gs; bindTarget = _bt;
+    } else {
+      groupsSource = ''; bindTarget = ''; disabledGroups = {};
+      if (_gd.length && !_gs) {
+        // 通知后端清理孤儿数据（一次性，失败无碍）
+        apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
+          __groups_source__: '', __bind_target__: '', __disabled_groups__: {}, __groups_data__: []
+        }) }, true);
+      }
+    }
+    isBound = !!(groupsSource && bindTarget && _gd.length > 0);
     disabledNodes = c.__disabled_nodes__ || [];
 
     // 先清空 textarea，避免旧工作流的残留数据
@@ -9572,8 +9586,10 @@ function showGroupsBinding() {
   const extractBtn = document.getElementById('btn_extract'), clearBtn = document.getElementById('btn_clear_extract');
   const cur = getCurrentWF();
   if (!cur) { bar.style.display = 'none'; return; }
+  // v4.4.1 串台修复：绑定三元组完整性校验——source 为空的孤儿状态一律按「无关联」处理
+  const hasBind = !!(groupsSource && bindTarget && isBound);
   const isSource = (groupsSource === cur);
-  const isTarget = bindTarget === cur;
+  const isTarget = hasBind && (bindTarget === cur);
 
   // 当前工作流已关联组数据 — 显示对应的操作面板
   if (isSource || isTarget) {
@@ -9643,11 +9659,12 @@ function toggleGroupTag(g, el) {
 }
 
 function loadBoundGroups() {
-  if (getCurrentWF() !== bindTarget) return;
+  // v4.4.1 串台修复：绑定三元组完整性校验（source 空 = 孤儿绑定，不渲染别的工作流的组）
+  if (getCurrentWF() !== bindTarget || !groupsSource || !isBound) return;
   apiFetch('/api/workflow-params-config', {}).then((c) => {
     if (!c) return;
     const g = c.__groups_data__ || [];
-    if (g.length) {
+    if (g.length && groupsSource) {
       $id('groups_bar').style.display = 'block';
       let h = '';
       g.forEach((x) => {
