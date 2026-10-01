@@ -2640,6 +2640,44 @@ class WebUIMixin:
             return prompt, ''
         return out, '⚠ 已按规则「' + str(rule.get('name', '')) + '」自动修正：' + '；'.join(notes)
 
+    def _apply_group_modes(self, workflow, wf_name=None):
+        """v4.4.10: 组控制落装——禁用组从图中级联移除（ComfyUI API 执行忽略 mode=4）。
+        语义：节点处于禁用组且不在任何启用组 → 移除；跨组共享节点不受影响。
+        数据源：分桶存储（当前工作流的 data+disabled），兼容旧 ROOT __disabled_groups__。
+        注意：全部输出组被禁用 → ComfyUI 返回 no outputs，属预期反馈。"""
+        wf = wf_name or self.current_workflow_name
+        store = self.workflow_config.get('__group_bindings_store__', {}) or {}
+        bucket = store.get(wf) or {}
+        groups = bucket.get('data') or []
+        disabled = set(str(k) for k in (bucket.get('disabled') or {}).keys())
+        if wf == self.current_workflow_name:
+            disabled |= set(str(k) for k in (self.workflow_config.get('__disabled_groups__', {}) or {}).keys())
+        if not disabled or not groups:
+            self._group_modes_diag = {'wf': wf, '组数': len(groups), '禁用': sorted(disabled), '结果': '跳过'}
+            return
+        self._group_modes_diag = {'wf': wf, '组数': len(groups), '禁用': sorted(disabled)}
+        disabled_nodes = set()
+        enabled_nodes = set()
+        for g in groups:
+            gid = str(g.get('id', ''))
+            nodes = [str(n) for n in (g.get('nodes') or [])]
+            if gid in disabled:
+                disabled_nodes |= set(nodes)
+            else:
+                enabled_nodes |= set(nodes)
+        targets = disabled_nodes - enabled_nodes
+        if not targets:
+            self._group_modes_diag = {'wf': wf, '组数': len(groups), '禁用': sorted(disabled), '结果': '无命中节点'}
+            return
+        # v4.4.10: ComfyUI API 执行忽略 mode=4（bypass 是 UI 层概念）——改用级联移除：
+        # 移除禁用组节点，其下游若所有输入都来自已移除节点也一并移除，否则仅断开引用。
+        before = len(workflow)
+        self._remove_workflow_nodes(workflow, list(targets))
+        applied = before - len(workflow)
+        self._group_modes_diag['移除'] = applied
+        if applied:
+            logger.info(f"[ComfyUI] 组控制: 已移除 {applied} 个节点（禁用组: {sorted(disabled)}，启用组不受影响）")
+
     def _llm_template_text(self, ttype: str) -> str:
         """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
         tpl = self.workflow_config.get('__llm_prompt_templates__', {}) or {}
@@ -2702,6 +2740,7 @@ class WebUIMixin:
             'imgrev': store.get('imgrev', []),
             'active': self.workflow_config.get('__llm_template_active__', {}) or {},
             'applied': getattr(self, '_llm_tpl_applied', {}),
+            'group_diag': getattr(self, '_group_modes_diag', None),
             'rule_names': {'t2i': [t.get('name') for t in store.get('t2i', [])], 'imgrev': [t.get('name') for t in store.get('imgrev', [])]},
             'workflows': [{'name': w.get('name', ''), 'category': (self.workflow_config.get('__wf_categories__', {}) or {}).get(w.get('name', ''), '')} for w in (self._refresh_workflow_list() or [])],
             'bindings': {wf: wc.get('__llm_rule__', '') for wf, wc in (self.workflow_config.get('__workflow_node_configs__', {}) or {}).items() if isinstance(wc, dict) and wc.get('__llm_rule__')},
@@ -8647,6 +8686,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 except Exception as e:
                     logger.debug(f"[ComfyUI] 预取 LoadImage 节点失败: {e}")
             self._apply_workflow_config(wf, wf_name=wf_name, protect_nodes=_protect or None)
+            self._apply_group_modes(wf, wf_name=wf_name)
             # 注：占位文件方案已废弃（改用「未上传加载节点移除+断连」），
             # 不再需要 _ensure_placeholder_files 预上传，避免每次生成浪费 ffmpeg + 上传
             try:
