@@ -1878,6 +1878,7 @@ class WebUIMixin:
         app.router.add_get('/api/data-layout', self._webui_data_layout)
         app.router.add_post('/api/deploy-mode', self._webui_set_deploy_mode)
         app.router.add_get('/api/groups', self._webui_get_groups)
+        app.router.add_post('/api/groups/auto-apply', self._webui_groups_auto_apply)
         app.router.add_get('/api/proxy', self._webui_proxy)
         app.router.add_get('/api/workflows', lambda r: web.json_response(self._refresh_workflow_list() or []))
         app.router.add_get('/api/workflows/all', lambda r: web.json_response(self.workflow_list_cache or []))
@@ -3232,6 +3233,57 @@ class WebUIMixin:
         except Exception:
             pass
         return self.workflow_config.get('__groups_data__', []) or []
+
+    async def _webui_groups_auto_apply(self, r):
+        """v4.5.0: 组提取自动应用——组数据写入所有节点结构兼容的工作流（节点 id 全覆盖），
+        免手动绑定。空 groups = 清除 source 工作流的组数据。"""
+        try:
+            data = await r.json()
+            source = str(data.get('source', '')).strip()
+            raw_groups = data.get('groups')
+            if not source:
+                return web.json_response({"ok": False, "error": "source 缺失"})
+            store = self.workflow_config.setdefault('__group_bindings_store__', {})
+            if not (isinstance(raw_groups, list) and raw_groups):
+                store.pop(source, None)
+                await self._save_workflow_config()
+                return web.json_response({"ok": True, "applied": [], "skipped": [], "cleared": source})
+            clean = []
+            all_ids = set()
+            for g in raw_groups:
+                if not isinstance(g, dict):
+                    continue
+                nodes = [str(n) for n in (g.get('nodes') or [])]
+                clean.append({'id': str(g.get('id', '')), 'title': str(g.get('title', ''))[:60],
+                              'color': str(g.get('color', '')), 'nodes': nodes})
+                all_ids |= set(nodes)
+            if not clean:
+                return web.json_response({"ok": False, "error": "组数据为空"})
+            applied, skipped = [], []
+            for wr in (self._refresh_workflow_list() or []):
+                name = wr.get('name', '')
+                try:
+                    with open(wr.get('path', ''), 'r', encoding='utf-8') as f:
+                        twf = json.load(f)
+                    ids = set(str(k) for k in twf.keys())
+                except Exception:
+                    skipped.append({'name': name, 'reason': '读取失败'})
+                    continue
+                missing = len(all_ids - ids)
+                if missing:
+                    skipped.append({'name': name, 'reason': f'缺 {missing} 个节点'})
+                    continue
+                prev = store.get(name) if isinstance(store.get(name), dict) else {}
+                prev_dis = (prev.get('disabled') or {}) if prev else {}
+                # 保留用户已切换的组开关（仅存留的组 id）
+                store[name] = {'data': clean, 'target': name,
+                               'disabled': {k: v for k, v in prev_dis.items() if any(c['id'] == k for c in clean)}}
+                applied.append(name)
+            self.workflow_config['__group_bindings_store__'] = store
+            await self._save_workflow_config()
+            return web.json_response({"ok": True, "applied": applied, "skipped": skipped})
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_proxy(self, r):
         """代理 ComfyUI 请求（支持 GET 和 POST）。白名单精确校验 host:port，防止 SSRF 绕过。"""

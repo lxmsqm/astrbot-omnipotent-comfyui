@@ -4978,8 +4978,6 @@ textarea:focus-visible,
           <div class="groups-tags" id="groups_list"></div>
           <div class="groups-actions">
             <button class="btn btn-xs btn-secondary" data-action="extractGroups" id="btn_extract"><svg class="icon" aria-hidden="true"><use href="#icon-box"/></svg> 提取</button>
-            <button class="btn btn-xs btn-primary" data-action="showBindModal" id="btn_bind" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-link"/></svg> 设独立</button>
-            <button class="btn btn-xs btn-secondary" data-action="unbindGroups" id="btn_unbind" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-unlock"/></svg> 解绑</button>
             <button class="btn btn-xs btn-danger" data-action="clearExtractGroups" id="btn_clear_extract" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-trash"/></svg> 清除组</button>
           </div>
         </div>
@@ -5057,20 +5055,6 @@ textarea:focus-visible,
     <div id="node_modal_body"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
       <button class="btn btn-sm btn-secondary" data-action="closeNodeModal">关闭</button>
-    </div>
-  </div>
-</div>
-
-<!-- ==================== Bind Modal ==================== -->
-<div class="modal" id="bind_modal" role="dialog" aria-modal="true" aria-label="选择API工作流">
-  <div class="modal-content" style="max-width:440px">
-    <button class="modal-close" data-action="closeBindModal" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
-    <h3><svg class="icon" aria-hidden="true"><use href="#icon-link"/></svg> 选择 API 工作流</h3>
-    <p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">组来源: <b id="bind_source_name"></b></p>
-    <select id="bind_target_select" size="6" aria-label="目标工作流" style="width:100%;padding:8px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px"></select>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-sm btn-primary" data-action="bindGroups">确认设置</button>
-      <button class="btn btn-sm btn-secondary" data-action="closeBindModal">取消</button>
     </div>
   </div>
 </div>
@@ -7499,8 +7483,7 @@ async function loadParams() {
 
   renderNodes();
   updateNodeDisplay();
-  showGroupsBinding();
-  if (isBound && getCurrentWF() === bindTarget) loadBoundGroups();
+  refreshGroupsUI();
 }
 
 function showSkeletonNodes() {
@@ -9801,73 +9784,47 @@ function filterNodes() {
 // ========================================================================
 // 组控制
 // ========================================================================
-function showGroupsBinding() {
-  const bar = document.getElementById('groups_bar'), src = document.getElementById('groups_source');
-  const bindBtn = document.getElementById('btn_bind'), unbindBtn = document.getElementById('btn_unbind');
-  const extractBtn = document.getElementById('btn_extract'), clearBtn = document.getElementById('btn_clear_extract');
+async function refreshGroupsUI() {
+  const bar = document.getElementById('groups_bar');
+  if (!bar) return;
   const cur = getCurrentWF();
   if (!cur) { bar.style.display = 'none'; return; }
-  // v4.4.8: 分桶存储后组数据自包含——source 可空（源工作流已删），绑定有效性只看 目标+数据
-  const hasBind = !!(bindTarget && isBound);
-  const isSource = (groupsSource === cur);
-  const isTarget = hasBind && (bindTarget === cur);
-
-  // 当前工作流已关联组数据 — 显示对应的操作面板
-  if (isSource || isTarget) {
-    bar.style.display = 'block';
-    if (isTarget) {
-      src.textContent = groupsSource ? `📎 ${  groupsSource  } → ${  bindTarget}` : `📎 ${  bindTarget}（源已删除，组数据自包含）`;
-      extractBtn.style.display = 'none'; bindBtn.style.display = 'none';
-      unbindBtn.style.display = 'inline-flex';
-      clearBtn.style.display = 'none';
-    } else {
-      src.textContent = `📎 ${  groupsSource  } (未设置)`;
-      extractBtn.style.display = 'inline-flex'; bindBtn.style.display = 'inline-flex';
-      unbindBtn.style.display = 'none';
-      clearBtn.style.display = 'inline-flex';
+  try {
+    const d = await apiFetch('/api/groups');
+    const groups = (d && d.groups) || [];
+    const extractBtn = document.getElementById('btn_extract');
+    const clearBtn = document.getElementById('btn_clear_extract');
+    if (!groups.length) {
+      bar.style.display = 'block';
+      document.getElementById('groups_source').textContent = '';
+      if (extractBtn) extractBtn.style.display = 'inline-flex';
+      if (clearBtn) clearBtn.style.display = 'none';
+      $id('groups_list').innerHTML = '<span style="font-size:11px;color:var(--text-sub)">点击「📦 提取」获取工作流组件（自动应用到同结构工作流）</span>';
+      return;
     }
-    return;
-  }
-
-  // 当前工作流无关联组数据 — 始终显示提取按钮
-  bar.style.display = 'block';
-  src.textContent = '🎀 组控制';
-  extractBtn.style.display = 'inline-flex';
-  bindBtn.style.display = 'none'; unbindBtn.style.display = 'none';
-  clearBtn.style.display = 'none';
-  document.getElementById('groups_list').innerHTML = '<span style="font-size:11px;color:var(--text-sub)">点击「📦 提取」获取工作流组件</span>';
+    bar.style.display = 'block';
+    document.getElementById('groups_source').textContent = `${groups.length} 组`;
+    if (extractBtn) extractBtn.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'inline-flex';
+    $id('groups_list').innerHTML = groups.map((x) => {
+      const o = disabledGroups[x.id] ? ' off' : '';
+      return `<label class="group-tag${o}" style="border-color:${x.color}" data-action="toggleGroupTag" data-groupid="${x.id}">` +
+        `<input type="checkbox" ${disabledGroups[x.id] ? '' : 'checked'} data-gid="${x.id}"> ${x.title}</label>`;
+    }).join('');
+  } catch (e) { console.warn('refreshGroupsUI failed', e); }
 }
 
 async function extractGroups() {
   const cur = getCurrentWF();
   if (!cur) { toast('请先选择工作流', 'error'); return; }
   const d = await apiFetch('/api/groups');
-  if (d?.groups?.length) {
-    // 如果重新提取同一个工作流，保留独立工作流状态；否则视为新提取
-    if (groupsSource === cur && isBound) {
-      // 已设置独立工作流的重新提取，保持设置
-    } else {
-      isBound = false; bindTarget = '';
-    }
-    groupsSource = cur; disabledGroups = {};
-    showGroupsBinding();
-    let h = '';
-    d.groups.forEach((g) => {
-      h += `<label class="group-tag" style="border-color:${  g.color  }" data-action="toggleGroupTag" data-groupid="${  g.id  }">` +
-        `<input type="checkbox" checked data-gid="${  g.id  }"> ${  g.title  }</label>`;
-    });
-    $id('groups_list').innerHTML = h;
-    // 立即保存组数据（含节点列表）到后端，确保组控制条件满足
-    await apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
-      __groups_source__: groupsSource,
-      __disabled_groups__: disabledGroups,
-      __bind_target__: bindTarget,
-      __groups_data__: d.groups
-    }) });
-    toast(`✅ 已提取 ${  d.groups.length  } 个组`);
-  } else {
-    toast('没有组信息', 'error');
-  }
+  if (!d?.groups?.length) { toast('没有组信息', 'error'); return; }
+  // v4.5.0: 自动应用——组数据写入所有节点结构兼容的工作流（节点 id 全覆盖），免手动绑定
+  const r = await apiFetch('/api/groups/auto-apply', { method: 'POST', body: JSON.stringify({ source: cur, groups: d.groups }) }, true);
+  if (!r || r.ok === false) { toast((r && r.error) || '应用失败', 'error'); return; }
+  const skipNote = (r.skipped && r.skipped.length) ? `，跳过 ${r.skipped.length} 个（节点结构不匹配）` : '';
+  toast(`✅ 已应用到 ${r.applied.length} 个工作流${skipNote}`);
+  await refreshGroupsUI();
 }
 
 function toggleGroupTag(g, el) {
@@ -9879,88 +9836,16 @@ function toggleGroupTag(g, el) {
   saveParams();
 }
 
-function loadBoundGroups() {
-  // v4.4.2: 分桶后数据按目标自包含，source 可为空（源已删除仍渲染）
-  if (getCurrentWF() !== bindTarget || !isBound) return;
-  apiFetch('/api/workflow-params-config', {}).then((c) => {
-    if (!c) return;
-    const g = c.__groups_data__ || [];
-    if (g.length) {
-      $id('groups_bar').style.display = 'block';
-      let h = '';
-      g.forEach((x) => {
-        const o = disabledGroups[x.id] ? ' off' : '';
-        h += `<label class="group-tag${  o  }" style="border-color:${  x.color  }" data-action="toggleGroupTag" data-groupid="${  x.id  }">` +
-          `<input type="checkbox" ${  disabledGroups[x.id] ? '' : 'checked'  } data-gid="${  x.id  }"> ${  x.title  }</label>`;
-      });
-      $id('groups_list').innerHTML = h;
-    }
-  });
-}
 
-function showBindModal() {
-  $id('bind_source_name').textContent = groupsSource;
-  const s = $id('bind_target_select');
-  s.innerHTML = allWorkflows.filter((w) =>{ return w.name !== groupsSource; }).map((w) => {
-    return `<option value="${esc(w.name)}">${esc(w.name)}</option>`;
-  }).join('');
-  $id('bind_modal').classList.add('active');
-}
-function closeBindModal() { $id('bind_modal').classList.remove('active'); }
 
-async function bindGroups() {
-  if (!groupsSource) { toast('请先提取组', 'error'); return; }
-  bindTarget = $id('bind_target_select').value;
-  if (!bindTarget) { toast('选择目标', 'error'); return; }
-  const cur = getCurrentWF();
-  if (cur !== groupsSource) {
-    await apiFetch('/api/workflows/switch', { method:'POST', body:JSON.stringify({name:groupsSource}) });
-  }
-  const d = await apiFetch('/api/groups');
-  if (cur && cur !== groupsSource) {
-    await apiFetch('/api/workflows/switch', { method:'POST', body:JSON.stringify({name:cur}) });
-  }
-  if (!d?.groups?.length) { toast('获取组数据失败', 'error'); return; }
-  isBound = true;
-  await apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
-    __groups_source__: groupsSource,
-    __disabled_groups__: disabledGroups,
-    __bind_target__: bindTarget,
-    __groups_data__: d.groups
-  }) });
-  closeBindModal();
-  // 切换到独立工作流目标，让用户立刻看到设置状态
-  if (getCurrentWF() !== bindTarget) {
-    await apiFetch('/api/workflows/switch', { method:'POST', body:JSON.stringify({name:bindTarget}) });
-    await loadWorkflows();
-    await loadParams();
-  } else {
-    showGroupsBinding();
-  }
-  toast('✅ 已设置独立工作流');
-}
 
-async function unbindGroups() {
-  if (!confirm('确定取消独立工作流设置？')) return;
-  isBound = false; groupsSource = ''; bindTarget = ''; disabledGroups = {};
-  await apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
-    __groups_source__: '', __disabled_groups__: {}, __bind_target__: '', __groups_data__: []
-  }) });
-  $id('groups_list').innerHTML = '';
-  showGroupsBinding();
-  toast('已取消独立工作流');
-}
 
 function clearExtractGroups() {
-  if (!confirm('确定清除当前工作流的组提取数据？')) return;
-  groupsSource = ''; isBound = false; bindTarget = ''; disabledGroups = {};
-  $id('groups_list').innerHTML = '';
-  showGroupsBinding();
-  toast('🗑 已清除组提取数据');
-  // 异步保存到后端
-  apiFetch('/api/workflow-params', { method:'POST', body:JSON.stringify({
-    __groups_source__: '', __disabled_groups__: {}, __bind_target__: '', __groups_data__: []
-  }) });
+  const cur = getCurrentWF();
+  if (!cur || !confirm('确定清除当前工作流的组数据？（不影响其他已应用的工作流）')) return;
+  apiFetch('/api/groups/auto-apply', { method: 'POST', body: JSON.stringify({ source: cur, groups: [] }) }, true)
+    .then(() => { toast('🗑 已清除'); refreshGroupsUI(); })
+    .catch(() => toast('清除失败', 'error'));
 }
 
 // ========================================================================
