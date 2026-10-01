@@ -2671,8 +2671,8 @@ class WebUIMixin:
                                "调用本工具前：先按以下规则把用户需求改写；写完逐项自检（无质量词、无权重语法、无标签堆砌、符合规则结构），"
                                "自检通过再提交。用户明确要求随机词库/K2 成句时，改走对应工具。"
                                "\n——以下为规则全文——\n" + content)
-                    if len(snippet) > 8000:
-                        snippet = snippet[:8000] + '…(规则过长已截断，请在魔导书精简规则)'
+                    if len(snippet) > 20000:
+                        snippet = snippet[:20000] + '…(规则过长已截断)'
                     desc = f"{desc}\n\n{snippet}"
                 applied[name] = len(desc)
                 obj.description = desc
@@ -2725,7 +2725,7 @@ class WebUIMixin:
                             _cc = max(0, min(60, int(_cc))) if _cc else 0
                         except (TypeError, ValueError):
                             _cc = 0
-                        lst.append({'name': str(x['name']).strip()[:60], 'content': str(x.get('content', ''))[:6000],
+                        lst.append({'name': str(x['name']).strip()[:60], 'content': str(x.get('content', ''))[:20000],
                                     'chk_quality': bool(x.get('chk_quality')), 'chk_weights': bool(x.get('chk_weights')),
                                     'chk_commas': _cc})
                 store[ttype] = lst
