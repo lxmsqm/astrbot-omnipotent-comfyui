@@ -6945,17 +6945,28 @@ function uploadWfPreview(name) {
     // 减小 base64 传输量与后端压缩耗时，避免 30s 超时
     const reader = new FileReader();
     reader.onload = async () => {
+      // v4.4.0: 最长边 2048 保持，但对超高分辨率原图先在画布阶段控制（压缩函数内部处理），
+      // 8K 级长图会缩到 2048 长边再输出，PNG 透明图也可控
       const data = await compressImageDataURL(reader.result, 2048, 0.85);
-      const d = await apiFetch('/api/workflow-preview', { method:'POST', body:JSON.stringify({ name:name, data:data }) });
+      // v4.4.0: 大图 base64 可达数 MB，慢网 30s 默认超时会掐断 → 加到 120s；
+      // 失败时把后端错误透出来（旧版只说"保存失败"查不到原因）
+      const d = await apiFetch('/api/workflow-preview', { method:'POST', timeoutMs: 120000, body:JSON.stringify({ name:name, data:data }) });
       if (d && d.ok) { toast('预览图已保存'); loadWorkflows(); loadWfEditList && loadWfEditList(); }
-      else toast('预览图保存失败', 'error');
+      else {
+        const why = d ? (d.error || '未知错误') : '网络超时或数据过大（图太大时换小图重试）';
+        toast('预览图保存失败: ' + why, 'error', 8000);
+      }
     };
     reader.readAsDataURL(file);
   };
   input.click();
 }
 
-/** canvas 预压缩 dataURL 图片：限制最长边 maxSide，JPEG 质量 quality（保留透明则回退 PNG） */
+/** canvas 预压缩 dataURL 图片：限制最长边 maxSide，JPEG 质量 quality（真有透明才回退 PNG）
+ *  v4.4.0 修复：旧版 hasAlpha 判断恒 true（|| true 笔误）→ 所有图都转 PNG，
+ *  2048px PNG 动漫图/截图可达 4-10MB，base64 后可超 aiohttp client_max_size(20MB)
+ *  → 服务端 JSON 解析失败 →「预览图保存失败」。现在：逐像素查真实 alpha，无透明一律 JPEG
+ *  （体积小 3-8 倍），真透明才用 PNG。 */
 function compressImageDataURL(dataUrl, maxSide, quality) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -6969,8 +6980,18 @@ function compressImageDataURL(dataUrl, maxSide, quality) {
       canvas.width = cw; canvas.height = ch;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, cw, ch);
-      // 有透明通道用 PNG，否则 JPEG 更小
-      const hasAlpha = /data:image\/png/i.test(dataUrl) && (dataUrl.includes('iVBOR') || true);
+      // 真透明检测：抽样 alpha 通道，出现 <255 即认为有透明（抽样步长按面积自适应）
+      let hasAlpha = false;
+      try {
+        const srcIsPng = /data:image\/png/i.test(dataUrl);
+        if (srcIsPng) {
+          const step = Math.max(1, Math.floor(Math.sqrt(cw * ch / 4096)));
+          const d = ctx.getImageData(0, 0, cw, ch).data;
+          for (let i = 3; i < d.length; i += 4 * step) {
+            if (d[i] < 255) { hasAlpha = true; break; }
+          }
+        }
+      } catch (e) { /* getImageData 受 CORS 限制时按无透明处理 */ }
       try {
         resolve(canvas.toDataURL(hasAlpha ? 'image/png' : 'image/jpeg', quality));
       } catch (e) { resolve(dataUrl); }

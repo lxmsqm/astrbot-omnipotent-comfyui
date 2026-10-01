@@ -1808,7 +1808,7 @@ class WebUIMixin:
             return {"ok": False, "error": f"K2 引擎执行失败: {e}"}
 
     def _start_webui(self):
-        app = web.Application(client_max_size=20 * 1024 * 1024)  # 20MB 限制，支持大背景图上传
+        app = web.Application(client_max_size=64 * 1024 * 1024)  # 64MB：工作流预览图 base64 大图（v4.4.0，20MB 曾导致大图保存失败）
         app.router.add_get('/', self._serve_webui)
         app.router.add_get('/api/k2gen/data', self._webui_k2gen_data)
         # K2 字段锁定设定（前端面板保存，QQ /随机图 后端组句时遵守）
