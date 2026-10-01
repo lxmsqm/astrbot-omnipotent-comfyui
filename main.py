@@ -214,7 +214,16 @@ class ComfyUISwitchWorkflowTool(FunctionTool):
         for w in plugin._refresh_workflow_list():
             if keyword.lower() in w['name'].lower():
                 plugin._switch_to_workflow(w)
-                return f"✅ 已切换到【{w.get('display_name', w['name'])}】"
+                # v4.4.4: 带出目标工作流的规则绑定——LLM 在同一轮就能拿到新工作流的提示词规则
+                _r_t2i = plugin._effective_rule('t2i', w['name'])
+                _r_rev = plugin._effective_rule('imgrev', w['name'])
+                _extra = ''
+                if _r_t2i:
+                    _extra += f"\n【文生图提示词规则——写 prompt 必须严格遵循】\n{_r_t2i}"
+                if _r_rev:
+                    _extra += f"\n【图片参考提示词规则——写 prompt 必须严格遵循】\n{_r_rev}"
+                _tail = _extra if _extra else "\n（该工作流未绑定提示词规则，自由发挥即可）"
+                return f"✅ 已切换到【{w.get('display_name', w['name'])}】{_tail}"
         return f"❌ 未找到包含'{keyword}'的工作流"
 
 
@@ -705,6 +714,8 @@ class WorkflowMixin:
             self.workflow_config['__current_workflow__'] = wname
             self._schedule_save_workflow_config()
         self._refresh_workflow_list()
+        # v4.4.4: 切换工作流后按新工作流的规则绑定重注入工具描述（下一轮对话生效）
+        self._apply_llm_templates()
 
     def _refresh_workflow_list(self):
         """扫描工作流：根目录 *.json + 各一级分类子目录 *.json。
@@ -2563,6 +2574,20 @@ class WebUIMixin:
         await self._save_workflow_config()
         return web.json_response({"ok": True, "order": order})
 
+    def _effective_rule(self, ttype: str, wf_name: str = None) -> str:
+        """工作流级规则绑定优先：none=不注入；指定名=该规则内容；空/未绑定=继承全局启用规则。"""
+        wf = wf_name or self.current_workflow_name
+        wf_cfg = (self.workflow_config.get('__workflow_node_configs__', {}) or {}).get(wf, {}) or {}
+        binding = (wf_cfg.get('__llm_rule__') or '').strip()
+        if binding == 'none':
+            return ''
+        if binding:
+            for t in ((self.workflow_config.get('__llm_prompt_templates__', {}) or {}).get(ttype) or []):
+                if t.get('name') == binding:
+                    return (t.get('content') or '').strip()
+            return ''
+        return self._llm_template_text(ttype)
+
     def _llm_template_text(self, ttype: str) -> str:
         """取指定类型（t2i=文生图规划 / imgrev=图片反推）当前启用的规则内容。"""
         tpl = self.workflow_config.get('__llm_prompt_templates__', {}) or {}
@@ -2579,9 +2604,9 @@ class WebUIMixin:
         标签化词库 / K2 不在此列：AI 可按用户需求自行选择调用对应工具。"""
         try:
             pairs = {
-                'comfyui_draw': self._llm_template_text('t2i'),
-                'comfyui_img2img': self._llm_template_text('imgrev'),
-                'comfyui_video': self._llm_template_text('imgrev'),
+                'comfyui_draw': self._effective_rule('t2i'),
+                'comfyui_img2img': self._effective_rule('imgrev'),
+                'comfyui_video': self._effective_rule('imgrev'),
             }
             applied = {}
             for name, content in pairs.items():
@@ -2622,6 +2647,9 @@ class WebUIMixin:
             'imgrev': store.get('imgrev', []),
             'active': self.workflow_config.get('__llm_template_active__', {}) or {},
             'applied': getattr(self, '_llm_tpl_applied', {}),
+            'rule_names': {'t2i': [t.get('name') for t in store.get('t2i', [])], 'imgrev': [t.get('name') for t in store.get('imgrev', [])]},
+            'workflows': [{'name': w.get('name', ''), 'category': (self.workflow_config.get('__wf_categories__', {}) or {}).get(w.get('name', ''), '')} for w in (self._refresh_workflow_list() or [])],
+            'bindings': {wf: wc.get('__llm_rule__', '') for wf, wc in (self.workflow_config.get('__workflow_node_configs__', {}) or {}).items() if isinstance(wc, dict) and wc.get('__llm_rule__')},
         })
 
     async def _webui_save_llm_templates(self, r):
@@ -2630,7 +2658,7 @@ class WebUIMixin:
             data = await r.json()
             op = data.get('op')
             ttype = data.get('type')
-            if ttype not in ('t2i', 'imgrev'):
+            if op != 'bind' and ttype not in ('t2i', 'imgrev'):
                 return web.json_response({"ok": False, "error": "type 必须是 t2i 或 imgrev"})
             store = self.workflow_config.setdefault('__llm_prompt_templates__', {'t2i': [], 'imgrev': []})
             if op == 'save':
@@ -2647,6 +2675,30 @@ class WebUIMixin:
                 if not any(t.get('name') == name for t in store.get(ttype, [])):
                     return web.json_response({"ok": False, "error": "模板不存在"})
                 self.workflow_config.setdefault('__llm_template_active__', {})[ttype] = name
+            elif op == 'bind':
+                # v4.4.4: 工作流级规则绑定——'' 继承分类默认 / 'none' 不注入 / 规则名
+                wfname = str(data.get('workflow', '')).strip()
+                rule = str(data.get('rule', '')).strip()
+                if not wfname:
+                    return web.json_response({"ok": False, "error": "workflow 不能为空"})
+                if rule and rule != 'none':
+                    valid = any(t.get('name') == rule for t in (store.get('t2i', []) + store.get('imgrev', [])))
+                    if not valid:
+                        return web.json_response({"ok": False, "error": "规则不存在"})
+                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+                wcfg = wf_configs.get(wfname) or {}
+                if not isinstance(wcfg, dict):
+                    wcfg = {}
+                if rule:
+                    wcfg['__llm_rule__'] = rule
+                else:
+                    wcfg.pop('__llm_rule__', None)
+                wf_configs[wfname] = wcfg
+                self.workflow_config['__workflow_node_configs__'] = wf_configs
+                await self._save_workflow_config()
+                if wfname == self.current_workflow_name:
+                    self._apply_llm_templates()
+                return web.json_response({"ok": True, "applied": getattr(self, '_llm_tpl_applied', {})})
             else:
                 return web.json_response({"ok": False, "error": "未知操作"})
             self.workflow_config['__llm_prompt_templates__'] = store
