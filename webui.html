@@ -9807,8 +9807,8 @@ function showGroupsBinding() {
   const extractBtn = document.getElementById('btn_extract'), clearBtn = document.getElementById('btn_clear_extract');
   const cur = getCurrentWF();
   if (!cur) { bar.style.display = 'none'; return; }
-  // v4.4.1 串台修复：绑定三元组完整性校验——source 为空的孤儿状态一律按「无关联」处理
-  const hasBind = !!(groupsSource && bindTarget && isBound);
+  // v4.4.8: 分桶存储后组数据自包含——source 可空（源工作流已删），绑定有效性只看 目标+数据
+  const hasBind = !!(bindTarget && isBound);
   const isSource = (groupsSource === cur);
   const isTarget = hasBind && (bindTarget === cur);
 
@@ -9816,7 +9816,7 @@ function showGroupsBinding() {
   if (isSource || isTarget) {
     bar.style.display = 'block';
     if (isTarget) {
-      src.textContent = `📎 ${  groupsSource  } → ${  bindTarget}`;
+      src.textContent = groupsSource ? `📎 ${  groupsSource  } → ${  bindTarget}` : `📎 ${  bindTarget}（源已删除，组数据自包含）`;
       extractBtn.style.display = 'none'; bindBtn.style.display = 'none';
       unbindBtn.style.display = 'inline-flex';
       clearBtn.style.display = 'none';
@@ -9885,7 +9885,7 @@ function loadBoundGroups() {
   apiFetch('/api/workflow-params-config', {}).then((c) => {
     if (!c) return;
     const g = c.__groups_data__ || [];
-    if (g.length && groupsSource) {
+    if (g.length) {
       $id('groups_bar').style.display = 'block';
       let h = '';
       g.forEach((x) => {
