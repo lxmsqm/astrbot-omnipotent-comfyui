@@ -3772,12 +3772,27 @@ class WebUIMixin:
         pp = self._prompt_progress.get(pid, {}) or {}
         nodes_done = pp.get('nodes_done', 0) or 0
         nodes_total = pp.get('nodes_total', 0) or 0
+        # pv/pm = 当前节点的采样步进度（仅采样节点有事件）
         if prog.get('max', 0) and prog.get('max', 0) > 0:
             pv, pm = prog.get('value', 0), prog.get('max', 0)
-        elif nodes_total > 0:
-            pv, pm = nodes_done, nodes_total
         else:
-            pv, pm = prog.get('value', 0), prog.get('max', 0)
+            pv, pm = 0, 0
+        # v4.5.6: 合成总进度 = (已完成节点数 + 当前节点采样分数) / 总节点数。
+        # 旧版直接拿当前节点采样步当百分比：模型加载/非采样节点期间没有任何事件，
+        # 进度条长时间钉在 0%，且每个节点之间跳变不单调。
+        step_frac = (pv / pm) if pm > 0 else 0.0
+        if nodes_total > 0:
+            percent = int(min(99, max(0, (nodes_done + step_frac) / nodes_total * 100)))
+        elif pm > 0:
+            percent = int(min(99, step_frac * 100))
+        else:
+            percent = 0
+        if not is_running:
+            percent = 0
+        # 节点类名翻译：WS 只给裸 ID
+        node_map = pp.get('node_map') or {}
+        raw_node = str(pp.get('node_name', '') or '')
+        node_label = node_map.get(raw_node) or raw_node
         return web.json_response({
             "prompt_id": pid or "",
             "queue_running": running,
@@ -3786,7 +3801,11 @@ class WebUIMixin:
             "elapsed": elapsed,
             "progress_value": pv,
             "progress_max": pm,
+            "percent": percent,
+            "nodes_done": nodes_done,
+            "nodes_total": nodes_total,
             "node_name": pp.get('node_name', ''),
+            "node_label": node_label,
             "state": "generating" if any_running else ("queued" if running > 0 else "idle"),
         })
 
@@ -9033,6 +9052,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     'nodes_done': 0, 'nodes_total': len(wf),
                     'node_name': '', 'node_value': 0, 'node_max': 0,
                     'running': True,
+                    # 节点 ID → class_type 映射：WS 事件只带裸节点 ID，
+                    # 进度接口靠它翻译成人类可读的节点类名
+                    'node_map': {str(k): (v.get('class_type', '') if isinstance(v, dict) else '') for k, v in wf.items()},
                 }
                 if user_id:
                     async with self._task_lock:

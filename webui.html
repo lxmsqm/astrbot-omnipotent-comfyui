@@ -10203,33 +10203,45 @@ async function pollProgress() {
         : '';
 
       if (d.state === 'generating') {
-        if (d.progress_max > 0) {
-          // 有真实进度：显示百分比进度条
+        // v4.5.6: 总进度百分比（后端合成：节点级 + 当前节点采样分数），旧字段兜底
+        var pct = (typeof d.percent === 'number')
+          ? d.percent
+          : (d.progress_max > 0 ? Math.min(100, Math.round(d.progress_value / d.progress_max * 100)) : 0);
+        // 当前节点：类名 + 节点计数（模型加载等无事件阶段也有实时反馈）
+        var nodeParts = [];
+        if (d.node_label) nodeParts.push(d.node_label);
+        if (d.nodes_total > 0) nodeParts.push('节点 ' + (d.nodes_done || 0) + '/' + d.nodes_total);
+        if (nodeParts.length) {
+          nodeName.textContent = nodeParts.join(' ');
+          nodeName.style.display = '';
+          document.querySelectorAll('.progress-sep--node').forEach(el => el.style.display = '');
+        } else {
+          nodeName.style.display = 'none';
+          document.querySelectorAll('.progress-sep--node').forEach(el => el.style.display = 'none');
+        }
+        if (pct > 0) {
           section.classList.remove('generating');
           bar.classList.add('active');
           bar.classList.remove('indeterminate');
-          var pct = Math.min(100, Math.round(d.progress_value / d.progress_max * 100));
           bar.style.width = pct + '%';
           pctLabel.textContent = pct + '%';
-          label.textContent = '生成中';
-          nodeName.style.display = 'none';
-          const parts = timeStr ? ['已运行 ' + timeStr] : [];
-          if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
-          detail.textContent = parts.join(' · ');
-          stepDetail.textContent = '';
         } else {
-          // 无真实进度：扫光动画
+          // 尚无百分比（模型加载/排队起始）：扫光动画 + 显示已运行时间
           section.classList.add('generating');
           bar.classList.remove('active', 'indeterminate');
           bar.style.width = '0%';
           pctLabel.textContent = timeStr || '...';
-          label.textContent = '生成中';
-          nodeName.style.display = 'none';
-          const parts = timeStr ? ['已运行 ' + timeStr] : [];
-          if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
-          detail.textContent = parts.join(' · ');
+        }
+        label.textContent = '生成中';
+        // 当前节点采样步数（仅采样节点有）
+        if (d.progress_max > 0 && d.progress_value > 0) {
+          stepDetail.textContent = '采样 ' + d.progress_value + '/' + d.progress_max;
+        } else {
           stepDetail.textContent = '';
         }
+        const parts = timeStr ? ['已运行 ' + timeStr] : [];
+        if (d.queue_pending > 0) parts.push('前面还有 ' + d.queue_pending + ' 个');
+        detail.textContent = parts.join(' · ');
         schedulePoll(1000);
       } else if (d.state === 'queued') {
         section.classList.remove('generating');
