@@ -1500,6 +1500,33 @@ class GenerateMixin:
                     return True
         return False
 
+    def _read_workflow_file_resolution(self, workflow):
+        """v4.5.7: 读工作流自带分辨率节点的值（无需手动指定角色）——
+        官方 ResolutionSelector（aspect_ratio+megapixels 换算宽高）→ AspectRatioNode（width/height）。
+        读不到返回 (None, None)。这些值就是该工作流的"当前分辨率"：
+        WebUI 官方面板、/比例、/分辨率 都会落盘到工作流文件，提交时必须以它为基准，
+        否则每次生成都会被全局默认比例/质量踩掉（官方面板"改不动"的根因）。"""
+        try:
+            for nid in self._find_official_resolution_nodes(workflow):
+                ins = workflow[nid].get('inputs', {})
+                ar = ins.get('aspect_ratio', '')
+                mp = ins.get('megapixels', 0)
+                pr = self._official_to_ratio(ar) if ar else ''
+                if pr and ':' in str(pr) and isinstance(mp, (int, float)) and mp > 0:
+                    ra, rb = map(int, str(pr).split(':'))
+                    total = float(mp) * 1024 * 1024
+                    x = (total / (ra * rb)) ** 0.5
+                    return int(round(ra * x)), int(round(rb * x))
+            for nid in self._find_aspect_ratio_nodes(workflow):
+                ins = workflow[nid].get('inputs', {})
+                try:
+                    return int(ins.get('width')), int(ins.get('height'))
+                except (TypeError, ValueError):
+                    continue
+        except Exception:
+            pass
+        return None, None
+
     def _set_resolution(self, workflow, width, height):
         nid = self._find_resolution_node(workflow)
         if not nid:
@@ -8767,7 +8794,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
-                    ws_url = f"ws://{self.comfyui_url}/ws?client_id={self._ws_client_id}"
+                    # v4.5.7: 必须用驼峰 clientId——ComfyUI 按 query 的 clientId 注册会话，
+                    # 执行事件（executing/progress/execution_cached）是点对点发给提交者 sid 的，
+                    # 不广播。此前用 client_id（蛇形）未被识别，监听连接拿到随机 sid，
+                    # 永远收不到执行事件（进度条 0% / 节点 0/N 不动的根因）。
+                    ws_url = f"ws://{self.comfyui_url}/ws?clientId={self._ws_client_id}"
                     async with session.ws_connect(ws_url, timeout=10) as ws:
                         logger.info(f"[ComfyUI] WS 进度监听已连接: {ws_url}")
                         async for msg in ws:
@@ -8886,12 +8917,25 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     w = int(wf[res_nid]['inputs']['width'])
                     h = int(wf[res_nid]['inputs']['height'])
                 except (ValueError, TypeError): pass
+            # v4.5.7: 无手动节点时，读工作流自带分辨率节点的值（官方选择器/AspectRatioNode）。
+            # 这些值是 WebUI 官方面板与 /比例、/分辨率 落盘的"本工作流当前分辨率"，
+            # 必须作为提交基准——否则面板刚设的 4:3/1.3MP 每次生成都被全局默认 16:9/720p 踩掉。
+            if w is None:
+                fw, fh = self._read_workflow_file_resolution(wf)
+                if fw and fh:
+                    w, h = fw, fh
+                    logger.info(f"[ComfyUI] 使用工作流自带分辨率: {w}x{h}")
 
             # 3. 如果工作流已有明确宽高（如 API 工作流内置 720x1200），直接使用，不覆盖
             #    只有用户通过 /比例 或 /分辨率 命令显式指定时才重新计算
             quality = quality_override if (quality_override and quality_override in self.quality_presets) else self.default_quality
             effective_ratio = ratio or self.default_ratio or "9:16"
             should_set_resolution = False
+            # v4.5.7: 本次调用显式指定比例/质量（LLM 工具参数）→ 优先于工作流自带值重新计算；
+            # 未指定时保留上面读到的文件值（官方面板与命令路径均已落盘，见 _read_workflow_file_resolution）
+            if ratio or (quality_override and quality_override in self.quality_presets):
+                w, h = self._calc_resolution(quality, effective_ratio)
+                should_set_resolution = True
             if w is not None and h is not None:
                 # 工作流已有宽高，直接使用不覆盖
                 pass
