@@ -9081,8 +9081,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             if image_path: await self._set_load_image(wf, image_path)
             self._rebuild_jzl_refs(wf)
             if prompt:
-                # 合并固定标签到 prompt（有冲突检测），随机图模式跳过（已由 random-pick 合并过）
-                if not skip_pin_merge:
+                # 合并固定标签到 prompt（有冲突检测），随机图模式跳过（已由 random-pick 合并过）。
+                # v4.5.9: 图生图/图生视频（带 image_path 的编辑类任务）同样跳过——
+                # 这类提示词是"编辑指令/视频描述"，混入魔导书固定标签/画风标签会污染编辑意图。
+                if not skip_pin_merge and not image_path:
                     if self.workflow_config.get('__grimoire_enabled__', False):
                         prompt = self._merge_prompt_with_pins(prompt)
                 target_node = cmd_config.get('__prompt_node__') if cmd_config else None
