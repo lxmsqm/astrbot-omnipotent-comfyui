@@ -5962,7 +5962,9 @@ class GrimoireMixin:
         return None
 
     def _grimoire_read(self, source_path: str) -> list:
-        """读取魔导书 JSON 文件，返回列表"""
+        """读取魔导书 JSON 文件，返回列表。
+        损坏时不静默返回空列表——先把损坏文件隔离为 .corrupt（保留现场），
+        由调用方决定是否重建；否则下一次保存会用空列表覆盖、整个词库源被无声清空。"""
         data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         fpath = data_dir / source_path.replace('/', os.sep)
         if not fpath.exists():
@@ -5971,20 +5973,33 @@ class GrimoireMixin:
             with open(fpath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return data if isinstance(data, list) else []
-        except Exception:
+        except Exception as e:
+            try:
+                corrupt = fpath.with_suffix(fpath.suffix + '.corrupt')
+                if not corrupt.exists():
+                    fpath.replace(corrupt)
+                logger.warning(f"[ComfyUI] 词库文件损坏已隔离: {fpath.name} -> {corrupt.name} ({e})")
+            except Exception:
+                logger.warning(f"[ComfyUI] 词库文件损坏且隔离失败: {source_path} ({e})")
             return []
 
     def _grimoire_write(self, source_path: str, data: list) -> bool:
-        """写入魔导书 JSON 文件"""
+        """写入魔导书 JSON 文件（原子写：tmp + replace，防止写一半崩溃损坏词库）"""
         data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
         fpath = data_dir / source_path.replace('/', os.sep)
         fpath.parent.mkdir(parents=True, exist_ok=True)
+        tmp = fpath.with_suffix(fpath.suffix + '.tmp')
         try:
-            with open(fpath, 'w', encoding='utf-8') as f:
+            with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            tmp.replace(fpath)
             return True
         except Exception as e:
             logger.warning(f"[ComfyUI] 写入魔导书文件失败 {source_path}: {e}")
+            try:
+                tmp.unlink(missing_ok=True)
+            except Exception:
+                pass
             return False
 
     def _grimoire_anima_source_names(self) -> list[str]:
@@ -8858,34 +8873,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 self._apply_style_selector(wf)
             except Exception as e:
                 logger.warning(f"[ComfyUI] 风格预设应用失败（已跳过）: {e}")
-            disabled_groups = self.workflow_config.get('__disabled_groups__', {})
-            groups_data = self.workflow_config.get('__groups_data__', [])
-            bind_target = self.workflow_config.get('__bind_target__', '')
-            groups_source = self.workflow_config.get('__groups_source__', '')
-            # 应用禁用（v4.4.1 串台修复）：组禁用只对「组源工作流」或「显式绑定的目标工作流」生效。
-            # 旧版条件 `not is_bound`（无绑定就全局生效）+ 切工作流改写 bind_target 的 bug，
-            # 曾导致 A 工作流提取的组禁用被错误应用到 B 工作流（孤儿绑定串台）。
-            # 现在：source 空 = 组数据无效（孤儿），无论 bind_target 是什么都不应用。
-            group_applies = bool(groups_source) and (
-                bind_target == wf_name or groups_source == wf_name)
-            if disabled_groups and groups_data and group_applies:
-                for g in groups_data:
-                    if disabled_groups.get(str(g.get('id', ''))):
-                        to_delete = []
-                        for nid in g.get('nodes', []):
-                            if nid in wf:
-                                for onid, onode in wf.items():
-                                    if not isinstance(onode, dict): continue
-                                    inputs = onode.get('inputs', {})
-                                    if not isinstance(inputs, dict): continue
-                                    for k, v in inputs.items():
-                                        if isinstance(v, list) and len(v) == 2 and str(v[0]) == nid:
-                                            onode['inputs'][k] = ""
-                                to_delete.append(nid)
-                        for nid in to_delete:
-                            del wf[nid]
-                        # 处理单个禁用节点（删除节点 + 重新连线下游）
-            # 注意：ComfyUI API 模式下 mode 字段不生效，必须物理删除节点
+            # 组禁用已全部由 _apply_group_modes（级联删除）完成——它同时合并了根级
+            # __disabled_groups__ 兼容数据。这里不允许再走旧版内联删除路径：
+            # 旧路径把下游引用直接置 ""（断头不重连），且与分桶数据可能不一致，
+            # 二次删除会留下 ComfyUI 校验错误的图。同理 mode=4 无效，禁用必须物理删节点。
             disabled_nodes = wf_cfg.get('__disabled_nodes__', []) or []
             if disabled_nodes:
                 for nid in disabled_nodes:
