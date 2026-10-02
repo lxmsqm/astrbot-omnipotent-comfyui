@@ -1420,6 +1420,8 @@ class GenerateMixin:
         logger.info(f"[ComfyUI] 风格预设已应用: node=#{style_nid} styles={lib!r} select_styles={sel!r}")
 
     def _inject_prompt(self, workflow, prompt, target_node=None, wf_name=None):
+        if not str(prompt or '').strip():
+            return False  # 空提示词不注入（避免把节点已有内容覆盖成 "existing, " 尾逗号）
         nid = target_node or self._find_positive_prompt_node(workflow, wf_name=wf_name)
         if nid and nid in workflow:
             inputs = workflow[nid].get('inputs', {})
@@ -10006,10 +10008,17 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             queue_msg = self._format_queue_msg(total_q, running_q, pending_q)
             yield event.plain_result(f"生成视频中...{queue_msg}")
             if not await self._download_image(image_url, save_path): yield event.plain_result("下载图片失败"); return
+            # v4.5.3: 提取命令后的提示词（此前硬编码空串，提示词永远丢失）
+            vid_prompt = event.message_str.replace("/图生视频", "").strip()
+            vid_prompt = re.sub(r'\[[^\]]{1,24}\]', '', vid_prompt).strip()   # 去掉 [图片] 等占位前缀
+            vid_prompt = re.sub(r'\[At:\d+\]', '', vid_prompt).strip()
+            vid_prompt = re.sub(r'@\S+', '', vid_prompt).strip()
             cmd_config = self.workflow_config.get('__commands__', {}).get('图生视频', {})
             _umo = getattr(event, 'unified_msg_origin', None)
-            status, text, out_path = await self._process_and_submit("", None, str(save_path), cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id(), notify_umo=_umo)
+            vid_prompt, _rule_note = self._enforce_prompt_rule(vid_prompt, 'imgrev')
+            status, text, out_path = await self._process_and_submit(vid_prompt, None, str(save_path), cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id(), notify_umo=_umo)
             if status == "ok":
+                _ok_note = (_rule_note + "\n") if _rule_note else ""
                 vid_path = out_path[0] if isinstance(out_path, list) else out_path
                 try:
                     from astrbot.api.message_components import Video, At, Plain
@@ -10018,7 +10027,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     # 再发 @用户 的完成通知
                     yield event.chain_result([
                         At(qq=event.get_sender_id()),
-                        Plain(" 视频生成完毕"),
+                        Plain(_ok_note + " 视频生成完毕"),
                     ])
                 except Exception as e:
                     logger.error(f"[ComfyUI] 发送视频消息失败: {e}")
