@@ -291,7 +291,17 @@ class ComfyUIImg2ImgTool(FunctionTool):
             if await plugin._download_image(url, sp):
                 saved_paths.append(str(sp))
         if not saved_paths:
-            return "❌ 下载图片失败，请检查image_urls是否正确"
+            # v4.5.3: 回退对话图片收集（直接图/引用图/@头像/最近图片缓存）
+            try:
+                ev_urls = await plugin._collect_images_from_event(event, max_images=10)
+                for i, evu in enumerate(ev_urls):
+                    sp = plugin._get_image_save_dir() / f"llm_img_fb_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{i}.png"
+                    if await plugin._download_image(evu, sp):
+                        saved_paths.append(str(sp))
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 对话图片回退失败: {e}")
+        if not saved_paths:
+            return "❌ 未能获取图片：请在对话中发送图片后再试，或提供图片 URL"
         try:
             umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
             if umo:
@@ -338,16 +348,17 @@ class ComfyUIVideoTool(FunctionTool):
     description: str = ("使用本地ComfyUI生成视频（图生视频）。需要一张输入图片和视频工作流。"
                         "★ 只能用分类为「图生视频」的工作流；若当前工作流不是「图生视频」类，"
                         "必须先用 comfyui_list_workflows 找到「图生视频」类工作流，"
-                        "再用 comfyui_switch_workflow 切换后再调用本工具。")
+                        "再用 comfyui_switch_workflow 切换后再调用本工具。"
+                        "★ image_url 不传时自动使用用户最近在对话中发送/引用的图片。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object", "properties": {
             "prompt": {"type": "string", "description": "提示词，描述视频内容"},
-            "image_url": {"type": "string", "description": "输入图片的URL或本地文件路径"},
+            "image_url": {"type": "string", "description": "输入图片的URL或本地文件路径；不传则自动使用用户最近发送/引用的图片"},
             "workflow": {"type": "string", "description": "工作流名称关键词，不传则用当前工作流"}
-        }, "required": ["image_url"]
+        }, "required": []
     })
 
-    async def run(self, event: AstrMessageEvent, image_url: str, prompt: str = "", workflow: str = None):
+    async def run(self, event: AstrMessageEvent, image_url: str = "", prompt: str = "", workflow: str = None):
         plugin = self._plugin
         if workflow:
             for w in plugin._refresh_workflow_list():
@@ -363,8 +374,17 @@ class ComfyUIVideoTool(FunctionTool):
                 from astrbot.api.event import MessageChain
                 await plugin.context.send_message(umo, MessageChain().message("🎬 生成视频中..."))
         except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
-        if not await plugin._download_image(image_url, save_path):
-            return "❌ 下载图片失败"
+        got_img = await plugin._download_image(image_url, save_path) if image_url else False
+        if not got_img:
+            # v4.5.3: 回退对话图片收集（直接图/引用图/@头像/最近图片缓存）
+            try:
+                ev_urls = await plugin._collect_images_from_event(event, max_images=1)
+                if ev_urls:
+                    got_img = await plugin._download_image(ev_urls[0], save_path)
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 对话图片回退失败: {e}")
+        if not got_img:
+            return "❌ 未能获取图片：请在对话中发送图片后再试，或提供图片 URL"
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
         status, text, out_path = await plugin._process_and_submit(prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo)
         if status == "ok":
