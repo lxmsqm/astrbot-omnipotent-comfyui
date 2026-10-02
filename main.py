@@ -1503,7 +1503,41 @@ class GenerateMixin:
     def _set_resolution(self, workflow, width, height):
         nid = self._find_resolution_node(workflow)
         if not nid:
-            return False
+            # 兜底：未手动指定分辨率节点时，自动探测官方 ResolutionSelector / XB 参数节点 /
+            # AspectRatioNode 并全部写入。否则官方选择器工作流（分辨率存在 aspect_ratio+megapixels
+            # 输入里，没有 width/height）在提交时比例/质量永远不生效，图里保持文件里的旧值。
+            official_ids = self._find_official_resolution_nodes(workflow)
+            aspect_ids = self._find_aspect_ratio_nodes(workflow)
+            if not official_ids and not aspect_ids:
+                return False
+            try:
+                ratio = self._closest_ratio(width, height)
+                megapixels = round((width * height) / (1024 * 1024), 2)
+                official = self._ratio_to_official(ratio)
+            except Exception:
+                return False
+            for oid in official_ids:
+                inputs = workflow[oid].get('inputs', {})
+                inputs['aspect_ratio'] = official
+                inputs['megapixels'] = megapixels
+                if 'multiple' not in inputs:
+                    inputs['multiple'] = 8
+            if aspect_ids and ':' in ratio:
+                try:
+                    ra, rb = map(int, ratio.split(':'))
+                    x = ((width * height) / (ra * rb)) ** 0.5
+                    for aid in aspect_ids:
+                        inputs = workflow[aid].get('inputs', {})
+                        inputs['aspect_ratio'] = ratio
+                        div = 8
+                        dv = inputs.get('divisible_by', 8)
+                        div = int(dv) if str(dv).isdigit() else 8
+                        inputs['width'] = round(ra * x / div) * div
+                        inputs['height'] = round(rb * x / div) * div
+                except Exception:
+                    pass
+            logger.info(f"[ComfyUI] 分辨率兜底写入官方节点: {official_ids + aspect_ids} -> {ratio} {megapixels}MP")
+            return True
         inputs = workflow[nid]['inputs']
         ct = workflow[nid].get('class_type', '')
         # 官方 ResolutionSelector 没有 width/height 输入（宽高由 aspect_ratio+megapixels 算出并输出），
