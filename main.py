@@ -2588,6 +2588,53 @@ class WebUIMixin:
                 wf_configs = data.get('__workflow_node_configs__', {}) or {}
                 wf_configs[wf_name] = wf_configs.get(wf_name, {})
                 wf_saved_texts = wf_configs[wf_name].get('__saved_texts__', {}) or {}
+                # v4.5.7b: 分辨率类键不进 saved_texts，直接写入工作流文件。
+                # 官方面板重建后走 saveParams 通道（param_{nid}_* + onchange），旧版
+                # /api/set-official-res 的落盘路径已成死代码；若存 saved_texts，
+                # 一则陈旧值会反复回填（_clear_saved_resolution_keys 的由来），
+                # 二则提交链以文件值为基准时会把它盖掉（面板"改不动"）。指纹只含
+                # 节点ID+类型，写文件不影响指纹。
+                res_file_updates = {}
+                for ck in list(data.keys()):
+                    if ck.startswith('__'): continue
+                    parts = ck.split('_', 1)
+                    if len(parts) == 2 and parts[0].isdigit():
+                        if parts[1] in ('aspect_ratio', 'megapixels', 'multiple', 'width', 'height'):
+                            res_file_updates.setdefault(parts[0], {})[parts[1]] = data.pop(ck)
+                        else:
+                            wf_saved_texts[ck] = data.pop(ck)
+                if res_file_updates:
+                    _rp = self.workflow_path
+                    if _rp:
+                        try:
+                            with open(_rp, 'r', encoding='utf-8') as f:
+                                _rwf = json.load(f)
+                            _real_ids = {str(_k): _k for _k in _rwf.keys()}
+                            for nid_s, kv in res_file_updates.items():
+                                node = _rwf.get(_real_ids.get(nid_s))
+                                if not isinstance(node, dict): continue
+                                inputs = node.get('inputs', {})
+                                for k2, v2 in kv.items():
+                                    if k2 not in inputs: continue  # 只更新已有输入，绝不新建
+                                    orig = inputs[k2]
+                                    if isinstance(orig, bool):
+                                        v2 = str(v2).lower() in ('true', '1', 'yes')
+                                    elif isinstance(orig, (int, float)):
+                                        try:
+                                            v2 = float(v2) if isinstance(orig, float) else int(float(v2))
+                                        except (TypeError, ValueError):
+                                            continue
+                                    inputs[k2] = v2
+                            self._atomic_write_workflow_json(_rwf, _rp)
+                            logger.info(f"[ComfyUI] 面板分辨率已写入工作流文件: 节点{list(res_file_updates.keys())} { {k: v for kv in res_file_updates.values() for k, v in kv.items()} }")
+                        except Exception as e:
+                            logger.warning(f"[ComfyUI] 面板分辨率写入工作流文件失败: {e}")
+                    # 无论写文件成败，都清掉该工作流 saved_texts 里的旧分辨率残留
+                    _clear_nids = list(res_file_updates.keys())
+                    for ck in list(wf_saved_texts.keys()):
+                        p2 = ck.split('_', 1)
+                        if len(p2) == 2 and p2[0] in _clear_nids and p2[1] in ('aspect_ratio', 'megapixels', 'multiple', 'width', 'height'):
+                            del wf_saved_texts[ck]
                 for ck in list(data.keys()):
                     if ck.startswith('__'): continue
                     parts = ck.split('_', 1)
