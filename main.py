@@ -145,8 +145,7 @@ class ComfyUIListWorkflowsTool(FunctionTool):
     description: str = ("查询/列出本地ComfyUI所有可用工作流（含所属分类与用途）。"
                         "当用户想查看、查询、浏览可用工作流，或需要判断'该用哪个工作流'时调用此工具。"
                         "分类含义：画=文生图（出图，用 comfyui_draw）；图生图=需要输入图片改图/转风格"
-                        "（用 comfyui_img2img）；图生视频=图片转视频（用 comfyui_video）；"
-                        "反推=从图片提取提示词（用 comfyui_reverse_prompt）。")
+                        "（用 comfyui_img2img）；图生视频=图片转视频（用 comfyui_video）。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
     async def run(self, event: AstrMessageEvent):
@@ -160,7 +159,6 @@ class ComfyUIListWorkflowsTool(FunctionTool):
             '画': '文生图——纯提示词出图（对应工具 comfyui_draw）',
             '图生图': '必须提供输入图片——改图/转风格/转真人（对应工具 comfyui_img2img）',
             '图生视频': '必须提供输入图片——图片转视频（对应工具 comfyui_video）',
-            '反推': '从图片反向提取提示词（对应工具 comfyui_reverse_prompt）',
         }
 
         groups = {}
@@ -234,7 +232,7 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
     name: str = "comfyui_get_current_workflow"
     description: str = ("查询当前正在使用的工作流名称及其所属分类（分类决定能用哪个工具："
                         "画=文生图 comfyui_draw / 图生图=需输入图 comfyui_img2img / "
-                        "图生视频=需输入图 comfyui_video / 反推=提取提示词 comfyui_reverse_prompt）。"
+                        "图生视频=需输入图 comfyui_video）。"
                         "当用户问'我现在用什么工作流'、'当前画风是什么'，或需要判断能否执行某操作时调用。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
@@ -249,7 +247,6 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
             '画': '文生图（纯提示词出图，用 comfyui_draw）',
             '图生图': '图生图（必须提供输入图片，用 comfyui_img2img）',
             '图生视频': '图生视频（必须提供输入图片，用 comfyui_video）',
-            '反推': '提示词反推（用 comfyui_reverse_prompt）',
         }.get(cat, '用途未知')
         return f"当前工作流：【{plugin._get_display_name(name)}】（分类：{cat} —— {usage}）"
 
@@ -434,28 +431,6 @@ class ComfyUIRandomTool(FunctionTool):
                 results.append(f"第{i+1}张: ❌ {text}")
             if i < count - 1: await asyncio.sleep(1)
         return f"🎴 抽卡结果（共{count}张）：\n" + "\n".join(results)
-
-
-@dataclass
-class ComfyUIReversePromptTool(FunctionTool):
-    name: str = "comfyui_reverse_prompt"
-    description: str = "反推图片提示词——用VLM识别图片内容，返回详细的中文描述。适合想知道一张图中有什么、想提取提示词使用。"
-    parameters: dict = field(default_factory=lambda: {
-        "type": "object", "properties": {
-            "image_url": {"type": "string", "description": "要反推的图片URL或本地文件路径"},
-        }, "required": ["image_url"]
-    })
-
-    async def run(self, event: AstrMessageEvent, image_url: str):
-        plugin = self._plugin
-        try:
-            umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
-            if umo:
-                from astrbot.api.event import MessageChain
-                await plugin.context.send_message(umo, MessageChain().message("🔍 反推图片提示词中..."))
-        except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
-        result = await plugin._run_reverse_prompt(image_url, event)
-        return result
 
 
 @dataclass
@@ -7019,7 +6994,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             tools = [ComfyUIDrawTool(), ComfyUIListWorkflowsTool(), ComfyUISwitchWorkflowTool(), ComfyUIGetCurrentWorkflowTool(),
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIRandomTool(),
                      ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool(),
-                     ComfyUIReversePromptTool(), ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool()]
+                     ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool()]
             self._tool_objs = tools
             for t in tools:
                 t._plugin = self
@@ -8448,84 +8423,6 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         from urllib.parse import urlparse
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-
-    async def _run_reverse_prompt(self, image_url: str, event=None):
-        """反推图片提示词：下载图片 → 加载反推工作流 → 提交 ComfyUI → 读取文本输出"""
-        # 1. 下载图片到临时目录
-        from datetime import datetime
-        save_dir = self._get_image_save_dir()
-        save_path = save_dir / f"reverse_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.png"
-        if not await self._download_image(image_url, save_path):
-            return "❌ 下载图片失败"
-        try:
-            # 2. 通过 HTTP 上传到 ComfyUI input 目录
-            input_name = await self._upload_image_remote(save_path)
-            if not input_name:
-                return "❌ 上传图片到 ComfyUI 失败"
-            # 3. 加载当前工作流（用户已切换到反推工作流）
-            if not self.workflow_path or not Path(self.workflow_path).exists():
-                return "❌ 未选中反推工作流，请先通过 /工作流 切换到反推工作流"
-            with open(self.workflow_path, 'r', encoding='utf-8') as f:
-                wf = json.load(f)
-            # 4. 自动定位图片载入节点并替换图片（不再硬编码 node 3，兼容 UI 格式工作流）
-            image_nodes = self._find_image_input_nodes(wf)
-            if not image_nodes:
-                return "❌ 反推工作流中未找到图片载入节点（LoadImage），请检查工作流"
-            for nid in image_nodes:
-                node = wf.get(nid)
-                if isinstance(node, dict) and isinstance(node.get('inputs'), dict):
-                    node['inputs']['image'] = input_name
-            # 记录文本输出节点（ShowText 类），供完成后读取
-            show_nodes = self._find_show_text_nodes(wf)
-            # 5. 提交到 ComfyUI
-            import uuid
-            cid = str(uuid.uuid4())
-            async with aiohttp.ClientSession() as s:
-                async with s.post(f"http://{self.comfyui_url}/prompt", json={"prompt": wf, "client_id": cid}) as r:
-                    rj = await r.json()
-                if 'prompt_id' not in rj:
-                    return "❌ 提交反推任务失败"
-                pid = rj['prompt_id']
-                # 6. 轮询等待完成
-                import time
-                timeout = 120
-                for _ in range(timeout):
-                    await asyncio.sleep(2)
-                    try:
-                        async with s.get(f"http://{self.comfyui_url}/history/{pid}") as hr:
-                            h = await hr.json()
-                        if pid in h and h[pid].get('outputs'):
-                            outputs = h[pid]['outputs']
-                            # 7. 从 ShowText 类节点读取文本（优先提交前定位到的节点，其次按类型兜底扫描）
-                            for node_id in (list(show_nodes) if show_nodes else self._find_show_text_nodes(wf)):
-                                if node_id in outputs:
-                                    out = outputs[node_id]
-                                    for key in ('text_0', 'text', 'string', 'output'):
-                                        val = out.get(key)
-                                        if isinstance(val, list) and val:
-                                            text = str(val[0]).strip()
-                                            if text:
-                                                return text
-                                        elif isinstance(val, str) and val.strip():
-                                            return val.strip()
-                            # 兜底：取第一个字符串输出
-                            for out in outputs.values():
-                                for v in out.values():
-                                    if isinstance(v, str) and len(v) > 10:
-                                        return v.strip()
-                            return "✅ 反推完成，但未读取到文本输出"
-                        if pid in h and h[pid].get('status', {}).get('completed') is False:
-                            pass
-                    except Exception:
-                        pass
-                return "❌ 反推超时（120秒）"
-        except Exception as e:
-            return f"❌ 反推失败: {str(e)[:100]}"
-        finally:
-            # 清理临时图片
-            try:
-                if save_path.exists(): save_path.unlink(missing_ok=True)
-            except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
 
     async def _collect_images_from_event(self, event, max_images=10):
         """从事件中收集图片 URL：直接图片/引用图片 > @头像，最多 max_images 张，跳过机器人自身 @。
@@ -10136,15 +10033,6 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         async for r in self.img2vid(event):
             yield r
 
-    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*反推(\s|$)")
-    async def _lark_reverse_loose(self, event: AstrMessageEvent):
-        """飞书：[图片] 反推 → 转发给 reverse_prompt 命令实现"""
-        if (event.get_platform_name() or "") != "lark":
-            return
-        logger.info("[ComfyUI] 飞书宽松匹配命中：反推（含图片前缀）")
-        async for r in self.reverse_prompt(event):
-            yield r
-
     @filter.command("图生视频")
     async def img2vid(self, event: AstrMessageEvent):
         await self._ensure_workflow_for_event(event)
@@ -10195,32 +10083,6 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             else: yield event.plain_result(text)
             return
         yield event.plain_result("请引用图片或 @用户 后输入 /图生视频")
-
-    # ========= /反推 命令（引用图片 → VLM 反推提示词） =========
-
-    @filter.command("反推")
-    async def reverse_prompt(self, event: AstrMessageEvent):
-        """引用一张图片，用VLM反推图中的提示词"""
-        await self._ensure_workflow_for_event(event)
-        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '反推')
-        if needs_sel:
-            yield event.plain_result(self._build_wf_selection_menu(event, '反推', matching_wfs))
-            return
-        if not can_exec:
-            yield event.plain_result("❌ 没有可用的反推工作流，请先在WebUI中将一个工作流分类设为「反推」")
-            return
-        image_urls = await self._collect_images_from_event(event, max_images=1)
-        if not image_urls:
-            yield event.plain_result("请发送图片或引用图片后使用 /反推")
-            return
-        try:
-            umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
-            if umo:
-                from astrbot.api.event import MessageChain
-                await event.send(event.plain_result("🔍 反推图片提示词中...（约30秒）"))
-        except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
-        result = await self._run_reverse_prompt(image_urls[0], event)
-        yield event.plain_result(result)
 
     # ── 画廊 API ──────────────────────────────────────────
 
