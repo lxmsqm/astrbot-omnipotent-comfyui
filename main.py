@@ -1806,11 +1806,12 @@ class WebUIMixin:
 
     async def _serve_favicon(self, r):
         # v4.3.8: 优先回 AI 生成的多尺寸 PNG ico；无则回 SVG 兜底
-        ico = Path(__file__).parent / 'favicon.ico'
+        # v4.9.2: 静态图片统一收进 assets/ 子目录（插件根目录结构整理）
+        ico = Path(__file__).parent / 'assets' / 'favicon.ico'
         if ico.exists():
             resp = web.FileResponse(ico, headers={'Cache-Control': 'public, max-age=86400'})
             return resp
-        resp = web.FileResponse(Path(__file__).parent / 'favicon.svg', content_type='image/svg+xml')
+        resp = web.FileResponse(Path(__file__).parent / 'assets' / 'favicon.svg', content_type='image/svg+xml')
         resp.headers['Cache-Control'] = 'public, max-age=86400'
         return resp
 
@@ -1819,7 +1820,7 @@ class WebUIMixin:
         size = r.match_info.get('size', '')
         if size not in ('16x16', '32x32', '192', '512'):
             raise web.HTTPNotFound()
-        f = Path(__file__).parent / f'favicon-{size}.png'
+        f = Path(__file__).parent / 'assets' / f'favicon-{size}.png'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
@@ -1829,14 +1830,14 @@ class WebUIMixin:
         mode = r.match_info.get('mode', '')
         if mode not in ('day', 'night') and not mode.startswith('icon-'):
             raise web.HTTPNotFound()
-        f = Path(__file__).parent / f'theme-xin-{mode}.webp'
+        f = Path(__file__).parent / 'assets' / f'theme-xin-{mode}.webp'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=604800', 'Content-Type': 'image/webp'})
 
     async def _serve_apple_icon(self, r):
         """v4.3.8: iOS 添加到主屏用 180x180 图标"""
-        f = Path(__file__).parent / 'apple-touch-icon.png'
+        f = Path(__file__).parent / 'assets' / 'apple-touch-icon.png'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
