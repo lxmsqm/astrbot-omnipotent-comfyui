@@ -6860,7 +6860,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # 最近图片缓存：{umo: (timestamp, [urls])} —— 解决飞书「发图后再发命令」拿不到图的问题
         # （飞书图片是独立消息，命令那条消息没有图片组件；QQ 可同条/紧邻发送所以不受影响）
         self._recent_images: dict[str, tuple] = {}
-        self._recent_images_ttl = 600   # 缓存有效期 10 分钟
+        self._recent_images_ttl = 3600   # 缓存有效期 1 小时（v4.7.2 起缓存本地副本，不再受平台 URL 时效限制）
         # OneBot bot 引用（从 event.bot 获取，供撤回使用）
         self._bot_ref = None
         # 黑名单群组缓存（从 persona_switcher 读取）
@@ -10159,11 +10159,46 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 return
             self._recent_images[str(umo)] = (time.time(), urls)
             logger.info(f"[ComfyUI] 已缓存最近图片 {len(urls)} 张 (umo={umo[-20:]})")
+            # v4.7.2: 立即后台落地本地副本——飞书等平台图片 URL 短时效，隔一条消息就失效
+            # （"图只能在当场那条消息用"的根因）。下载成功后用本地路径替换 URL 缓存。
+            try:
+                _t = asyncio.create_task(self._persist_recent_images(str(umo), list(urls)))
+                self._background_tasks.add(_t)
+                _t.add_done_callback(self._background_tasks.discard)
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 启动最近图片落地失败: {e}")
         except Exception as e:
             logger.debug(f"[ComfyUI] 缓存最近图片失败: {e}")
 
+    async def _persist_recent_images(self, umo: str, urls: list):
+        """把最近图片缓存落地为本地文件（upload_dir/recent_cache/），下载成功后替换 URL 缓存。
+        本地路径在 _download_image 的允许目录内，可长期反复取用；该目录由每小时的
+        清理循环兜底回收（>1 天），TTL 过期时也会主动删除。"""
+        try:
+            cache_dir = Path(self.upload_dir) / 'recent_cache'
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            old = self._recent_images.get(umo)
+            old_locals = [u for u in (old[1] if old else []) if 'recent_cache' in str(u)]
+            stamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+            locals_ = []
+            for i, u in enumerate(urls[:10]):
+                sp = cache_dir / f"recent_{stamp}_{i}.png"
+                if await self._download_image(u, sp):
+                    locals_.append(str(sp))
+            if not locals_:
+                return  # 下载全失败：保留原 URL 缓存（短期内仍可用）
+            self._recent_images[umo] = (time.time(), locals_)
+            for f in old_locals:
+                try:
+                    Path(f).unlink(missing_ok=True)
+                except Exception:
+                    pass
+            logger.info(f"[ComfyUI] 最近图片已落地本地 {len(locals_)} 张 (umo={umo[-20:]})")
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 落地最近图片失败: {e}")
+
     def _get_recent_images(self, umo):
-        """取该会话最近的图片缓存（超过 TTL 返回空）"""
+        """取该会话最近的图片缓存（超过 TTL 返回空，并回收本地副本文件）"""
         try:
             rec = self._recent_images.get(str(umo))
             if not rec:
@@ -10171,6 +10206,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             ts, urls = rec
             if time.time() - ts > self._recent_images_ttl:
                 self._recent_images.pop(str(umo), None)
+                for u in urls:
+                    if 'recent_cache' in str(u):
+                        try:
+                            Path(u).unlink(missing_ok=True)
+                        except Exception:
+                            pass
                 return []
             return list(urls)
         except Exception:
