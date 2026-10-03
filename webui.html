@@ -5068,7 +5068,7 @@ textarea:focus-visible,
     <button class="btn btn-xs btn-secondary" id="grm_back_btn" onclick="backToGrimoireSources()" style="display:none;font-size:12px;padding:0 4px;min-height:24px;background:transparent;border:none;color:var(--text-sub)"><svg class="icon-sm" aria-hidden="true"><use href="#icon-arrow-left"/></svg></button>
     <svg class="icon" aria-hidden="true" style="color:var(--primary)"><use href="#icon-book"/></svg>
     <h2>魔导书</h2>
-    <label class="toggle-label" title="开启后 /画 命令会自动追加固定的标签到提示词">
+    <label class="toggle-label" title="开启后 /文生图 命令会自动追加固定的标签到提示词">
       <span>启用</span>
       <div class="toggle-switch" id="grimoire_toggle" onclick="toggleGrimoireSwitch()">
         <div class="toggle-knob"></div>
@@ -5388,9 +5388,9 @@ textarea:focus-visible,
     <div class="wf-mgr-panel active" id="wf_mgr_edit_panel">
       <div class="wf-cat-tags" id="wf_cat_tags" role="group" aria-label="分类筛选">
         <button class="wf-cat-tag active" data-action="filterWfByCat" data-cat="all">全部</button>
-        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="画">画</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="文生图">文生图</button>
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="图生图">图生图</button>
-        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="图生视频">图生视频</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="视频">视频</button>
         <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="未分类">未分类</button>
       </div>
       <div class="wf-edit-count" id="wf_edit_count"></div>
@@ -8730,7 +8730,7 @@ function grimRulesRender() {
     list.innerHTML = wfs.map((wf) => {
       const val = _grimRuleBindings[wf.name] || '';
       const bound = val && val !== 'none' ? val : '';
-      const names = wf.category === '画' ? (_grimRuleNames.t2i || []) : (_grimRuleNames.imgrev || []); // 名字字符串数组（_grimRules.* 是 {name,content} 对象数组，直接 map 会渲染成 [object Object]）
+      const names = wf.category === '文生图' ? (_grimRuleNames.t2i || []) : (_grimRuleNames.imgrev || []); // 名字字符串数组（_grimRules.* 是 {name,content} 对象数组，直接 map 会渲染成 [object Object]）
       const opts = ['<option value="none"' + (!bound ? ' selected' : '') + '>不注入</option>']
         .concat(names.map((n) => '<option value="' + esc(n) + '"' + (bound === n ? ' selected' : '') + '>' + esc(n) + '</option>')).join('');
       const wSafe = String(wf.name).replace(/'/g, "\\'");

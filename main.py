@@ -144,8 +144,8 @@ class ComfyUIListWorkflowsTool(FunctionTool):
     name: str = "comfyui_list_workflows"
     description: str = ("查询/列出本地ComfyUI所有可用工作流（含所属分类与用途）。"
                         "当用户想查看、查询、浏览可用工作流，或需要判断'该用哪个工作流'时调用此工具。"
-                        "分类含义：画=文生图（出图，用 comfyui_draw）；图生图=需要输入图片改图/转风格"
-                        "（用 comfyui_img2img）；图生视频=图片转视频（用 comfyui_video）。")
+                        "分类含义：文生图=纯提示词出图（用 comfyui_draw）；图生图=需要输入图片改图/转风格"
+                        "（用 comfyui_img2img）；视频=图片转视频（用 comfyui_video）。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
     async def run(self, event: AstrMessageEvent):
@@ -156,9 +156,9 @@ class ComfyUIListWorkflowsTool(FunctionTool):
 
         # 分类用途说明（供 LLM 判断该用哪个工作流、调哪个工具）
         cat_usage = {
-            '画': '文生图——纯提示词出图（对应工具 comfyui_draw）',
+            '文生图': '文生图——纯提示词出图（对应工具 comfyui_draw）',
             '图生图': '必须提供输入图片——改图/转风格/转真人（对应工具 comfyui_img2img）',
-            '图生视频': '必须提供输入图片——图片转视频（对应工具 comfyui_video）',
+            '视频': '视频——必须提供输入图片，图片转视频（对应工具 comfyui_video）',
         }
 
         groups = {}
@@ -168,7 +168,7 @@ class ComfyUIListWorkflowsTool(FunctionTool):
             (groups.setdefault(cat, []) if cat else ungrouped).append(w)
 
         out = "当前可用工作流（按分类分组）：\n"
-        cat_order = ['画', '图生图', '图生视频']
+        cat_order = ['文生图', '图生图', '视频']
         listed = 0
         for cat in cat_order:
             if cat not in groups:
@@ -232,7 +232,7 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
     name: str = "comfyui_get_current_workflow"
     description: str = ("查询当前正在使用的工作流名称及其所属分类（分类决定能用哪个工具："
                         "画=文生图 comfyui_draw / 图生图=需输入图 comfyui_img2img / "
-                        "图生视频=需输入图 comfyui_video）。"
+                        "视频=需输入图 comfyui_video）。"
                         "当用户问'我现在用什么工作流'、'当前画风是什么'，或需要判断能否执行某操作时调用。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
@@ -244,9 +244,9 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
         cats = plugin.workflow_config.get('__wf_categories__', {}) or {}
         cat = cats.get(name, '未分类')
         usage = {
-            '画': '文生图（纯提示词出图，用 comfyui_draw）',
+            '文生图': '文生图（纯提示词出图，用 comfyui_draw）',
             '图生图': '图生图（必须提供输入图片，用 comfyui_img2img）',
-            '图生视频': '图生视频（必须提供输入图片，用 comfyui_video）',
+            '视频': '视频（必须提供输入图片，用 comfyui_video）',
         }.get(cat, '用途未知')
         return f"当前工作流：【{plugin._get_display_name(name)}】（分类：{cat} —— {usage}）"
 
@@ -343,8 +343,8 @@ class ComfyUIImg2ImgTool(FunctionTool):
 class ComfyUIVideoTool(FunctionTool):
     name: str = "comfyui_video"
     description: str = ("使用本地ComfyUI生成视频（图生视频）。需要一张输入图片和视频工作流。"
-                        "★ 只能用分类为「图生视频」的工作流；若当前工作流不是「图生视频」类，"
-                        "必须先用 comfyui_list_workflows 找到「图生视频」类工作流，"
+                        "★ 只能用分类为「视频」的工作流；若当前工作流不是「视频」类，"
+                        "必须先用 comfyui_list_workflows 找到「视频」类工作流，"
                         "再用 comfyui_switch_workflow 切换后再调用本工具。"
                         "★ image_url 不传时自动使用用户最近在对话中发送/引用的图片。")
     parameters: dict = field(default_factory=lambda: {
@@ -598,8 +598,8 @@ class ComfyUIRandomImageTool(FunctionTool):
         wf_cats = plugin.workflow_config.get('__wf_categories__', {}) or {}
         wf_cats.update(plugin.workflow_config.get('__workflow_categories__', {}))
         cur_cat = wf_cats.get(plugin.current_workflow_name, '')
-        if cur_cat != '画':
-            return "❌ 随机图只能在「画」分类的工作流上使用，请先切换到画图工作流"
+        if cur_cat not in ('文生图', '画'):
+            return "❌ 随机图只能在「文生图」分类的工作流上使用，请先切换到画图工作流"
         # 1. 先收集所有提示词
         prompts = []
         for i in range(count):
@@ -867,7 +867,7 @@ class WorkflowMixin:
     def _build_wf_selection_menu(self, event, cmd_name, matching_wfs):
         """构建工作流选择菜单文本，并设置 pending_action。调用方 yield 该文本后 return。"""
         user_id = event.get_sender_id()
-        cmd_icons = {'画': '🎨', '图生图': '🖼️', '图生视频': '🎬'}
+        cmd_icons = {'文生图': '🎨', '图生图': '🖼️', '视频': '🎬'}
         icon = cmd_icons.get(cmd_name, '📋')
         m = f"{icon} 找到 {len(matching_wfs)} 个「{cmd_name}」工作流，请选择：\n\n"
         for i, wf in enumerate(matching_wfs, 1):
@@ -881,7 +881,7 @@ class WorkflowMixin:
         return m
 
     def _order_workflows_by_category(self, wfs):
-        """按分类排序工作流列表：画 → 图生图 → 图生视频 → 未分类。
+        """按分类排序工作流列表：文生图 → 图生图 → 视频 → 未分类。
         与 /工作流 分组展示的编号顺序保持一致，数字索引可直接对应。"""
         cats = self.workflow_config.get('__wf_categories__', {}) or {}
         groups = {}  # cat_name -> [wf_dict]
@@ -894,7 +894,7 @@ class WorkflowMixin:
             else:
                 ungrouped.append(w)
         ordered = []
-        for cat in ('画', '图生图', '图生视频'):
+        for cat in ('文生图', '图生图', '视频'):
             ordered.extend(groups.get(cat, []))
         ordered.extend(ungrouped)
         return ordered
@@ -906,7 +906,7 @@ class WorkflowMixin:
 
         # 分类名 → 显示该分类的工作流小列表（两级导航：先分类，再编号/关键词切换）
         cats = self.workflow_config.get('__wf_categories__', {}) or {}
-        known_cats = ['画', '图生图', '图生视频', '未分类']
+        known_cats = ['文生图', '图生图', '视频', '未分类']
         if msg in known_cats:
             if msg == '未分类':
                 cat_wfs = [w for w in target if not cats.get(w['name'] if isinstance(w, dict) else w, '')]
@@ -7440,7 +7440,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
     async def _ensure_command_workflow(self, event, cmd_name):
         """根据 __wf_categories__ 分类确保当前工作流允许该命令执行。
 
-        分类名与命令名一致（如 画、图生图、图生视频），只有分类匹配的工作流才能用该命令。
+        分类名与命令名一致（如 文生图、图生图、视频），只有分类匹配的工作流才能用该命令。
         未分类的工作流可通过 /执行 命令运行。
 
         返回值：元组 (can_execute, needs_selection, matching_workflows)
@@ -9288,10 +9288,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         ctx = self._get_context_key(event)
         ctx_wf = self._context_workflows.get(ctx, self.current_workflow_name) if ctx else self.current_workflow_name
         m = f"当前工作流: {self._get_display_name(ctx_wf)}\n\n"
-        m += "  /画 [比例] 提示词 - 文生图（发文字即可，自动追加固定标签）\n"
+        m += "  /文生图 [比例] 提示词 - 文生图（发文字即可，自动追加固定标签；旧名 /画 仍可用）\n"
         m += "  /随机图 [数量] - 随机出图（默认1张，最多10张）：K2 模式排中文成句，anima 模式从随机池抽标签\n"
         m += "  /图生图 [降噪值] 提示词 - 图生图（直接传图、引用图片 或 @用户获取头像，最多10张；也可仅靠图片生成）\n"
-        m += "  /图生视频 - 图生视频（引用图片 或 @用户获取头像，可仅靠图片生成）\n"
+        m += "  /生成视频 - 图生视频（引用图片 或 @用户获取头像，可仅靠图片生成；旧名 /图生视频 仍可用）\n"
         m += "  /执行 提示词 - 执行当前工作流（不限分类，未分类工作流专用）\n"
         m += "  /工作流 [编号/关键词] - 查看/切换工作流\n"
         m += "  /切换 [编号/关键词] - 快速切换工作流\n"
@@ -9688,7 +9688,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return
 
         # pending switch_workflow 时：纯文本分类名也消费（两级导航：/工作流 → 输入分类名 → 显示该分类列表）
-        if pa['action'] == 'switch_workflow' and msg in ['画', '图生图', '图生视频', '未分类']:
+        if pa['action'] == 'switch_workflow' and msg in ['文生图', '图生图', '视频', '未分类']:
             async for r in self._switch_workflow_by_msg(event, msg, user_id):
                 yield r
             return
@@ -9807,7 +9807,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # 分类概览带编号（一级编号选择分类；分类内工作流二级编号在选中分类后显示）
         m = f"当前: {cur_dn}\n"
         m += "\n分类概览:\n"
-        cat_order = ['画', '图生图', '图生视频']
+        cat_order = ['文生图', '图生图', '视频']
         cat_nums = []  # 一级编号 → 分类名（含未分类）
         n = 0
         for cat in cat_order:
@@ -9824,6 +9824,18 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._set_pending_action(user_id, "switch_workflow", {"workflows": ordered, "context_key": ctx, "stage": "category", "cat_nums": cat_nums, "cats": cats, "groups": {k: [w["name"] if isinstance(w, dict) else w for w in v] for k, v in groups.items()}, "ungrouped": [w["name"] if isinstance(w, dict) else w for w in ungrouped]}, timeout=10)
         yield event.plain_result(m.strip())
 
+    @filter.command("画")
+    async def draw_image_alias(self, event: AstrMessageEvent):
+        """旧命令别名：等价 /文生图"""
+        async for r in self.draw_image(event):
+            yield r
+
+    @filter.command("图生视频")
+    async def img2vid_alias(self, event: AstrMessageEvent):
+        """旧命令别名：等价 /生成视频"""
+        async for r in self.img2vid(event):
+            yield r
+
     @filter.command("切换")
     async def switch_workflow(self, event: AstrMessageEvent):
         await self._ensure_workflow_for_event(event)
@@ -9834,25 +9846,25 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return
         async for r in self._switch_workflow_by_msg(event, a, event.get_sender_id()):
             yield r
-    @filter.command("画")
+    @filter.command("文生图")
     async def draw_image(self, event: AstrMessageEvent):
         await self._ensure_workflow_for_event(event)
-        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '画')
+        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '文生图')
         if needs_sel:
-            yield event.plain_result(self._build_wf_selection_menu(event, '画', matching_wfs))
+            yield event.plain_result(self._build_wf_selection_menu(event, '文生图', matching_wfs))
             return
         if not can_exec:
-            yield event.plain_result("当前无可用画图工作流")
+            yield event.plain_result("当前无可用文生图工作流")
             return
-        msg = event.message_str.replace("/画", "").replace("画", "").strip()
+        msg = event.message_str.replace("/文生图", "").replace("/画", "").strip()
         msg = re.sub(r'\[At:\d+\]', '', msg).strip()
         msg = re.sub(r'@\S+', '', msg).strip()
-        if not msg: yield event.plain_result("/画 提示词（或使用 /随机图 随机出图）"); return
+        if not msg: yield event.plain_result("/文生图 提示词（或使用 /随机图 随机出图）"); return
         prompt = msg
         total_q, running_q, pending_q = await self._get_queue_status()
         queue_msg = self._format_queue_msg(total_q, running_q, pending_q)
         await event.send(event.plain_result(f"生成中...{queue_msg}"))
-        cmd_config = self.workflow_config.get('__commands__', {}).get('画', {})
+        cmd_config = self.workflow_config.get('__commands__', {}).get('文生图', {})
         status, text, path = await self._process_and_submit(prompt, None, cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id())
         if status == "ok":
             sent = await self._send_image_result(event, f"✨ 生成完成 当前{text}", path, prompt=prompt)
@@ -10024,24 +10036,24 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         async for r in self.img2img(event):
             yield r
 
-    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*图生视频(\s|$)")
+    @filter.regex(r"^(\[[^\]]{1,24}\]\s*)*(生成视频|图生视频)(\s|$)")
     async def _lark_img2vid_loose(self, event: AstrMessageEvent):
         """飞书：[图片] 图生视频 → 转发给 img2vid 命令实现"""
         if (event.get_platform_name() or "") != "lark":
             return
-        logger.info("[ComfyUI] 飞书宽松匹配命中：图生视频（含图片前缀）")
+        logger.info("[ComfyUI] 飞书宽松匹配命中：生成视频/图生视频（含图片前缀）")
         async for r in self.img2vid(event):
             yield r
 
-    @filter.command("图生视频")
+    @filter.command("生成视频")
     async def img2vid(self, event: AstrMessageEvent):
         await self._ensure_workflow_for_event(event)
-        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '图生视频')
+        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '视频')
         if needs_sel:
-            yield event.plain_result(self._build_wf_selection_menu(event, '图生视频', matching_wfs))
+            yield event.plain_result(self._build_wf_selection_menu(event, '视频', matching_wfs))
             return
         if not can_exec:
-            yield event.plain_result("当前无可用图生视频工作流")
+            yield event.plain_result("当前无可用视频工作流")
             return
         image_urls = await self._collect_images_from_event(event, max_images=1)
         image_url = image_urls[0] if image_urls else None
@@ -10049,7 +10061,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 检查当前工作流是否支持视频生成
             video_kw = ['视频', 'wan', 'ltx', 'animate', 'video', 'WAN']
             if not any(k in self.current_workflow_name for k in video_kw):
-                yield event.plain_result(f"当前工作流「{self._get_display_name(self.current_workflow_name)}」不是视频工作流，请先切换到视频工作流再使用 /图生视频")
+                yield event.plain_result(f"当前工作流「{self._get_display_name(self.current_workflow_name)}」不是视频工作流，请先切换到视频工作流再使用 /生成视频")
                 return
             save_path = self._get_image_save_dir() / f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             total_q, running_q, pending_q = await self._get_queue_status()
@@ -10057,11 +10069,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             yield event.plain_result(f"生成视频中...{queue_msg}")
             if not await self._download_image(image_url, save_path): yield event.plain_result("下载图片失败"); return
             # v4.5.3: 提取命令后的提示词（此前硬编码空串，提示词永远丢失）
-            vid_prompt = event.message_str.replace("/图生视频", "").strip()
+            vid_prompt = event.message_str.replace("/生成视频", "").replace("/图生视频", "").strip()
             vid_prompt = re.sub(r'\[[^\]]{1,24}\]', '', vid_prompt).strip()   # 去掉 [图片] 等占位前缀
             vid_prompt = re.sub(r'\[At:\d+\]', '', vid_prompt).strip()
             vid_prompt = re.sub(r'@\S+', '', vid_prompt).strip()
-            cmd_config = self.workflow_config.get('__commands__', {}).get('图生视频', {})
+            cmd_config = self.workflow_config.get('__commands__', {}).get('视频', {})
             _umo = getattr(event, 'unified_msg_origin', None)
             vid_prompt, _rule_note = self._enforce_prompt_rule(vid_prompt, 'imgrev')
             status, text, out_path = await self._process_and_submit(vid_prompt, None, str(save_path), cmd_config=cmd_config if cmd_config else None, user_id=event.get_sender_id(), notify_umo=_umo)
@@ -10082,7 +10094,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     yield event.plain_result(f"视频已生成，但无法自动发送，文件路径: {vid_path}")
             else: yield event.plain_result(text)
             return
-        yield event.plain_result("请引用图片或 @用户 后输入 /图生视频")
+        yield event.plain_result("请引用图片或 @用户 后输入 /生成视频")
 
     # ── 画廊 API ──────────────────────────────────────────
 
