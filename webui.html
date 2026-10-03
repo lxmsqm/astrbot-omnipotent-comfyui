@@ -7250,14 +7250,12 @@ async function _reorderCategories(from, to) {
   if (!fromCat || !toCat || fromCat === toCat) return;
   // 获取当前在 DOM 中的所有分类顺序
   const headers = Array.from(document.querySelectorAll('.sidebar-cat-header'));
+  // v4.7.1: 以 DOM 实际渲染的分类为准——旧版用 _catOrder 过滤，分类更名后
+  // 陈旧名单（如已改名的 画/图生视频）会把新分类全部滤掉，indexOf 得 -1 直接 return，
+  // 表现为拖动排序永远无效。未分类不渲染在侧栏（搜索时才显示），保序补到末尾。
   let currentOrder = [];
-  // 如果 _catOrder 为空（首次拖拽），从 DOM 提取当前顺序
-  if (!_catOrder || !_catOrder.length) {
-    headers.forEach((h) => { const c = h.dataset.cat; if (c && !currentOrder.includes(c)) currentOrder.push(c); });
-  } else {
-    headers.forEach((h) => { const c = h.dataset.cat; if (c && !currentOrder.includes(c) && _catOrder.includes(c)) currentOrder.push(c); });
-    _catOrder.forEach((c) => { if (!currentOrder.includes(c)) currentOrder.push(c); });
-  }
+  headers.forEach((h) => { const c = h.dataset.cat; if (c && !currentOrder.includes(c)) currentOrder.push(c); });
+  if (!currentOrder.includes('未分类')) currentOrder.push('未分类');
   // 重排：把 fromCat 移到 toCat 的位置
   const fromIdx = currentOrder.indexOf(fromCat);
   const toIdx = currentOrder.indexOf(toCat);
