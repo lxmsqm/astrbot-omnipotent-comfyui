@@ -168,7 +168,7 @@ class ComfyUIListWorkflowsTool(FunctionTool):
             (groups.setdefault(cat, []) if cat else ungrouped).append(w)
 
         out = "当前可用工作流（按分类分组）：\n"
-        cat_order = ['画', '图生图', '图生视频', '反推']
+        cat_order = ['画', '图生图', '图生视频']
         listed = 0
         for cat in cat_order:
             if cat not in groups:
@@ -881,7 +881,7 @@ class WorkflowMixin:
         return m
 
     def _order_workflows_by_category(self, wfs):
-        """按分类排序工作流列表：画 → 图生图 → 图生视频 → 反推 → 未分类。
+        """按分类排序工作流列表：画 → 图生图 → 图生视频 → 未分类。
         与 /工作流 分组展示的编号顺序保持一致，数字索引可直接对应。"""
         cats = self.workflow_config.get('__wf_categories__', {}) or {}
         groups = {}  # cat_name -> [wf_dict]
@@ -894,7 +894,7 @@ class WorkflowMixin:
             else:
                 ungrouped.append(w)
         ordered = []
-        for cat in ('画', '图生图', '图生视频', '反推'):
+        for cat in ('画', '图生图', '图生视频'):
             ordered.extend(groups.get(cat, []))
         ordered.extend(ungrouped)
         return ordered
@@ -906,7 +906,7 @@ class WorkflowMixin:
 
         # 分类名 → 显示该分类的工作流小列表（两级导航：先分类，再编号/关键词切换）
         cats = self.workflow_config.get('__wf_categories__', {}) or {}
-        known_cats = ['画', '图生图', '图生视频', '反推', '未分类']
+        known_cats = ['画', '图生图', '图生视频', '未分类']
         if msg in known_cats:
             if msg == '未分类':
                 cat_wfs = [w for w in target if not cats.get(w['name'] if isinstance(w, dict) else w, '')]
@@ -9688,7 +9688,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             return
 
         # pending switch_workflow 时：纯文本分类名也消费（两级导航：/工作流 → 输入分类名 → 显示该分类列表）
-        if pa['action'] == 'switch_workflow' and msg in ['画', '图生图', '图生视频', '反推', '未分类']:
+        if pa['action'] == 'switch_workflow' and msg in ['画', '图生图', '图生视频', '未分类']:
             async for r in self._switch_workflow_by_msg(event, msg, user_id):
                 yield r
             return
@@ -9807,7 +9807,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # 分类概览带编号（一级编号选择分类；分类内工作流二级编号在选中分类后显示）
         m = f"当前: {cur_dn}\n"
         m += "\n分类概览:\n"
-        cat_order = ['画', '图生图', '图生视频', '反推']
+        cat_order = ['画', '图生图', '图生视频']
         cat_nums = []  # 一级编号 → 分类名（含未分类）
         n = 0
         for cat in cat_order:
