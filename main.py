@@ -390,6 +390,9 @@ class ComfyUIVideoTool(FunctionTool):
                 # out_path 可能是列表(兼容多图)，取第一个文件发送
                 vid_path = out_path[0] if isinstance(out_path, list) and out_path else out_path
                 umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
+                # v4.8.0: 飞书视频限 ~10MB，超限压缩后再发
+                if plugin._detect_event_platform(event) == 'feishu':
+                    vid_path = await asyncio.to_thread(plugin._shrink_video_for_feishu, vid_path)
                 if umo:
                     chain = MessageChain(chain=[Video(file=vid_path)])
                     await plugin.context.send_message(umo, chain)
@@ -7589,7 +7592,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                             continue
                         chain.chain.append(AstrImage(file=_shrunk))
                     elif _ext2 in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
-                        chain.chain.append(Video(file=_p))
+                        # v4.8.0: 飞书视频限 ~10MB，超限 ffmpeg 压缩后再发（耗时操作放线程）
+                        _vp = await asyncio.to_thread(self._shrink_video_for_feishu, _p)
+                        if not _vp:
+                            logger.warning(f"[ComfyUI] {Path(_p).name} 超飞书限制且压缩失败，跳过该视频")
+                            continue
+                        chain.chain.append(Video(file=_vp))
                     elif _ext2 in ('.wav', '.mp3', '.flac', '.ogg', '.m4a'):
                         chain.chain.append(Record(file=_p))
                     else:
@@ -7823,6 +7831,58 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         except Exception as e:
             logger.warning(f"[ComfyUI] 预览图压缩失败（原样保存）: {e}")
             return raw, 'png'
+
+    def _shrink_video_for_feishu(self, path, limit_bytes=9 * 1024 * 1024):
+        """飞书视频限 ~10MB：超限时用 ffmpeg 重编码压到限内（proot 自带 ffmpeg）。
+        同步函数（ffmpeg 重编码可达数十秒），调用方必须经 asyncio.to_thread 调度。
+        成功返回压缩文件路径（原文件保留在画廊），未超限返回原路径，彻底失败返回 None。"""
+        p = Path(path)
+        try:
+            if p.suffix.lower() not in ('.mp4', '.mov', '.webm', '.avi', '.mkv'):
+                return str(p)
+            if p.stat().st_size <= limit_bytes:
+                return str(p)
+            ffmpeg = shutil.which('ffmpeg') or '/usr/bin/ffmpeg'
+            import subprocess as _sp
+            if not Path(ffmpeg).exists():
+                logger.warning("[ComfyUI] 视频超飞书限制但 ffmpeg 不可用，原样尝试发送")
+                return str(p)
+            out = p.with_name(p.stem + '_fs.mp4')
+            # 时长：优先 ffprobe 精确取，失败按当前体积粗估（假设 ~1.2MB/s）
+            dur = None
+            try:
+                ffprobe = shutil.which('ffprobe') or '/usr/bin/ffprobe'
+                if Path(ffprobe).exists():
+                    _r = _sp.run([ffprobe, '-v', 'error', '-show_entries', 'format=duration',
+                                  '-of', 'default=nw=1:nk=1', str(p)],
+                                 capture_output=True, text=True, timeout=30)
+                    dur = float(_r.stdout.strip())
+            except Exception:
+                dur = None
+            if not dur or dur <= 0:
+                dur = max(5.0, p.stat().st_size / (1.2 * 1024 * 1024))
+            audio_k = 64
+            for factor in (1.0, 0.65, 0.4):
+                bv = int(limit_bytes * 8 * 0.92 * factor / max(dur, 1.0)) - audio_k * 1024
+                if bv < 120 * 1024:
+                    bv = 120 * 1024
+                cmd = [ffmpeg, '-y', '-i', str(p), '-c:v', 'libx264',
+                       '-b:v', str(bv), '-maxrate', str(int(bv * 1.45)), '-bufsize', str(int(bv * 2.9)),
+                       '-preset', 'veryfast', '-pix_fmt', 'yuv420p',
+                       '-c:a', 'aac', '-b:a', f'{audio_k}k', '-movflags', '+faststart', str(out)]
+                try:
+                    _r = _sp.run(cmd, capture_output=True, text=True, timeout=900)
+                except _sp.TimeoutExpired:
+                    logger.warning(f"[ComfyUI] 视频压缩超时: {p.name}")
+                    return str(p)
+                if _r.returncode == 0 and out.exists() and out.stat().st_size <= limit_bytes:
+                    logger.info(f"[ComfyUI] 视频已压缩适配飞书: {p.name} {p.stat().st_size // 1024}KB -> {out.stat().st_size // 1024}KB ({dur:.0f}s, {bv // 1024}kbps)")
+                    return str(out)
+            logger.warning("[ComfyUI] 视频压缩后仍超飞书限制，发送最后一次压缩结果")
+            return str(out) if out.exists() else str(p)
+        except Exception as e:
+            logger.warning(f"[ComfyUI] 视频压缩失败（原样发送）: {e}")
+            return str(p)
 
     def _shrink_for_feishu(self, path, limit_bytes=9 * 1024 * 1024):
         """飞书图片上传前按需压缩。
@@ -10093,6 +10153,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 vid_path = out_path[0] if isinstance(out_path, list) else out_path
                 try:
                     from astrbot.api.message_components import Video, At, Plain
+                    # v4.8.0: 飞书视频限 ~10MB，超限压缩后再发
+                    if self._detect_event_platform(event) == 'feishu':
+                        vid_path = await asyncio.to_thread(self._shrink_video_for_feishu, vid_path)
                     # 先发视频
                     yield event.chain_result([Video.fromFileSystem(vid_path)])
                     # 再发 @用户 的完成通知
