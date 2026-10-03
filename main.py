@@ -1665,13 +1665,35 @@ class GenerateMixin:
         return True
 
     def _remove_workflow_nodes(self, workflow, remove_ids):
-        """智能级联删除：删除指定节点。若下游节点的所有输入都来自已删节点则也删除，否则仅清理引用。
+        """智能级联删除：删除指定节点。若下游节点的所有输入都来自已删节点则也删除，
+        否则按 ComfyUI bypass 语义**直通重连**：下游引用改接到被删节点自己的上游
+        （输出序号 → 输入序号启发式），找不到对应上游才退化为 ""。
+        v4.9.1: 旧版直接把幸存节点的引用填 ""——若被禁组里有模型链节点（如加速组的
+        LoraLoaderModelOnly）而组外还有下游（rgthree LoRA 加载器），下游 model 变字符串，
+        ComfyUI 报 'str' object has no attribute 'model'（v4.4.10 前组禁用是空操作所以从未暴露）。
         注意：工作流节点键可能是 int 或 str，统一按 str 比较，但删除时用真实键。"""
         to_remove = set(str(x) for x in remove_ids)
         if not to_remove:
             return
+
+        def _pass_through(removed_nid, out_idx):
+            """被删节点自己第 out_idx 个输出对应的上游链接（bypass 直通目标）"""
+            node = workflow.get(removed_nid)
+            if node is None:
+                real = [k for k in workflow if str(k) == str(removed_nid)]
+                node = workflow.get(real[0]) if real else None
+            if not isinstance(node, dict):
+                return None
+            link_inputs = [(k, v) for k, v in (node.get('inputs') or {}).items()
+                           if isinstance(v, list) and len(v) >= 1]
+            if not link_inputs:
+                return None
+            k, v = link_inputs[out_idx] if out_idx < len(link_inputs) else link_inputs[-1]
+            return list(v)
+
         while True:
             new_removals = set()
+            relinked = False
             for nid, node in list(workflow.items()):
                 if str(nid) in to_remove or not isinstance(node, dict):
                     continue
@@ -1688,10 +1710,18 @@ class GenerateMixin:
                 if all_from_deleted and all_inputs:
                     new_removals.add(str(nid))
                 else:
-                    # 还有活着的输入源 → 只清理已删引用，保留节点（设为空而非删 key，避免节点结构损坏）
+                    # 还有活着的输入源 → 直通重连到被删节点的上游（bypass 语义），
+                    # 直通目标若也指向已删节点，下一轮循环会继续接力或退化
                     for k in refs_deleted:
-                        inputs[k] = ""
-            if not new_removals:
+                        v = inputs[k]
+                        up = _pass_through(str(v[0]), v[1] if len(v) > 1 else 0)
+                        if up is not None:
+                            inputs[k] = up
+                            if str(up[0]) in to_remove:
+                                relinked = True
+                        else:
+                            inputs[k] = ""
+            if not new_removals and not relinked:
                 break
             to_remove.update(new_removals)
         # 用真实键删除（兼容 int / str 键）
