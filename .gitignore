@@ -46,3 +46,6 @@ data/cache/
 data/user/
 
 
+
+# Architecture handover doc (kept local, not in repo)
+ASTCOMF架构总文档.md
