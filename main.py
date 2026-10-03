@@ -9174,6 +9174,17 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                                 saved_images.append(str(sp))
                             else:
                                 logger.warning(f"[ComfyUI] 下载失败 HTTP {ir.status}: {img['filename']}")
+                # v4.8.0: 视频任务多输出时（如一采+二采双 VHS_VideoCombine 同前缀的工作流），
+                # 历史记录里两段视频都在，outputs 字典顺序决定 out_path[0]——曾把一采低清版
+                # 当成成品发给用户。同等时长下文件体积与分辨率正相关，按体积降序排，
+                # 高清二采版排最前；图片批量输出不受影响（仅 is_video 生效）。
+                if is_video and len(saved_images) > 1:
+                    try:
+                        saved_images.sort(key=lambda p: Path(p).stat().st_size, reverse=True)
+                        sizes = [f"{Path(p).name}:{Path(p).stat().st_size // 1024}KB" for p in saved_images]
+                        logger.info(f"[ComfyUI] 视频多输出按体积降序（最大优先交付）: {sizes}")
+                    except Exception as e:
+                        logger.debug(f"[ComfyUI] 视频输出排序失败: {e}")
                 if saved_images:
                     # 用第一张图计算比例
                     first_sp = Path(saved_images[0])
