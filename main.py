@@ -1485,14 +1485,20 @@ class GenerateMixin:
         WebUI 官方面板、/比例、/分辨率 都会落盘到工作流文件，提交时必须以它为基准，
         否则每次生成都会被全局默认比例/质量踩掉（官方面板"改不动"的根因）。"""
         try:
+            # v4.9.0: 取 MP 最大的官方节点作为基准——多阶段工作流（如 H3 一采0.5MP/二采1.0MP）
+            # 的最终成品分辨率由最大的选择器决定，读第一个会把基准压到一采档
+            best = None
             for nid in self._find_official_resolution_nodes(workflow):
                 ins = workflow[nid].get('inputs', {})
-                ar = ins.get('aspect_ratio', '')
                 mp = ins.get('megapixels', 0)
-                pr = self._official_to_ratio(ar) if ar else ''
-                if pr and ':' in str(pr) and isinstance(mp, (int, float)) and mp > 0:
+                if isinstance(mp, (int, float)) and mp > 0 and (best is None or float(mp) > best[1]):
+                    best = (nid, float(mp), ins.get('aspect_ratio', ''))
+            if best:
+                pr = self._official_to_ratio(best[2]) if best[2] else ''
+                mp = best[1]
+                if pr and ':' in str(pr) and mp > 0:
                     ra, rb = map(int, str(pr).split(':'))
-                    total = float(mp) * 1024 * 1024
+                    total = mp * 1024 * 1024
                     x = (total / (ra * rb)) ** 0.5
                     return int(round(ra * x)), int(round(rb * x))
             for nid in self._find_aspect_ratio_nodes(workflow):
@@ -1521,10 +1527,27 @@ class GenerateMixin:
                 official = self._ratio_to_official(ratio)
             except Exception:
                 return False
+            # v4.9.0: 多阶段分辨率选择器（如 H3 一采0.5MP/二采1.0MP）——按文件原 MP 比例
+            # 分配目标总像素，只统一宽高比、绝不抹平阶段差。曾把所有选择器盖成同一个 MP，
+            # 二采放大目标被压成一采分辨率，放大链白跑（输出永远是一采尺寸）。
+            file_mps = []
+            for oid in official_ids:
+                v = workflow[oid].get('inputs', {}).get('megapixels')
+                if isinstance(v, (int, float)) and v > 0:
+                    file_mps.append(float(v))
+            multi_stage = len(set(file_mps)) > 1
+            max_mp = max(file_mps) if file_mps else 0.0
             for oid in official_ids:
                 inputs = workflow[oid].get('inputs', {})
                 inputs['aspect_ratio'] = official
-                inputs['megapixels'] = megapixels
+                if multi_stage:
+                    v = inputs.get('megapixels')
+                    if isinstance(v, (int, float)) and v > 0 and max_mp > 0:
+                        inputs['megapixels'] = round(float(v) * megapixels / max_mp, 3)
+                    else:
+                        inputs['megapixels'] = megapixels
+                else:
+                    inputs['megapixels'] = megapixels
                 if 'multiple' not in inputs:
                     inputs['multiple'] = 8
             if aspect_ids and ':' in ratio:
@@ -9579,10 +9602,26 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 official_ratio = self._ratio_to_official(ratio)
                 # 质量档位像素数 → 百万像素（官方公式 total_pixels = megapixels * 1024²）
                 megapixels = round((width * height) / (1024 * 1024), 2)
+                # v4.9.0: 多阶段选择器（文件内 MP 值不同，如 H3 一采0.5MP/二采1.0MP）——
+                # 按原比例分配目标像素，只统一宽高比、不抹平阶段差（与 _set_resolution 同语义）
+                file_mps = []
+                for nid in official_ids:
+                    v = wf[nid].get('inputs', {}).get('megapixels')
+                    if isinstance(v, (int, float)) and v > 0:
+                        file_mps.append(float(v))
+                multi_stage = len(set(file_mps)) > 1
+                max_mp = max(file_mps) if file_mps else 0.0
                 for nid in official_ids:
                     inputs = wf[nid].get('inputs', {})
                     inputs['aspect_ratio'] = official_ratio
-                    inputs['megapixels'] = megapixels
+                    if multi_stage:
+                        v = inputs.get('megapixels')
+                        if isinstance(v, (int, float)) and v > 0 and max_mp > 0:
+                            inputs['megapixels'] = round(float(v) * megapixels / max_mp, 3)
+                        else:
+                            inputs['megapixels'] = megapixels
+                    else:
+                        inputs['megapixels'] = megapixels
                     # multiple 保留工作流现有值，无则给 8
                     if 'multiple' not in inputs:
                         inputs['multiple'] = 8
