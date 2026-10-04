@@ -2577,7 +2577,10 @@ class WebUIMixin:
                     logger.info(f"[ComfyUI]   save role {rk}={data[rk]!r}")
             async with self._config_lock:
                 # ★ v4.4.2: 组绑定键重定向到分桶存储（桶键 = 绑定目标 || 当前工作流）。
-                # 数据自包含：删除源工作流不再连坐清除；空 groups_data = 解绑删桶。
+                # 数据自包含：删除源工作流不再连坐清除。
+                # v4.9.4: 空 groups_data 不再删桶——前端 saveParams 无条件上报该字段，
+                # 面板一旦无数据（指纹重置/竞态等）就会把用户组绑定静默端掉（自毁循环：
+                # 面板空→保存→桶删→面板永远空）。显式解绑走 /api/groups/auto-apply（groups:[]）。
                 self._migrate_group_binding_to_store()
                 if any(k in data for k in ('__groups_source__', '__bind_target__', '__groups_data__', '__disabled_groups__')):
                     _gstore = self.workflow_config.get('__group_bindings_store__', {}) or {}
@@ -2590,8 +2593,7 @@ class WebUIMixin:
                             _gbucket['source'] = str(data.pop('__groups_source__', _gbucket.get('source', '')) or '')
                             _gbucket['target'] = _bkey
                             _gbucket['disabled'] = data.pop('__disabled_groups__', _gbucket.get('disabled', {})) or {}
-                        else:
-                            _gbucket = None  # 空 groups_data = 解绑/清除该目标的桶
+                        # else: 空 groups_data → 保留现有桶原样（仅忽略本次组数据上报）
                     else:
                         if '__groups_source__' in data:
                             _gbucket['source'] = str(data.pop('__groups_source__') or '')

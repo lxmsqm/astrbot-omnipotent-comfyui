@@ -9655,6 +9655,8 @@ async function saveParams() {
       __disabled_groups__: disabledGroups,
       __groups_source__: groupsSource,
       __bind_target__: bindTarget,
+      // v4.9.4: 组数据仅在有内容时上报——空数组曾触发后端"解绑删桶"，
+      // 把用户组绑定静默端掉（自毁循环：面板空→保存→桶删→面板永远空）
       __groups_data__: c.__groups_data__ || [],
       __hidden_workflows__: c.__hidden_workflows__ || [],
       __workflow_aliases__: c.__workflow_aliases__ || {},
@@ -9662,6 +9664,8 @@ async function saveParams() {
       // 触发保存时用空值覆盖后端已保存的节点配置，导致刷新后图片/角色丢失
       __empty_load_nodes__: emptyLoadNodes.join(',')
     };
+    // v4.9.4: 空 groups_data 不上报（后端已不再删桶，双保险）
+    if (!(d.__groups_data__ || []).length) delete d.__groups_data__;
     // 节点角色：默认只在非空时附带（避免切换工作流后未初始化时用空值覆盖后端已存配置）；
     // 但用户「主动取消指定」时必须发送空值，否则后端保留旧值 → 表现为「取消不掉」。
     // _explicitClear 里的角色名 = 本次是用户显式取消，允许发送空串覆盖。
