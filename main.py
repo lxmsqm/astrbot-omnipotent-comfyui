@@ -2419,6 +2419,16 @@ class WebUIMixin:
         if target_id:
             is_group = bool(_lc.get("target_group", False))
             sent = await self._send_to_target(tp, target_id, all_paths, _send_prompt, group=is_group)
+            # v4.9.6: WebUI 推送也记入提示词日志——此前只有聊天路径记录，
+            # WebUI 出的图在飞书/QQ 里用 /提示词 永远查不到
+            try:
+                if all_paths:
+                    _p0 = str(Path(all_paths[0]).resolve())
+                    _ih = self._calc_file_md5(_p0)
+                    _idh = self._calc_image_dhash(_p0)
+                    await self._append_prompt_log('', _send_prompt or _last_gen_prompt, _ih, _idh, path=_p0)
+            except Exception as e:
+                logger.debug(f"[ComfyUI] WebUI 推送记录提示词失败: {e}")
         return web.json_response({
             "ok": True, "paths": [str(p) for p in all_paths], "count": len(all_paths),
             "sent": sent, "target_qq": target_id, "target_platform": tp, "target_id": target_id,
@@ -7107,16 +7117,19 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         if len(self._prompt_log) < before:
             logger.info(f"[ComfyUI] 提示词记录清理: {before} -> {len(self._prompt_log)} 条")
 
-    async def _append_prompt_log(self, message_id, prompt, img_hash='', img_dhash=''):
+    async def _append_prompt_log(self, message_id, prompt, img_hash='', img_dhash='', path=''):
         """追加一条提示词记录到日志并写文件（img_hash=内容MD5，img_dhash=感知哈希，
-        供重新保存/重编码图片后按内容或感知相似度查询兜底）"""
+        供重新保存/重编码图片后按内容或感知相似度查询兜底；path=本地文件路径，
+        v4.9.6: 飞书发送拿不到 message_id 也照记（message_id 留空），配合
+        /提示词 的「会话最近发送图」兜底，修复飞书查询永远失效的问题。"""
         async with self._prompt_log_lock:
             self._prompt_log.append({
                 "message_id": str(message_id),
                 "prompt": prompt,
                 "timestamp": time.time(),
                 "img_hash": img_hash or '',
-                "img_dhash": img_dhash or ''
+                "img_dhash": img_dhash or '',
+                "path": str(path or '')
             })
             self._trim_prompt_log()
             try:
@@ -7314,15 +7327,17 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 logger.debug(f"[ComfyUI] 记录发送图片失败: {e}")
 
             # 记录提示词到 prompt_log（引用图片查提示词用）
-            if msg_id:
-                final_prompt = self._expanded_prompt_cache.pop(first_abs, '') or prompt
-                if final_prompt:
-                    try:
-                        img_hash = self._calc_file_md5(first_abs)
-                        img_dhash = self._calc_image_dhash(first_abs)
-                        await self._append_prompt_log(msg_id, final_prompt, img_hash, img_dhash)
-                    except Exception as e:
-                        logger.debug(f"[ComfyUI] 记录提示词失败: {e}")
+            # v4.9.6: 不再以 msg_id 为门槛——飞书发送拿不到 message_id，此前因此
+            # 完全不记录，导致飞书里 /提示词 永远查不到；现在照记（message_id 留空，
+            # 靠 path/img_hash/img_dhash 匹配），QQ 平台行为不变
+            final_prompt = self._expanded_prompt_cache.pop(first_abs, '') or prompt
+            if final_prompt:
+                try:
+                    img_hash = self._calc_file_md5(first_abs)
+                    img_dhash = self._calc_image_dhash(first_abs)
+                    await self._append_prompt_log(msg_id, final_prompt, img_hash, img_dhash, path=first_abs)
+                except Exception as e:
+                    logger.debug(f"[ComfyUI] 记录提示词失败: {e}")
 
             return True
         except Exception as e:
@@ -7624,9 +7639,27 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         #（聊天路径 _send_image_result 一直有闸门，只有 WebUI 推送这条路漏了）。
         if not self.show_prompt_on_image:
             prompt = ''
+        sent = False
         if tp == 'feishu':
-            return await self._send_image_to_feishu(tid, paths, prompt, group=group)
-        return await self._send_image_to_qq(tid, paths, prompt, group=group)
+            sent = await self._send_image_to_feishu(tid, paths, prompt, group=group)
+        else:
+            sent = await self._send_image_to_qq(tid, paths, prompt, group=group)
+        # v4.9.6: 记录发送（/提示词 的「会话最近图」兜底数据源；WebUI 推送此前零记录）
+        try:
+            if sent and paths:
+                if tp == 'feishu':
+                    _umo = f"{self._get_lark_platform_id() or 'lark-main'}:{'GroupMessage' if tid.startswith('oc_') else 'FriendMessage'}:{tid}"
+                else:
+                    _umo = f"default:{'GroupMessage' if group else 'FriendMessage'}:{tid}"
+                _p0 = str(Path(paths[0]).resolve())
+                async with self._sent_images_lock:
+                    self._sent_images.setdefault(_p0, []).append(
+                        {"message_id": "", "umo": _umo, "sent_at": time.time()})
+                    if len(self._sent_images[_p0]) > 20:
+                        self._sent_images[_p0] = self._sent_images[_p0][-20:]
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 记录推送图片失败: {e}")
+        return sent
 
     async def _send_image_to_feishu(self, target_id, paths, prompt, group=False):
         """主动发送生成结果到飞书（走 AstrBot 标准消息链，适配器负责素材上传）。
@@ -9539,6 +9572,35 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                         tmp_path.unlink(missing_ok=True)
                     except Exception:
                         pass
+        # 3. 飞书等平台回复链不带图 URL 且 message_id 无从匹配：回退到「本会话最近发送的图」
+        #    （v4.9.6: 飞书发送此前根本不进日志 + 回复链无图可下载，命令在飞书永远失效；
+        #      现取 10 分钟内该会话最近发送的图，按 path/img_hash 匹配 prompt_log）
+        umo = getattr(event, 'unified_msg_origin', None)
+        if umo:
+            try:
+                cands = []
+                async with self._sent_images_lock:
+                    for p_abs, records in self._sent_images.items():
+                        for rec in records:
+                            if rec.get('umo') == str(umo) and time.time() - rec.get('sent_at', 0) <= 600:
+                                cands.append((rec.get('sent_at', 0), p_abs))
+                cands.sort(reverse=True)
+                for _, p_abs in cands[:3]:
+                    for r in reversed(self._prompt_log):
+                        if r.get('path') and r['path'] == p_abs:
+                            yield event.plain_result(f"提示词: {r['prompt']}")
+                            return
+                    try:
+                        if Path(p_abs).exists():
+                            h = self._calc_file_md5(p_abs)
+                            for r in reversed(self._prompt_log):
+                                if r.get('img_hash') and r['img_hash'] == h:
+                                    yield event.plain_result(f"提示词: {r['prompt']}")
+                                    return
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 会话最近图兜底失败: {e}")
         yield event.plain_result("已过期或不是我发的图")
 
     @filter.command("停止")
