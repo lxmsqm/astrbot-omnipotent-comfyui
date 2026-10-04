@@ -5076,9 +5076,32 @@ class GrimoireMixin:
             return web.json_response({"ok": False, "error": "保存失败，请重试"})
         return web.json_response({"ok": True, "pins": pins})
 
+    def _grimoire_valid_source_paths(self) -> set:
+        """当前真实存在的词库源相对路径集合（与 /api/grimoire/sources 同一扫描口径，含 Anima 补充源）。
+        随机池条目必须命中此集合；否则视为垃圾/失效条目（v4.9.3：曾混入 43 条 't/1'..'t/43'
+        垃圾路径，徽章计数虚高且随机抽取撞空）。"""
+        data_dir = data_dir_resolver()
+        valid = set()
+        if data_dir.exists():
+            for fpath in data_dir.rglob("*.json"):
+                rel = fpath.relative_to(data_dir)
+                if rel.parts and rel.parts[0] in ('anima_tools', 'cache', 'prompt_log.json', 'user',
+                                                  'anima_tools_migrated_backup', 'user_migrated_backup'):
+                    continue
+                valid.add(str(rel).replace('\\', '/'))
+        for source_path, _n, _l in _ANIMA_SOURCE_NAMES:
+            valid.add((source_path + '.json').replace('\\', '/'))
+        return valid
+
     async def _webui_grimoire_get_rand_pool(self, request):
-        """获取随机池数据源列表"""
-        pool = self.workflow_config.get('__grimoire_rand_pool__', [])
+        """获取随机池数据源列表（v4.9.3: 剔除失效/垃圾条目并自愈落盘）"""
+        old = list(self.workflow_config.get('__grimoire_rand_pool__', []) or [])
+        valid = self._grimoire_valid_source_paths()
+        pool = [s for s in old if str(s).replace('\\', '/') in valid]
+        if len(pool) != len(old):
+            self.workflow_config['__grimoire_rand_pool__'] = pool
+            await self._save_workflow_config()
+            logger.info(f"[魔导书] 随机池自愈: 剔除 {len(old) - len(pool)} 条失效源，剩 {len(pool)} 条")
         return web.json_response({"ok": True, "pool": pool})
 
     async def _webui_grimoire_set_rand_pool(self, request):
@@ -5095,6 +5118,13 @@ class GrimoireMixin:
             sources.append(single.replace('\\', '/'))
         if not sources or not action:
             return web.json_response({"ok": False, "error": "缺少参数"})
+        # v4.9.3: add 操作校验源路径必须真实存在（防垃圾路径混入池子撑爆计数）
+        if action == 'add':
+            valid = self._grimoire_valid_source_paths()
+            bad = [s for s in sources if s not in valid]
+            if bad:
+                return web.json_response({"ok": False,
+                                          "error": f"无效的数据源: {', '.join(bad[:5])}{'…' if len(bad) > 5 else ''}"})
         pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
         if action == 'add':
             for src in sources:
