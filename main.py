@@ -6956,6 +6956,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             pass
         # 扩写后提示词缓存 {文件路径: 扩写文本}，由 _process_and_submit 写入，_send_image_result 消费
         self._expanded_prompt_cache: dict[str, str] = {}
+        # v4.9.6: 缓存写入时间戳——与 prompt_log 同一保留天数（prompt_log_days）清理，
+        # 附带"源文件已被输出清理删除"的条目也一并回收
+        self._expanded_prompt_cache_ts: dict[str, float] = {}
         # 最近图片缓存：{umo: (timestamp, [urls])} —— 解决飞书「发图后再发命令」拿不到图的问题
         # （飞书图片是独立消息，命令那条消息没有图片组件；QQ 可同条/紧邻发送所以不受影响）
         self._recent_images: dict[str, tuple] = {}
@@ -8911,6 +8914,21 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                             pass
                 if deleted:
                     logger.info(f"[ComfyUI] 清理了 {deleted} 个过期输出文件(保留{keep_days}天)")
+                # v4.9.6: 提示词内存缓存同步清理——与 prompt_log 同一保留天数（prompt_log_days），
+                # 或源文件已被本轮输出清理删除的条目也一并回收（此前该缓存从不清理、无限堆积）
+                try:
+                    _pc_days = max(1, int(getattr(self, 'prompt_log_days', 3) or 3))
+                except (TypeError, ValueError):
+                    _pc_days = 3
+                _pc_cutoff = now - _pc_days * 86400
+                _stale = [k for k in list(self._expanded_prompt_cache.keys())
+                          if self._expanded_prompt_cache_ts.get(k, 0) < _pc_cutoff
+                          or not Path(k).exists()]
+                for k in _stale:
+                    self._expanded_prompt_cache.pop(k, None)
+                    self._expanded_prompt_cache_ts.pop(k, None)
+                if _stale:
+                    logger.info(f"[ComfyUI] 清理了 {len(_stale)} 条过期提示词缓存(保留{_pc_days}天)")
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -9348,6 +9366,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                                 # 根据真实分辨率计算实际比例（映射到最近的标准比例）
                                 actual_ratio = self._closest_ratio(real_w, real_h)
                                 # 扩写后文本缓存，供 _send_image_result 使用
+                                # （v4.9.6: 记录入缓存时间，供按保留天数清理）
                                 if expanded_text:
                                     self._expanded_prompt_cache[str(sp)] = expanded_text
                                 else:
@@ -9355,6 +9374,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                                     # 否则「图片附带提示词」开关取不到内容而静默失效
                                     if prompt:
                                         self._expanded_prompt_cache[str(sp)] = prompt
+                                if str(sp) in self._expanded_prompt_cache:
+                                    self._expanded_prompt_cache_ts[str(sp)] = time.time()
                                 saved_images.append(str(sp))
                             else:
                                 logger.warning(f"[ComfyUI] 下载失败 HTTP {ir.status}: {img['filename']}")
