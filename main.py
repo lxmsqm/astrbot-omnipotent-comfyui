@@ -7619,6 +7619,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         tid = str(target_id or '').strip()
         if not tid:
             return False
+        # v4.9.5: 尊重「图片附带提示词」开关——关闭时主动推送不带提示词文本。
+        # 此前飞书/QQ 发送器无条件把 prompt 拼进「✨ 生成完成」，开关形同虚设
+        #（聊天路径 _send_image_result 一直有闸门，只有 WebUI 推送这条路漏了）。
+        if not self.show_prompt_on_image:
+            prompt = ''
         if tp == 'feishu':
             return await self._send_image_to_feishu(tid, paths, prompt, group=group)
         return await self._send_image_to_qq(tid, paths, prompt, group=group)
