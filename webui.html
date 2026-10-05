@@ -3452,7 +3452,7 @@ body.page-gallery{overflow:hidden;}
 .gallery-prompt-panel .gpp-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);}
 .gallery-prompt-panel .gpp-body{flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;color:var(--text-sub);background:var(--input-bg);border-radius:6px;padding:8px;}
 .gallery-prompt-panel .gpp-foot{display:flex;justify-content:flex-end;}
-#gallery_prompt_copy{position:fixed;right:12px;bottom:76px;z-index:70;}
+#gallery_prompt_copy{ display:none !important; } /* v4.11.1: 手机入口收敛到工具栏「提示词」，悬浮按钮压图废弃 */
 @media(max-width:767px){ .gallery-prompt-panel{display:none !important;} }
 
 /* --- 单图模式：回到逐张 scroll-snap 大图 --- */
@@ -11435,6 +11435,8 @@ function _relFromItem(img) {
   } catch (e) { return ''; }
 }
 function toggleGalleryPrompt() {
+  // v4.11.1: 手机端该按钮=直接复制提示词（面板在手机隐藏，此前点了无反应）；PC=开合右侧栏
+  if (window.innerWidth < 768) { copyGalleryPrompt(); return; }
   _gppOpen = !_gppOpen;
   const panel = document.getElementById('gallery_prompt_panel');
   if (panel) panel.style.display = _gppOpen ? 'flex' : 'none';
@@ -11473,17 +11475,9 @@ async function copyGalleryPrompt() {
   }
 }
 function updateGalleryPromptUI() {
-  const isMobile = window.innerWidth < 768;
-  const hasImg = !!_curGalleryItem();
-  const btn = document.getElementById('gallery_prompt_copy');
-  if (btn) btn.style.display = (isMobile && hasImg) ? 'inline-flex' : 'none';
   const panel = document.getElementById('gallery_prompt_panel');
   if (!panel) return;
-  if (isMobile) {
-    if (_gppOpen) toggleGalleryPrompt(); // 手机不展示全文面板
-    return;
-  }
-  // v4.11.0: PC 面板显示状态完全由 _gppOpen 驱动（HTML 内联 display:none 曾压过 CSS 默认展开）
+  if (window.innerWidth < 768) { panel.style.display = 'none'; return; } // 手机无面板
   panel.style.display = _gppOpen ? 'flex' : 'none';
   if (_gppOpen) {
     clearTimeout(_gppDebounce);
@@ -11621,13 +11615,15 @@ function switchGalleryFilter(filter) {
 function toggleGalleryBatchDel() {
   const btn = document.getElementById('gallery_batch_toggle');
   const bar = document.getElementById('gallery_batch_bar');
+  const delBtn = document.getElementById('gallery_delete_btn');
   if (_batchMode) {
     exitBatchMode();
     return;
   }
   _batchMode = true;
   _selectedBatch.clear();
-  if (btn) btn.classList.add('active');
+  if (btn) { btn.classList.add('active'); btn.innerHTML = '✓ 完成'; } // v4.11.2: 再点=退出，文字跟随
+  if (delBtn) delBtn.style.display = 'none'; // v4.11.2: 批量模式隐藏单删按钮，防止误删当前张
   if (bar) bar.style.display = 'flex';
   updateBatchBar();
   updateBatchSelectUI();
@@ -11637,6 +11633,10 @@ function toggleGalleryBatchDel() {
 function exitBatchMode() {
   if (!_batchMode && _selectedBatch.size === 0) return;
   _batchMode = false;
+  const toggleBtn = document.getElementById('gallery_batch_toggle');
+  if (toggleBtn) { toggleBtn.classList.remove('active'); toggleBtn.innerHTML = '批量'; }
+  const delBtn = document.getElementById('gallery_delete_btn');
+  if (delBtn) delBtn.style.display = '';
   _selectedBatch.clear();
   const btn = document.getElementById('gallery_batch_toggle');
   const bar = document.getElementById('gallery_batch_bar');
