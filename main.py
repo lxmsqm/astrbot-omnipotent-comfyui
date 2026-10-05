@@ -4472,6 +4472,7 @@ class WebUIMixin:
                     })
                 full.sort(key=lambda x: x["mtime"], reverse=True)
                 self._gallery_scan_cache = (now, full)
+                cached = self._gallery_scan_cache  # 首扫结果必须回读（旧局部值还是空）
             full = cached[1] if cached else []
             items = full
             if ftype in ('image', 'video'):
@@ -5415,6 +5416,10 @@ class GrimoireMixin:
             #   NSFW 关闭 → 只抽「正常动作」（色情动作已在前面被排除）
             #   NSFW 开启 → 只抽「色情动作」（用户要求：开启时只出色情动作）
             if group_name == "动作姿态":
+                # v4.12.4: 动作姿态二选一是核心流程，不受随机池成员限制——
+                # 此前要求源必须在池内，池里没勾动作姿态时 NSFW 开关等于白开（色情动作永远抽不到）
+                if not available:
+                    available = list(members)
                 if _nsfw_on:
                     available = [m for m in available if "色情" in m] or available
                 else:
