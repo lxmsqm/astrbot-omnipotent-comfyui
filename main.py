@@ -4561,7 +4561,10 @@ class WebUIMixin:
         """删除画廊中的图片文件（按文件名，避免全路径中文编码问题）。
         兼容子目录：name 为纯文件名时若根目录找不到，递归在 output_dir 内查找同名文件删除。"""
         try:
-            data = await r.json()
+            try:
+                data = await r.json()
+            except Exception:
+                return web.json_response({"ok": False, "error": "无效的 JSON 请求"})
             name_str = data.get('name', '')
             if not name_str:
                 return web.json_response({"ok": False, "error": "名为空"})
