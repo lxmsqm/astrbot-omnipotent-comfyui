@@ -4430,55 +4430,70 @@ class WebUIMixin:
             return web.json_response({"ok": False, "error": str(e)})
 
     async def _webui_get_gallery(self, r):
-        """获取输出目录中的图片列表（按修改时间倒序，递归子目录）"""
+        """v4.12.0: 分页画廊——扫描结果内存缓存（30s TTL，force=1 立即重扫），
+        服务端完成 type/filter 过滤后按 offset/limit 分页返回。
+        旧版每次请求全量递归扫描 + 全量 JSON 返回 + 前端一次性渲染，列表越大越慢。"""
         try:
             output_dir = self.output_dir.resolve()
             if not output_dir.exists():
-                return web.json_response({"images": []})
+                return web.json_response({"images": [], "total": 0, "hasMore": False})
+            q = r.rel_url.query
+            def _int(name, default, lo, hi):
+                try:
+                    return max(lo, min(hi, int(q.get(name, str(default)))))
+                except (TypeError, ValueError):
+                    return default
+            offset = _int('offset', 0, 0, 100000)
+            limit = _int('limit', 60, 1, 200)
+            ftype = q.get('type', 'all')
+            tfilter = q.get('filter', 'all')
+            force = q.get('force') == '1'
 
-            allowed_ext = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.mp4', '.mov', '.avi'}
-            video_ext = {'.mp4', '.mov', '.avi'}  # v4.10.1: gif 归图片（<video> 播不了 gif，此前动图在画廊直接消失）
-            images = []
-            from urllib.parse import quote
-
-            # 递归扫描所有子目录，跳过 upload 目录（限制最多扫描 5000 个文件防 OOM）
-            scan_count = 0
-            max_scan = 5000
-            for f in output_dir.rglob('*'):
-                if not f.is_file() or f.suffix.lower() not in allowed_ext:
-                    continue
-                # 跳过 upload 子目录中的文件
-                rel = f.relative_to(output_dir)
-                if str(rel).startswith('upload\\') or str(rel).startswith('upload/'):
-                    continue
-                # 生成可通过 gallery/file 端点访问的 URL（使用相对路径）
-                url = f'/api/gallery/file?path={quote(str(rel))}'
-                images.append({
-                    "path": str(f),
-                    "url": url,
-                    "name": f.name,
-                    "size": f.stat().st_size,
-                    "mtime": f.stat().st_mtime,
-                    "type": "video" if f.suffix.lower() in video_ext else "image"
-                })
-                scan_count += 1
-                if scan_count >= max_scan:
-                    logger.warning(f"[ComfyUI] 画廊扫描已达上限 {max_scan}，部分文件未显示")
-                    break
-
-            # 按修改时间倒序排列
-            images.sort(key=lambda x: x["mtime"], reverse=True)
-            # 按完整路径去重（防止子目录同名文件导致重复或遗漏）
-            seen_paths = set()
-            deduped = []
-            for img in images:
-                if img["path"] not in seen_paths:
-                    seen_paths.add(img["path"])
-                    deduped.append(img)
-            return web.json_response({"images": deduped})
+            now = time.time()
+            cached = getattr(self, '_gallery_scan_cache', None)
+            if force or not cached or now - cached[0] > 30:
+                allowed_ext = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.mp4', '.mov', '.avi'}
+                video_ext = {'.mp4', '.mov', '.avi'}
+                from urllib.parse import quote
+                full = []
+                for f in output_dir.rglob('*'):
+                    if not f.is_file() or f.suffix.lower() not in allowed_ext:
+                        continue
+                    rel = f.relative_to(output_dir)
+                    if str(rel).startswith('upload' + os.sep) or str(rel).startswith('upload/'):
+                        continue
+                    full.append({
+                        "path": str(f),
+                        "url": f'/api/gallery/file?path={quote(str(rel))}',
+                        "name": f.name,
+                        "size": f.stat().st_size,
+                        "mtime": f.stat().st_mtime,
+                        "type": "video" if f.suffix.lower() in video_ext else "image"
+                    })
+                full.sort(key=lambda x: x["mtime"], reverse=True)
+                self._gallery_scan_cache = (now, full)
+            full = cached[1] if cached else []
+            items = full
+            if ftype in ('image', 'video'):
+                items = [x for x in items if x['type'] == ftype]
+            if tfilter == 'today':
+                ts = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+                items = [x for x in items if x['mtime'] >= ts]
+            elif tfilter == '1day':
+                items = [x for x in items if now - x['mtime'] <= 86400]
+            elif tfilter == '2day':
+                items = [x for x in items if now - x['mtime'] <= 2 * 86400]
+            page = items[offset:offset + limit]
+            return web.json_response({
+                "images": page,
+                "total": len(items),
+                "hasMore": offset + limit < len(items)
+            })
         except Exception as e:
             logger.error(f"[ComfyUI] 获取画廊列表失败: {e}")
-            return web.json_response({"images": [], "error": str(e)})
+            return web.json_response({"images": [], "total": 0, "hasMore": False, "error": str(e)})
+
+
 
     async def _webui_gallery_file(self, r):
         """提供画廊图片文件"""
@@ -7035,6 +7050,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # 附带"源文件已被输出清理删除"的条目也一并回收
         self._expanded_prompt_cache_ts: dict[str, float] = {}
         self._gallery_md5_cache: dict = {}  # (path, mtime) -> md5，画廊查提示词用
+        self._gallery_scan_cache = (0, [])  # (扫描时间, 全量列表)——分页画廊的 30s 扫描缓存
         # 最近图片缓存：{umo: (timestamp, [urls])} —— 解决飞书「发图后再发命令」拿不到图的问题
         # （飞书图片是独立消息，命令那条消息没有图片组件；QQ 可同条/紧邻发送所以不受影响）
         self._recent_images: dict[str, tuple] = {}

@@ -8923,12 +8923,12 @@ function setMpTab(t) {
   document.querySelectorAll('.mp-tab').forEach((b) => b.classList.toggle('active', b.dataset.mp === t));
   renderMediaPanel();
 }
+let _mpData = []; // v4.12.0: 媒体面板独立数据（分页后不再与画廊共享全量列表）
 async function loadMediaPanel(force = false) {
-  // 缓存优先：画廊数据已载入时直接渲染（生成完成钩子会刷新 _galleryData），避免比画廊页还慢
-  if (!force && _galleryData && _galleryData.length) { renderMediaPanel(); return; }
+  if (!force && _mpData && _mpData.length) { renderMediaPanel(); return; }
   try {
-    const d = await apiFetch('/api/gallery', {}, true);
-    _galleryData = (d && d.images) ? d.images : [];
+    const d = await apiFetch('/api/gallery?limit=60&type=' + encodeURIComponent(_mpTab), {}, true);
+    _mpData = (d && d.images) ? d.images : [];
     renderMediaPanel();
   } catch (e) { /* 忽略：面板开着时静默失败 */ }
 }
@@ -8943,7 +8943,7 @@ function renderMediaPanel() {
   const search = document.getElementById('mp_search');
   if (!list) return;
   const q = ((search && search.value) || '').toLowerCase();
-  const items = (_galleryData || []).filter((i) => (i.type === _mpTab) && (!q || (i.name || '').toLowerCase().includes(q)));
+  const items = (_mpData || []).filter((i) => (!q || (i.name || '').toLowerCase().includes(q)));
   if (!items.length) { list.innerHTML = '<div class="mp-empty">暂无资产</div>'; return; }
   const shown = items.slice(0, _mpLimit);
   const more = items.length > shown.length ? `<div class="mp-more" onclick="_mpLimit=9999;renderMediaPanel()">显示全部 ${items.length} 张</div>` : '';
@@ -10330,7 +10330,7 @@ async function pollProgress() {
       bar.classList.remove('active', 'indeterminate');
       section.classList.remove('generating');
       if (_wasRunning) {
-        loadGalleryImages();
+        loadGalleryImages(true); // v4.12.0: force 立即重扫，新图马上出现在页首
         // 媒体资产面板：生成完成自动弹出（仅 PC），强制拉取最新列表（异步时序：直接渲染会拿到旧列表）
         const mp = window.innerWidth >= 900 ? document.getElementById('media_panel') : null;
         if (mp) {
@@ -11120,6 +11120,8 @@ let _selectedBatch = new Set();
 let _galleryPage = 1;
 let _galleryPageSize = 20;
 let _galleryFiltered = [];
+let _galleryHasMore = false;   // v4.12.0: 分页——还有下一页
+let _galleryTotal = 0;         // v4.12.0: 服务端过滤后的总数（FAB 徽标用）
 let _galleryLoadingMore = false;
 
 function toggleGalleryDropdown() {
@@ -11251,59 +11253,98 @@ function escGallery(str) {
   return d.innerHTML;
 }
 
-async function loadGalleryImages(force = false) {
-  if (!force && !_acceptData) return; // 数据接收已暂停，不加载（删除后强制刷新不受此限制）
-  const d = await apiFetch('/api/gallery', {}, true);
-  _galleryData = (d && d.images) ? d.images : [];
-  // 更新FAB徽标
-  const total = _galleryData.length;
+async function loadGalleryImages(force = false, append = false) {
+  // v4.12.0: 分页加载——服务端扫描缓存(30s/force 刷新) + type/filter 过滤 + offset/limit 分页，
+  // 旧版每次全量扫描+全量返回+一次性渲染全部节点，列表越大越慢
+  if (!append && !force && !_acceptData) return; // 数据接收已暂停，不加载（删除后强制刷新不受此限制）
+  if (_galleryLoadingMore) return;
+  const offset = append ? (_galleryData || []).length : 0;
+  const q = new URLSearchParams({ offset: String(offset), limit: '60', type: _galleryType, filter: _galleryFilter });
+  if (force) q.set('force', '1');
+  const d = await apiFetch('/api/gallery?' + q.toString(), {}, true);
+  const page = (d && d.images) ? d.images : [];
+  _galleryHasMore = !!(d && d.hasMore);
+  _galleryTotal = (d && d.total) || 0;
+  if (append) {
+    const known = new Set((_galleryData || []).map(x => x.path));
+    _galleryData = (_galleryData || []).concat(page.filter(x => !known.has(x.path)));
+    _galleryFiltered = _galleryData.slice();
+    appendGallerySlides(page.filter(x => !known.has(x.path)));
+  } else {
+    _galleryData = page.slice();
+    _galleryFiltered = _galleryData.slice();
+    _galleryCurrentIdx = 0;
+    renderGallerySlides();
+    initGalleryScroll();
+  }
+  // 更新FAB徽标（用服务端 total，不再依赖已加载页大小）
   const badge = document.getElementById('gallery_fab_badge');
   if (badge) {
-    if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.style.display = 'flex'; }
+    if (_galleryTotal > 0) { badge.textContent = _galleryTotal > 99 ? '99+' : _galleryTotal; badge.style.display = 'flex'; }
     else { badge.style.display = 'none'; }
   }
-  applyGalleryFilters();
 }
 
-function applyGalleryFilters(append = false) {
-  const scrollView = document.getElementById('gallery_scroll_view');
+// 追加渲染新一页的 slide（不重建已有 DOM）
+function appendGallerySlides(items) {
   const track = document.getElementById('gallery_scroll_track');
-  const empty = document.getElementById('gallery_default_empty');
-  if (!scrollView || !track || !empty) return;
-  
-  // Filter by type
-  let filtered = _galleryData.filter(img => img.type === _galleryType);
-  
-  // Filter by time
-  const now = Date.now() / 1000;
-  const daySec = 86400;
-  if (_galleryFilter === 'today') {
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-    const todayTs = todayStart.getTime() / 1000;
-    filtered = filtered.filter(img => img.mtime >= todayTs);
-  } else if (_galleryFilter === '1day') {
-    filtered = filtered.filter(img => (now - img.mtime) <= daySec);
-  } else if (_galleryFilter === '2day') {
-    filtered = filtered.filter(img => (now - img.mtime) <= 2 * daySec);
-  }
-  
-  _galleryFiltered = filtered;
-  _galleryCurrentIdx = 0;
-  
-  if (!filtered.length) {
-    empty.style.display = 'flex';
-    scrollView.style.display = 'none';
-    track.innerHTML = '';
-    updateGalleryToolbar();
-    return;
-  }
-  
-  empty.style.display = 'none';
-  scrollView.style.display = 'block';
-  renderGallerySlides();
-  initGalleryScroll();
+  if (!track || !items.length) return;
+  const startIdx = (_galleryFiltered || []).length - items.length;
+  items.forEach((img, i) => {
+    const idx = startIdx + i;
+    const slide = document.createElement('div');
+    slide.className = 'gallery-slide';
+    slide.dataset.index = idx;
+    slide.dataset.name = img.name || '';
+    slide.dataset.rel = _relFromItem(img) || img.name || '';
+    const wrap = document.createElement('div');
+    wrap.className = 'gallery-media-wrap';
+    wrap.onclick = function(e) {
+      if (_batchMode) {
+        toggleCurrentBatchSelect(_relFromItem(img) || img.name);
+      } else if (img.type !== 'video') {
+        const dd = document.getElementById('gallery_dropdown');
+        if (!dd.classList.contains('view-single')) toggleGalleryView();
+        _galleryCurrentIdx = idx;
+        updateGalleryToolbar();
+        scrollToGalleryIndex(idx);
+      }
+    };
+    if (img.type === 'video') {
+      const video = document.createElement('video');
+      video.src = img.url || ''; video.muted = true; video.preload = 'metadata'; video.controls = true;
+      video.setAttribute('playsinline', 'true');
+      video.onerror = function() { this.style.display = 'none'; };
+      wrap.appendChild(video);
+    } else {
+      const image = document.createElement('img');
+      image.dataset.src = img.url || ''; image.alt = img.name || '';
+      image.onerror = function() { this.alt = '加载失败'; };
+      wrap.appendChild(image);
+    }
+    slide.appendChild(wrap);
+    track.appendChild(slide);
+    if (_galleryLazyObserver) _galleryLazyObserver.observe(slide);
+    if (_galleryObserveFn) { /* 滚动观察由 initGalleryScroll 的 observer 统一处理 */ }
+  });
+  // 加载占位哨兵挪到末尾
+  const sentinel = document.getElementById('gallery_more_sentinel');
+  if (sentinel) track.appendChild(sentinel);
+  initGalleryLazyLoad();
 }
 
+// 无限滚动：接近列表末尾时拉下一页
+let _galleryMoreLoading = false;
+async function loadGalleryMore() {
+  if (_galleryMoreLoading || !_galleryHasMore || !_acceptData) return;
+  _galleryMoreLoading = true;
+  try { await loadGalleryImages(false, true); } finally { _galleryMoreLoading = false; }
+}
+
+function applyGalleryFilters() {
+  // v4.12.0: type/filter 过滤已下沉到服务端，切换时重取第一页
+  if ((_galleryData || []).length || _acceptData) loadGalleryImages(false);
+}
 function renderGallerySlides() {
   const track = document.getElementById('gallery_scroll_track');
   if (!track) return;
@@ -11373,7 +11414,17 @@ function renderGallerySlides() {
     slide.appendChild(wrap);
     track.appendChild(slide);
   });
-  
+
+  // v4.12.0: 分页哨兵挪到列表末尾
+  let sentinel = document.getElementById('gallery_more_sentinel');
+  if (!sentinel) {
+    sentinel = document.createElement('div');
+    sentinel.id = 'gallery_more_sentinel';
+    sentinel.style.cssText = 'height:48px;flex-shrink:0;width:100%;display:flex;align-items:center;justify-content:center;color:var(--text-sub);font-size:12px;';
+  }
+  sentinel.textContent = _galleryHasMore ? '上滑加载更多…' : '';
+  track.appendChild(sentinel);
+
   updateGalleryToolbar();
   // 新渲染 slide 后重连 IntersectionObserver
   if (_galleryObserveFn) _galleryObserveFn();
@@ -11496,6 +11547,12 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') { closeGalleryDropdown(); }
 });
 
+function sv_scrollNearEnd(el, margin) {
+  const horiz = el.scrollWidth > el.clientWidth + 4; // 单图=横向轮播，多图=纵向瀑布流
+  if (horiz) return el.scrollLeft + el.clientWidth >= el.scrollWidth - margin;
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - margin;
+}
+
 let _galleryScrollInit = false;
 let _galleryScrollSilent = false;
 let _galleryObserver = null;
@@ -11560,6 +11617,10 @@ function initGalleryScroll() {
   observeSlides();
   // 新 slide 渲染后自动连接（通过 scroll 事件轻触触发检查）
   scrollView.addEventListener('scroll', observeSlides, { passive: true, once: true });
+  // v4.12.0: 无限滚动——接近列表末尾拉下一页
+  scrollView.addEventListener('scroll', () => {
+    if (sv_scrollNearEnd(scrollView, 500)) loadGalleryMore();
+  }, { passive: true });
   _galleryObserveFn = observeSlides;
   _galleryObserver = observer;
 }
