@@ -13717,6 +13717,7 @@ async function toggleGrimoirePin(idx) {
     renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
     toast(isPinned ? '✅ 已取消固定' : '✅ 已固定: ' + (item.name_cn || item.name));
     updatePinnedBar();
+    renderGrimoireSources(); // v4.12.3: 源列表的 has-pin 框框即时更新（此前要手动刷新才变）
   } else {
     toast('❌ 操作失败: ' + (result?.error || ''), 'error');
   }
@@ -13848,6 +13849,7 @@ async function unpinSource(src, name) {
     }
     renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
     updatePinnedBar();
+    renderGrimoireSources(); // v4.12.3: 源列表 has-pin 框框即时消失
     toast('✅ 已取消固定');
   }
 }
