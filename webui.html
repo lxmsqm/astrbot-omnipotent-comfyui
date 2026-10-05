@@ -11280,12 +11280,13 @@ function renderGallerySlides() {
     slide.className = 'gallery-slide';
     slide.dataset.index = idx;
     slide.dataset.name = img.name || '';
+    slide.dataset.rel = _relFromItem(img) || img.name || ''; // v4.10.1: 批量删除键改用相对路径
     
     const wrap = document.createElement('div');
     wrap.className = 'gallery-media-wrap';
     wrap.onclick = function(e) {
       if (_batchMode) {
-        toggleCurrentBatchSelect(img.name);
+        toggleCurrentBatchSelect(_relFromItem(img) || img.name);
       } else if (img.type !== 'video') {
         // 多图/单图模式：点击哪张就打开哪张（不要用全局 _galleryCurrentIdx）
         _galleryCurrentIdx = idx;
@@ -11516,7 +11517,7 @@ function galleryCurrentDelete() {
   const img = _galleryFiltered && _galleryFiltered[_galleryCurrentIdx];
   if (!img) return;
   if (!confirm('确定删除这张图片？')) return;
-  gallerySingleDelete(img.name);
+  gallerySingleDelete(_relFromItem(img) || img.name);
 }
 
 function openCurrentGalleryLightbox() {
@@ -11568,7 +11569,8 @@ function exitBatchMode() {
 
 function toggleCurrentBatchSelect(name) {
   if (!_batchMode) return;
-  const imgName = name || (_galleryFiltered && _galleryFiltered[_galleryCurrentIdx] && _galleryFiltered[_galleryCurrentIdx].name);
+  const _cur = _galleryFiltered && _galleryFiltered[_galleryCurrentIdx];
+  const imgName = name || (_cur && (_relFromItem(_cur) || _cur.name));
   if (!imgName) return;
   if (_selectedBatch.has(imgName)) {
     _selectedBatch.delete(imgName);
@@ -11589,7 +11591,7 @@ function updateBatchBar() {
 function updateBatchSelectUI() {
   const slides = document.querySelectorAll('.gallery-slide');
   slides.forEach(slide => {
-    const name = slide.dataset.name;
+    const name = slide.dataset.rel || slide.dataset.name; // v4.10.1: 键与 _selectedBatch 一致（rel）
     const overlay = slide.querySelector('.gallery-batch-overlay');
     const check = slide.querySelector('.gallery-batch-check');
     if (!overlay || !check) return;
@@ -11640,8 +11642,9 @@ function executeBatchDelete() {
       loadGalleryImages(true); // 删除后强制刷新，立即从画廊消失
       return;
     }
-    const name = pending.shift();
-    apiFetch('/api/gallery/delete', { method: 'POST', body: JSON.stringify({name}) }).then(r => {
+    const key = pending.shift();
+    const body = key.includes('/') ? { path: key, name: key.split('/').pop() } : { name: key };
+    apiFetch('/api/gallery/delete', { method: 'POST', body: JSON.stringify(body) }).then(r => {
       if (r && r.ok) { success++; _selectedBatch.delete(name); }
       else { fail++; }
       deleteNext();
@@ -11651,11 +11654,13 @@ function executeBatchDelete() {
 }
 // End of Gallery functions
 
-function gallerySingleDelete(name) {
-  if (!confirm(`确定要删除此文件吗？\n${name}`)) return;
-  apiFetch('/api/gallery/delete', { method: 'POST', body: JSON.stringify({name}) }).then(r => {
+function gallerySingleDelete(key) {
+  const isRel = key && key.includes('/');
+  if (!confirm(`确定要删除此文件吗？\n${key}`)) return;
+  const body = isRel ? { path: key, name: key.split('/').pop() } : { name: key };
+  apiFetch('/api/gallery/delete', { method: 'POST', body: JSON.stringify(body) }).then(r => {
     if (r && r.ok) { toast('✅ 已删除'); loadGalleryImages(true); } // 删除后强制刷新，立即从画廊消失
-    else { toast('❌ 删除失败', 'error'); }
+    else { toast('❌ ' + (r?.error || '删除失败'), 'error'); }
   });
 }
 

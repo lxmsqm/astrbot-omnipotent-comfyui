@@ -4437,7 +4437,7 @@ class WebUIMixin:
                 return web.json_response({"images": []})
 
             allowed_ext = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.mp4', '.mov', '.avi'}
-            video_ext = {'.mp4', '.mov', '.avi', '.gif'}
+            video_ext = {'.mp4', '.mov', '.avi'}  # v4.10.1: gif 归图片（<video> 播不了 gif，此前动图在画廊直接消失）
             images = []
             from urllib.parse import quote
 
@@ -4501,12 +4501,15 @@ class WebUIMixin:
                 return web.Response(status=404, text="文件不存在")
             # 根据扩展名设置 Content-Type
             ext = file_path.suffix.lower()
+            # v4.10.1: 补视频 Content-Type（此前 mp4 全是 octet-stream，部分内核播放不出）；
+            # Cache-Control 改长缓存——文件名时间戳化天然不可变，no-cache 曾导致每次浏览重复下载
             content_type_map = {
                 '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp'
+                '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp',
+                '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.avi': 'video/x-msvideo'
             }
             ctype = content_type_map.get(ext, 'application/octet-stream')
-            return web.FileResponse(file_path, headers={'Content-Type': ctype, 'Cache-Control': 'no-cache'})
+            return web.FileResponse(file_path, headers={'Content-Type': ctype, 'Cache-Control': 'public, max-age=86400'})
         except Exception as e:
             logger.error(f"[ComfyUI] 提供画廊文件失败: {e}")
             return web.Response(status=500, text=str(e))
@@ -4562,26 +4565,51 @@ class WebUIMixin:
             name_str = data.get('name', '')
             if not name_str:
                 return web.json_response({"ok": False, "error": "名为空"})
-            # 安全校验：禁止路径穿越与路径分隔（只允许纯文件名）
-            if '..' in name_str or '/' in name_str or '\\' in name_str:
-                return web.json_response({"ok": False, "error": "非法文件名"})
+            # v4.10.1: 优先按相对路径精确删除（画廊数据自带 rel path）——旧版按纯文件名
+            # rglob 取第一个同名文件，多子目录同名时会删错。name 兼容保留：多个同名时报错防误删。
+            rel = str(data.get('path', '') or '').strip().replace('\\', '/')
+            name_str = str(data.get('name', '') or '').strip()
+            if not rel and not name_str:
+                return web.json_response({"ok": False, "error": "缺少 path/name"})
             out_dir = self.output_dir.resolve()
-            target = (out_dir / name_str).resolve()
-            try:
-                target.relative_to(out_dir)
-            except ValueError:
-                logger.warning(f"[ComfyUI] 拒绝删除非输出目录文件: name={name_str}, target={target}, out_dir={out_dir}")
-                return web.json_response({"ok": False, "error": "拒绝删除：文件不在输出目录中"})
-            if not target.exists() or not target.is_file():
-                # 子目录兜底：画廊扫描是递归的，文件可能位于子目录，递归查找同名文件
-                matches = [p for p in out_dir.rglob(name_str) if p.is_file()]
-                if not matches:
-                    return web.json_response({"ok": False, "error": "文件不存在"})
-                target = matches[0].resolve()
+            target = None
+            if rel and '..' not in rel:
+                t = (out_dir / rel).resolve()
+                try:
+                    t.relative_to(out_dir)
+                except ValueError:
+                    return web.json_response({"ok": False, "error": "拒绝删除：文件不在输出目录中"})
+                if t.is_file():
+                    target = t
+            if target is None and name_str and '..' not in name_str and '/' not in name_str and '\\' not in name_str:
+                t = (out_dir / name_str).resolve()
+                try:
+                    t.relative_to(out_dir)
+                except ValueError:
+                    t = None
+                if t and t.is_file():
+                    target = t
+                else:
+                    matches = [p.resolve() for p in out_dir.rglob(name_str) if p.is_file()]
+                    if len(matches) == 1:
+                        target = matches[0]
+                    elif len(matches) > 1:
+                        return web.json_response({"ok": False, "error": f"存在 {len(matches)} 个同名文件，无法确定删除目标"})
             target.unlink()
             logger.info(f"[ComfyUI] 画廊删除文件: {target}")
             # 同时清理发送记录
             self._sent_images.pop(str(target), None)
+            try:
+                async with self._prompt_log_lock:
+                    _before = len(self._prompt_log)
+                    self._prompt_log = [x for x in self._prompt_log if x.get('path') != str(target)]
+                    _removed = _before - len(self._prompt_log)
+                if _removed:
+                    with self._prompt_log_file_lock:
+                        with open(str(self._prompt_log_path), 'w', encoding='utf-8') as f:
+                            json.dump(self._prompt_log, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
             return web.json_response({"ok": True})
         except Exception as e:
             logger.error(f"[ComfyUI] 删除画廊文件失败: {e}")
