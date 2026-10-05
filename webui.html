@@ -4427,6 +4427,40 @@ textarea:focus-visible,
   .gallery-dropdown.view-single .gallery-media-wrap video{ max-height:calc(100vh - 150px); }
 }
 
+
+/* 44. 媒体资产全高贴边 + 工作流编辑横版卡片 — v4.12.1 */
+/* 媒体资产：顶部与浏览器同高、贴右贴底不封顶 */
+.media-panel{
+  top:0;bottom:0;right:-330px;width:320px;
+  border-radius:0;border-top:none;border-bottom:none;border-right:none;
+}
+.media-panel.show{right:0;}
+.media-panel-head{padding:12px 14px;}
+.media-panel-tabs{padding:10px 12px 0;}
+.mp-search{margin:10px 12px 8px;}
+.media-panel-list{gap:8px;padding:8px 10px 12px;}
+.mp-item-thumb{aspect-ratio:16/10;}
+.mp-item{transition:transform .15s ease,border-color .15s ease;}
+.mp-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+/* 工作流编辑：横版 16:10 缩略图，紧凑多列，一屏更多卡片 */
+body.page-wfmgr .wf-edit-list{
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:14px;
+}
+body.page-wfmgr .wf-edit-thumb{
+  width:100%;height:auto;aspect-ratio:16/10;
+  max-height:150px;border-radius:var(--radius-sm);
+}
+body.page-wfmgr .wf-edit-name{font-size:13px;}
+body.page-wfmgr .wf-edit-alias-input{padding:7px 10px;font-size:12px;}
+body.page-wfmgr .wf-edit-cat-select{padding:7px 10px;font-size:12px;}
+body.page-wfmgr .wf-edit-item-actions{border-top:none;padding-top:0;margin-top:0;justify-content:flex-start;}
+body.page-wfmgr .wf-edit-item-actions .wf-edit-preview-btn,
+body.page-wfmgr .wf-edit-item-actions .wf-del-btn{width:34px;height:34px;font-size:15px;}
+body.page-wfmgr .wf-del-btn{width:34px;height:34px;font-size:15px;}
+/* 分组标题吸顶增强 */
+body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
+
 </style>
 </head>
 <body>
