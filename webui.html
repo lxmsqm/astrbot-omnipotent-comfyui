@@ -5130,7 +5130,7 @@ body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
     <button class="media-panel-close" data-action="toggleMediaPanel" aria-label="关闭媒体资产"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
   </div>
   <div class="media-panel-tabs">
-    <button class="mp-tab active" data-mp="image" onclick="setMpTab('image')">已生成</button>
+    <button class="mp-tab active" data-mp="image" onclick="setMpTab('image')">图片</button>
     <button class="mp-tab" data-mp="video" onclick="setMpTab('video')">视频</button>
   </div>
   <input class="mp-search" id="mp_search" type="text" placeholder="搜索资产名称..." aria-label="搜索资产">
@@ -8955,7 +8955,7 @@ function setMpTab(t) {
   _mpTab = t;
   _mpLimit = 40;
   document.querySelectorAll('.mp-tab').forEach((b) => b.classList.toggle('active', b.dataset.mp === t));
-  renderMediaPanel();
+  loadMediaPanel(true); // v4.12.2: 切 tab 必须按新类型重新取数（_mpData 按 tab 类型从服务端拉取）
 }
 let _mpData = []; // v4.12.0: 媒体面板独立数据（分页后不再与画廊共享全量列表）
 async function loadMediaPanel(force = false) {
