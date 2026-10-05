@@ -13110,11 +13110,14 @@ async function fetchGrimoireData() {
   });
   if (_grimoireDataFilter) params.append('q', _grimoireDataFilter);
   if (_grimoireCategoryFilter) params.append('category', _grimoireCategoryFilter);
-  // 传收藏的条目名，后端会优先排在前面
+  // v4.13.2: preferred = 固定在前 + 收藏次之（后端在分页前排序，固定条目天然进首页第一位）
+  const pinData = _grimoirePins && _grimoirePins[_grimoireCurrentSource];
+  const pinNames = [];
+  if (pinData) (Array.isArray(pinData) ? pinData : [pinData]).forEach(p => { if (p && p.name) pinNames.push(p.name); });
   const starredNames = _grimoireStars && _grimoireStars[_grimoireCurrentSource];
-  if (starredNames && starredNames.size > 0) {
-    params.append('preferred', Array.from(starredNames).join(','));
-  }
+  const starList = starredNames ? Array.from(starredNames).filter(n => !pinNames.includes(n)) : [];
+  const pref = pinNames.concat(starList);
+  if (pref.length) params.append('preferred', pref.join(','));
   
   const data = await apiFetch(`/api/grimoire/data?${params.toString()}`, {}, true);
   if (!data) return;
@@ -13716,7 +13719,9 @@ async function toggleGrimoirePin(idx) {
     for (const [k, v] of Object.entries(result.pins || {})) {
       _grimoirePins[k.replace(/\\/g, '/')] = v;
     }
-    renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
+    // v4.13.2: 固定后跳回首页第一位（后端 preferred 已把固定条目排到全源最前）
+    _grimoireCurrentPage = 1;
+    await fetchGrimoireData();
     toast(isPinned ? '✅ 已取消固定' : '✅ 已固定: ' + (item.name_cn || item.name));
     updatePinnedBar();
     renderGrimoireSources(); // v4.12.3: 源列表的 has-pin 框框即时更新（此前要手动刷新才变）
@@ -13849,7 +13854,9 @@ async function unpinSource(src, name) {
     for (const [k, v] of Object.entries(result.pins || {})) {
       _grimoirePins[k.replace(/\\/g, '/')] = v;
     }
-    renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
+    // v4.13.2: 取消固定后回首页刷新（该条目回到其在源数据中的原位）
+    _grimoireCurrentPage = 1;
+    await fetchGrimoireData();
     updatePinnedBar();
     renderGrimoireSources(); // v4.12.3: 源列表 has-pin 框框即时消失
     toast('✅ 已取消固定');
