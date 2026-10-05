@@ -5417,6 +5417,12 @@ class GrimoireMixin:
             #   NSFW 关闭 → 只抽「正常动作」（色情动作已在前面被排除）
             #   NSFW 开启 → 只抽「色情动作」（用户要求：开启时只出色情动作）
             if group_name == "动作姿态":
+                # v4.13: 已固定动作（固定源在 动作姿态/ 下）→ 不再随机抽动作，以固定为准，
+                # 防止固定姿势和随机动作同时出现导致姿势混乱（二元组按目录前缀匹配是安全的）
+                if any(str(ps).replace('.json', '').rsplit('/', 1)[0] == '动作姿态'
+                       for ps in pinned_sources):
+                    logger.info("[随机图] 动作姿态已被固定标签覆盖，跳过随机抽取")
+                    continue
                 # v4.12.4: 动作姿态二选一是核心流程，完全由 NSFW 开关决定取哪个源，
                 # 不受随机池成员限制——池里只勾了正常动作时，NSFW 开启也永远抽不到色情动作
                 available = list(members)
