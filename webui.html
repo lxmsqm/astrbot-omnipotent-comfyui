@@ -13308,11 +13308,12 @@ function renderGrimoireData(total, page) {
     (Array.isArray(pinData) ? pinData : [pinData]).forEach(p => { if (p.name) pinNames.add(p.name); });
   }
   const sorted = [..._grimoireCurrentData].sort((a, b) => {
-    const aStar = stars && stars.has(a.name) ? 2 : 0;
-    const bStar = stars && stars.has(b.name) ? 2 : 0;
+    // v4.12.5: 固定标签绝对优先（哪怕没收藏也排最前），收藏次之，其余按原序
     const aPin = pinNames.has(a.name) ? 1 : 0;
     const bPin = pinNames.has(b.name) ? 1 : 0;
-    return (bStar + bPin) - (aStar + aPin);
+    const aStar = stars && stars.has(a.name) ? 1 : 0;
+    const bStar = stars && stars.has(b.name) ? 1 : 0;
+    return (bPin * 10 + bStar) - (aPin * 10 + aStar);
   });
 
   let html = '';
@@ -13425,11 +13426,12 @@ function renderGrimoireGallery(total, page) {
     (Array.isArray(pinData) ? pinData : [pinData]).forEach(p => { if (p.name) pinNames.add(p.name); });
   }
   const sorted = [..._grimoireCurrentData].sort((a, b) => {
-    const aStar = stars && stars.has(a.name) ? 2 : 0;
-    const bStar = stars && stars.has(b.name) ? 2 : 0;
+    // v4.12.5: 固定标签绝对优先（哪怕没收藏也排最前），收藏次之，其余按原序
     const aPin = pinNames.has(a.name) ? 1 : 0;
     const bPin = pinNames.has(b.name) ? 1 : 0;
-    return (bStar + bPin) - (aStar + aPin);
+    const aStar = stars && stars.has(a.name) ? 1 : 0;
+    const bStar = stars && stars.has(b.name) ? 1 : 0;
+    return (bPin * 10 + bStar) - (aPin * 10 + aStar);
   });
   let html = '<div class="grm-gallery-grid">';
   sorted.forEach((item) => {
