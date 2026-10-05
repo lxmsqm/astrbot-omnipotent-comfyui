@@ -11276,6 +11276,11 @@ async function loadGalleryImages(force = false, append = false) {
     _galleryCurrentIdx = 0;
     renderGallerySlides();
     initGalleryScroll();
+    // v4.12.0: 显示切换补回（旧 applyGalleryFilters 的职责，重构时遗漏）
+    const emptyEl = document.getElementById('gallery_default_empty');
+    const svEl = document.getElementById('gallery_scroll_view');
+    if (emptyEl) emptyEl.style.display = _galleryFiltered.length ? 'none' : 'flex';
+    if (svEl) svEl.style.display = _galleryFiltered.length ? 'block' : 'none';
   }
   // 更新FAB徽标（用服务端 total，不再依赖已加载页大小）
   const badge = document.getElementById('gallery_fab_badge');
@@ -11617,9 +11622,16 @@ function initGalleryScroll() {
   observeSlides();
   // 新 slide 渲染后自动连接（通过 scroll 事件轻触触发检查）
   scrollView.addEventListener('scroll', observeSlides, { passive: true, once: true });
-  // v4.12.0: 无限滚动——接近列表末尾拉下一页
+  // v4.12.0: 无限滚动——距离最后一张真实 slide 不足 400px 拉下一页
+  //（不能用 scrollWidth 判端：分页哨兵自身的占位会把端点顶远，永远差一页）
   scrollView.addEventListener('scroll', () => {
-    if (sv_scrollNearEnd(scrollView, 500)) loadGalleryMore();
+    const sent = document.getElementById('gallery_more_sentinel');
+    if (!sent || _galleryMoreLoading || !_galleryHasMore) return;
+    const sr = scrollView.getBoundingClientRect();
+    const tr = sent.getBoundingClientRect();
+    const horiz = sv_scrollNearEnd(sv, 0) ? false : (sv.scrollWidth > sv.clientWidth + 4);
+    if (horiz) { if (tr.left - sr.right < 400) loadGalleryMore(); }
+    else { if (tr.top - sr.bottom < 400) loadGalleryMore(); }
   }, { passive: true });
   _galleryObserveFn = observeSlides;
   _galleryObserver = observer;
