@@ -9314,7 +9314,16 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 async with s.post(f"http://{self.comfyui_url}/prompt", json={"prompt": wf, "client_id": cid}) as r:
                     rj = await r.json()
                 if 'prompt_id' not in rj:
-                    return ("error", "提交失败", None)
+                    # v4.11.1: 不再吞掉 ComfyUI 的拒绝详情（校验错误/节点错误原样透出，方便定位）
+                    _err_detail = json.dumps(rj, ensure_ascii=False)[:400]
+                    logger.error(f"[ComfyUI] 提交被 ComfyUI 拒绝: {_err_detail}")
+                    _msg = ''
+                    if isinstance(rj.get('error'), dict):
+                        _msg = str(rj['error'].get('message', ''))
+                    _node_errs = rj.get('node_errors') or {}
+                    if _node_errs:
+                        _msg += ' 节点错误: ' + json.dumps(_node_errs, ensure_ascii=False)[:250]
+                    return ("error", f"提交失败: {_msg or _err_detail}", None)
                 pid = rj['prompt_id']
                 # ⚡ 立即预置进度数据，防止 WS 监听器在 async 间隙读到空值
                 self.current_prompt_id = pid
