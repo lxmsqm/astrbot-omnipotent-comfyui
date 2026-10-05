@@ -5410,16 +5410,16 @@ class GrimoireMixin:
         matched = set()
         for group_name, members in SOURCE_GROUPS:
             available = [m for m in members if m in pool_set]
-            if not available:
+            # v4.12.4: 动作姿态组是核心二选一流程，不因不在池内而跳过（下方分支接管）
+            if not available and group_name != "动作姿态":
                 continue
             # ★ 动作姿态组：按 NSFW 开关决定只取哪个源
             #   NSFW 关闭 → 只抽「正常动作」（色情动作已在前面被排除）
             #   NSFW 开启 → 只抽「色情动作」（用户要求：开启时只出色情动作）
             if group_name == "动作姿态":
-                # v4.12.4: 动作姿态二选一是核心流程，不受随机池成员限制——
-                # 此前要求源必须在池内，池里没勾动作姿态时 NSFW 开关等于白开（色情动作永远抽不到）
-                if not available:
-                    available = list(members)
+                # v4.12.4: 动作姿态二选一是核心流程，完全由 NSFW 开关决定取哪个源，
+                # 不受随机池成员限制——池里只勾了正常动作时，NSFW 开启也永远抽不到色情动作
+                available = list(members)
                 if _nsfw_on:
                     available = [m for m in available if "色情" in m] or available
                 else:
@@ -5743,8 +5743,9 @@ class GrimoireMixin:
                     _prefix.append('best quality')
                 if not any(_re.match(r'^score_\d+$', t) for t in _lower_all):
                     _prefix.append('score_7')          # Base 版；Aesthetic 版请关闭本增强
-                if not any(t == 'safe' or t.startswith('safe') for t in _lower_all):
-                    _prefix.append('safe')
+                if not any(t == 'safe' or t.startswith('safe') or t == 'nsfw' for t in _lower_all):
+                    # v4.12.4: NSFW 开启时分级用 nsfw（此前硬编码 safe，与色情内容自相矛盾）
+                    _prefix.append('safe' if not _nsfw_on else 'nsfw')
 
                 # ② 主体数：从抽到的标签里找，缺失才补
                 _subject_words = ('1girl', '2girls', '3girls', '1boy', '2boys',
@@ -10283,12 +10284,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
     async def random_image(self, event: AstrMessageEvent):
         """从随机池随机取标签 + 固定标签合并出图，支持 /随机图 N 执行 N 次"""
         await self._ensure_workflow_for_event(event)
-        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '画')
+        can_exec, needs_sel, matching_wfs = await self._ensure_command_workflow(event, '文生图')
         if needs_sel:
-            yield event.plain_result(self._build_wf_selection_menu(event, '画', matching_wfs))
+            yield event.plain_result(self._build_wf_selection_menu(event, '文生图', matching_wfs))
             return
         if not can_exec:
-            yield event.plain_result("随机图只能在「画」分类的工作流上使用，请先切换到画图工作流")
+            yield event.plain_result("当前无可用文生图工作流")
             return
         # 解析执行次数
         msg = event.message_str.replace("/随机图", "").replace("随机图", "").strip()
