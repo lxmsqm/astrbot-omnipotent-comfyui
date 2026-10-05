@@ -1893,6 +1893,13 @@ class WebUIMixin:
         on = bool(data.get("nsfw", False))
         async with self._config_lock:
             self.workflow_config["__k2_nsfw__"] = on
+        # v4.13.1: 同步 anima 模式的 NSFW——界面上可见的 NSFW 开关只有一个，
+        # 用户开了就该两个引擎都生效（此前 anima_nsfw 藏在管理后台，开了 K2 的等于没开）
+        try:
+            self._save_local_config({"anima_nsfw": on})
+            self.anima_nsfw = on
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 同步 anima_nsfw 失败: {e}")
         await self._save_workflow_config()
         return web.json_response({"ok": True, "nsfw": on})
 
@@ -5326,8 +5333,8 @@ class GrimoireMixin:
             _anima_nsfw = bool(self._load_local_config().get('anima_nsfw', False))
         except Exception:
             _anima_nsfw = False
-        _pm = str(self.workflow_config.get('__prompt_model__', 'anima') or 'anima')
-        _nsfw_on = _k2_nsfw if _pm == 'k2' else _anima_nsfw
+        # v4.13.1: 任一 NSFW 开关开启即放行（两个开关已由保存接口双向同步，此处兜底并集）
+        _nsfw_on = _k2_nsfw or _anima_nsfw
 
         # 已固定的数据源不参与随机（避免同源出重复）
         pinned_sources = set(pins.keys())
