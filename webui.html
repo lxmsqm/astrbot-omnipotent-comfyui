@@ -3442,6 +3442,19 @@ body.page-gallery{overflow:hidden;}
   box-shadow:0 0 10px oklch(65% 0.22 50 / 0.3);
 }
 
+/* 42. 画廊提示词面板（PC 右侧栏）+ 手机复制按钮 — v4.10.0 */
+.gallery-prompt-panel{
+  position:fixed;top:72px;right:12px;bottom:140px;width:min(360px,44%);
+  display:flex;flex-direction:column;gap:8px;padding:10px;
+  background:var(--bg-elevated);border:1px solid var(--card-border);
+  border-radius:var(--radius-sm);z-index:70;box-shadow:var(--shadow-lg);
+}
+.gallery-prompt-panel .gpp-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);}
+.gallery-prompt-panel .gpp-body{flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;color:var(--text-sub);background:var(--input-bg);border-radius:6px;padding:8px;}
+.gallery-prompt-panel .gpp-foot{display:flex;justify-content:flex-end;}
+#gallery_prompt_copy{position:fixed;right:12px;bottom:76px;z-index:70;}
+@media(max-width:767px){ .gallery-prompt-panel{display:none !important;} }
+
 /* --- 单图模式：回到逐张 scroll-snap 大图 --- */
 .gallery-dropdown.view-single .gallery-scroll-view{
   scroll-snap-type:y mandatory;scroll-behavior:smooth;
@@ -4646,10 +4659,18 @@ textarea:focus-visible,
       <div class="gallery-counter" id="gallery_counter">0 / 0</div>
       <div class="gallery-actions">
         <button class="gallery-btn" id="gallery_accept_btn" onclick="toggleAcceptData()" title="数据接收中"><svg class="icon-sm" aria-hidden="true"><use href="#icon-wifi"/></svg> <span id="gallery_accept_label">接收</span></button>
+        <button class="gallery-btn" id="gallery_prompt_toggle" onclick="toggleGalleryPrompt()" title="提示词面板">📝 提示词</button>
         <button class="gallery-btn" id="gallery_batch_toggle" onclick="toggleGalleryBatchDel()" title="批量选择"><svg class="icon-sm" aria-hidden="true"><use href="#icon-check-square"/></svg> 批量</button>
         <button class="gallery-btn gallery-btn-danger" id="gallery_delete_btn" onclick="galleryCurrentDelete()" title="删除"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 删除</button>
       </div>
     </div>
+    <!-- v4.10.0: 画廊提示词面板（PC 右侧栏）/ 手机复制按钮 -->
+    <div class="gallery-prompt-panel" id="gallery_prompt_panel" style="display:none">
+      <div class="gpp-head"><span>📝 提示词</span><button class="gallery-btn" onclick="toggleGalleryPrompt()" title="收起">×</button></div>
+      <div class="gpp-body" id="gpp_body">--</div>
+      <div class="gpp-foot"><button class="gallery-btn" onclick="copyGalleryPrompt()">📋 复制全文</button></div>
+    </div>
+    <button class="gallery-btn" id="gallery_prompt_copy" style="display:none" onclick="copyGalleryPrompt()">📋 复制提示词</button>
     <!-- Batch Delete Bar (hidden by default) -->
     <div class="gallery-batch-bar" id="gallery_batch_bar" style="display:none">
       <span class="gallery-batch-count" id="gallery_batch_count">已选 0 项</span>
@@ -11333,7 +11354,74 @@ function updateGalleryToolbar() {
   if (nameEl) nameEl.textContent = img ? (img.name || `文件 ${idx + 1}`) : '--';
   if (timeEl) timeEl.textContent = img ? formatRelativeTime(img.mtime) : '--';
   if (counterEl) counterEl.textContent = img ? `${idx + 1} / ${filtered.length}` : '0 / 0';
+  updateGalleryPromptUI();
 }
+
+// ===== v4.10.0: 画廊提示词面板 / 手机复制 =====
+let _gppOpen = false, _gppDebounce = null;
+
+function _curGalleryItem() {
+  const f = _galleryFiltered || [];
+  const i = Math.max(0, Math.min(_galleryCurrentIdx || 0, f.length - 1));
+  return f[i] || null;
+}
+function _relFromItem(img) {
+  try {
+    const m = (img.url || '').match(/[?&]path=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  } catch (e) { return ''; }
+}
+function toggleGalleryPrompt() {
+  _gppOpen = !_gppOpen;
+  const panel = document.getElementById('gallery_prompt_panel');
+  if (panel) panel.style.display = _gppOpen ? 'flex' : 'none';
+  if (_gppOpen) refreshGalleryPrompt();
+}
+async function refreshGalleryPrompt() {
+  const img = _curGalleryItem();
+  const body = document.getElementById('gpp_body');
+  if (!body) return;
+  if (!img) { body.textContent = '--'; return; }
+  body.textContent = '加载中…';
+  const rel = _relFromItem(img);
+  if (!rel) { body.textContent = '未找到生成记录'; return; }
+  const d = await apiFetch('/api/gallery/prompt?path=' + encodeURIComponent(rel), {}, true);
+  if (!d || !d.ok) { body.textContent = '查询失败'; return; }
+  body.textContent = d.matched === 'none' ? '未找到生成记录' : (d.prompt || '(空)');
+}
+async function copyGalleryPrompt() {
+  const img = _curGalleryItem();
+  if (!img) return;
+  const rel = _relFromItem(img);
+  const d = await apiFetch('/api/gallery/prompt?path=' + encodeURIComponent(rel), {}, true);
+  const txt = (d && d.ok && d.prompt) || '';
+  if (!txt) { toast('未找到生成记录', 'error'); return; }
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast('✅ 提示词已复制');
+  } catch (e) {
+    // 内置浏览器（X5 等）clipboard API 不可用时兜底
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); toast('✅ 提示词已复制'); }
+    catch (e2) { toast('复制失败，请长按手动复制', 'error'); }
+    ta.remove();
+  }
+}
+function updateGalleryPromptUI() {
+  const isMobile = window.innerWidth < 768;
+  const hasImg = !!_curGalleryItem();
+  const btn = document.getElementById('gallery_prompt_copy');
+  if (btn) btn.style.display = (isMobile && hasImg) ? 'inline-flex' : 'none';
+  const panel = document.getElementById('gallery_prompt_panel');
+  if (panel && isMobile && _gppOpen) toggleGalleryPrompt(); // 手机不展示全文面板
+  if (_gppOpen && !isMobile) {
+    clearTimeout(_gppDebounce);
+    _gppDebounce = setTimeout(refreshGalleryPrompt, 250);
+  }
+}
+// ===== v4.10.0 end =====
 
 let _galleryScrollInit = false;
 let _galleryScrollSilent = false;

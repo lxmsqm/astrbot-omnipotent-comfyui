@@ -2046,6 +2046,7 @@ class WebUIMixin:
         # 画廊 API
         app.router.add_get('/api/gallery', self._webui_get_gallery)
         app.router.add_get('/api/gallery/file', self._webui_gallery_file)
+        app.router.add_get('/api/gallery/prompt', self._webui_gallery_prompt)  # v4.10.0 画廊查提示词
         app.router.add_post('/api/gallery/delete', self._webui_gallery_delete)
         # Anima 数据搜索 API
         app.router.add_get('/api/anima/search', self._webui_anima_search)
@@ -4510,6 +4511,49 @@ class WebUIMixin:
             logger.error(f"[ComfyUI] 提供画廊文件失败: {e}")
             return web.Response(status=500, text=str(e))
 
+    async def _webui_gallery_prompt(self, request):
+        """v4.10.0: 画廊图片 → 查询生成提示词（画廊单图查看器右侧栏 / 手机复制按钮数据源）。
+        三级匹配：① prompt_log 的 path 精确命中（v4.9.6+ 生成的图）② 文件 MD5 对 img_hash
+        （旧图/平台重编码）③ 无记录返回 matched=none（前端显示「未找到生成记录」）。
+        路径安全：resolve 后必须位于输出目录内。MD5 带 (path,mtime) 缓存防重复算大文件。"""
+        rel = (request.rel_url.query.get('path', '') or '').strip().replace('\\', '/')
+        if not rel:
+            return web.json_response({"ok": False, "error": "缺少 path"})
+        try:
+            output_dir = self.output_dir.resolve()
+            f = (output_dir / rel).resolve()
+        except Exception:
+            return web.json_response({"ok": False, "error": "路径无效"})
+        if not str(f).startswith(str(output_dir)):
+            return web.json_response({"ok": False, "error": "路径越界"})
+        if not f.exists() or not f.is_file():
+            return web.json_response({"ok": False, "error": "文件不存在"})
+        try:
+            import hashlib
+            key = (str(f), int(f.stat().st_mtime))
+            h = self._gallery_md5_cache.get(key)
+            if h is None:
+                _h = hashlib.md5()
+                with open(str(f), 'rb') as fp:
+                    for chunk in iter(lambda: fp.read(1024 * 512), b''):
+                        _h.update(chunk)
+                h = _h.hexdigest()
+                if len(self._gallery_md5_cache) > 500:
+                    self._gallery_md5_cache.clear()
+                self._gallery_md5_cache[key] = h
+        except Exception as e:
+            return web.json_response({"ok": False, "error": f"读取失败: {e}"})
+        async with self._prompt_log_lock:
+            for r in reversed(self._prompt_log):
+                if r.get('path') and str(r['path']) == str(f):
+                    return web.json_response({"ok": True, "prompt": r.get('prompt', ''),
+                                              "ts": r.get('timestamp', 0), "matched": "path"})
+            for r in reversed(self._prompt_log):
+                if r.get('img_hash') and r['img_hash'] == h:
+                    return web.json_response({"ok": True, "prompt": r.get('prompt', ''),
+                                              "ts": r.get('timestamp', 0), "matched": "md5"})
+        return web.json_response({"ok": True, "prompt": "", "matched": "none"})
+
     async def _webui_gallery_delete(self, r):
         """删除画廊中的图片文件（按文件名，避免全路径中文编码问题）。
         兼容子目录：name 为纯文件名时若根目录找不到，递归在 output_dir 内查找同名文件删除。"""
@@ -6959,6 +7003,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         # v4.9.6: 缓存写入时间戳——与 prompt_log 同一保留天数（prompt_log_days）清理，
         # 附带"源文件已被输出清理删除"的条目也一并回收
         self._expanded_prompt_cache_ts: dict[str, float] = {}
+        self._gallery_md5_cache: dict = {}  # (path, mtime) -> md5，画廊查提示词用
         # 最近图片缓存：{umo: (timestamp, [urls])} —— 解决飞书「发图后再发命令」拿不到图的问题
         # （飞书图片是独立消息，命令那条消息没有图片组件；QQ 可同条/紧邻发送所以不受影响）
         self._recent_images: dict[str, tuple] = {}
@@ -7126,6 +7171,10 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         v4.9.6: 飞书发送拿不到 message_id 也照记（message_id 留空），配合
         /提示词 的「会话最近发送图」兜底，修复飞书查询永远失效的问题。"""
         async with self._prompt_log_lock:
+            # v4.10.0: 同 path 幂等——提交时先记一次，发送时带 msg_id 更新，不重复堆积
+            _p = str(path or '')
+            if _p:
+                self._prompt_log = [r for r in self._prompt_log if r.get('path') != _p]
             self._prompt_log.append({
                 "message_id": str(message_id),
                 "prompt": prompt,
@@ -9391,6 +9440,15 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                     except Exception as e:
                         logger.debug(f"[ComfyUI] 视频输出排序失败: {e}")
                 if saved_images:
+                    # v4.10.0: 生成完成即记录提示词日志（视频/LLM 工具路径此前不经过发送记录，
+                    # 画廊查提示词对这类文件永远"无记录"）
+                    try:
+                        _gp0 = str(Path(saved_images[0]).resolve())
+                        _gih = self._calc_file_md5(_gp0)
+                        _gidh = '' if is_video else self._calc_image_dhash(_gp0)
+                        await self._append_prompt_log('', expanded_text or prompt or '', _gih, _gidh, path=_gp0)
+                    except Exception:
+                        pass
                     # 用第一张图计算比例
                     first_sp = Path(saved_images[0])
                     try:
