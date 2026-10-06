@@ -224,15 +224,15 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
 .mp-tab{flex:1;padding:5px 0;border-radius:8px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text-sub);font-size:11px;cursor:pointer;font-family:inherit;}
 .mp-tab.active{background:var(--gradient-primary);color:#fff;border-color:transparent;font-weight:600;}
 .mp-search{margin:8px 12px;padding:6px 10px;border-radius:8px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;outline:none;flex-shrink:0;}
-.media-panel-list{flex:1;overflow-y:auto;padding:4px 12px 12px;display:flex;flex-direction:column;gap:10px;}
-.mp-item{cursor:pointer;border-radius:10px;overflow:hidden;border:1px solid var(--card-border);background:var(--input-bg);flex-shrink:0;} /* 禁止 flex 压缩，否则几十张卡片全被压成细条 */
+.media-panel-list{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:max-content;gap:10px;} /* auto-rows:max-content：默认 auto 行轨道会被压成 ~19px 横条（实测），需显式按内容撑开 */
+.mp-item{cursor:pointer;border-radius:10px;overflow:hidden;border:1px solid var(--card-border);background:var(--input-bg);} /* v4.13.5: 改双列网格，flex-shrink 不再需要 */
 .mp-item:hover{border-color:var(--primary);}
-.mp-item-thumb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--bg-elevated);}
+.mp-item-thumb{width:100%;height:260px;object-fit:cover;display:block;background:var(--bg-elevated);} /* v4.13.5: 9:16 竖版预览（格宽146px 固定，260px≈146×16/9；不用 aspect-ratio——网格行轨道会把 auto 高贡献算成 0 导致行塌缩成横条） */
+.mp-empty{grid-column:1/-1;padding:28px 8px;text-align:center;color:var(--text-sub2);font-size:11px;}
+.mp-more{grid-column:1/-1;padding:8px 0;text-align:center;font-size:11px;color:var(--accent);cursor:pointer;border:1px dashed var(--card-border);border-radius:8px;}
 .mp-item-meta{padding:6px 8px;}
-.mp-item-name{font-size:11px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.mp-item-sub{font-size:10px;color:var(--text-sub2);margin-top:1px;}
-.mp-empty{padding:28px 8px;text-align:center;color:var(--text-sub2);font-size:11px;}
-.mp-more{padding:8px 0;text-align:center;font-size:11px;color:var(--accent);cursor:pointer;border:1px dashed var(--card-border);border-radius:8px;}
+.mp-item-name{font-size:11px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-align:center;text-overflow:ellipsis;}
+.mp-item-sub{font-size:10px;color:var(--text-sub2);margin-top:1px;text-align:center;}
 @media(max-width:899px){
   .media-panel{display:none !important;} /* 手机端不提供媒体侧栏（屏幕太小），走画廊 */
   .theme-btn[data-action="toggleMediaPanel"]{display:none !important;}
@@ -4441,7 +4441,7 @@ textarea:focus-visible,
 .media-panel-tabs{padding:10px 12px 0;}
 .mp-search{margin:10px 12px 8px;}
 .media-panel-list{gap:8px;padding:8px 10px 12px;}
-.mp-item-thumb{aspect-ratio:16/10;}
+/* v4.13.5: 移除 height:96px 横条覆盖，缩略图回到 9:16 竖版（见 .mp-item-thumb 基础规则） */
 .mp-item{transition:transform .15s ease,border-color .15s ease;}
 .mp-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
 /* 工作流编辑：横版 16:10 缩略图，紧凑多列，一屏更多卡片 */
@@ -4450,8 +4450,7 @@ body.page-wfmgr .wf-edit-list{
   gap:14px;
 }
 body.page-wfmgr .wf-edit-thumb{
-  width:100%;height:auto;aspect-ratio:16/10;
-  max-height:150px;border-radius:var(--radius-sm);
+  width:100%;height:150px;border-radius:var(--radius-sm);
 }
 body.page-wfmgr .wf-edit-name{font-size:13px;}
 body.page-wfmgr .wf-edit-alias-input{padding:7px 10px;font-size:12px;}
@@ -4461,13 +4460,8 @@ body.page-wfmgr .wf-edit-item-actions .wf-edit-preview-btn,
 body.page-wfmgr .wf-edit-item-actions .wf-del-btn{width:34px;height:34px;font-size:15px;}
 body.page-wfmgr .wf-del-btn{width:34px;height:34px;font-size:15px;}
 
-/* 45. 媒体面板开启时左侧导航自动让位，悬停左缘唤回 — v4.13.4 */
+/* 45. 媒体面板开启时左侧导航自动让位，靠近左缘唤回 — v4.13.5（document 级 mousemove，感应区方案已废弃） */
 .page-tabs{ transition:left .3s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
-#nav_hover_zone{
-  position:fixed;left:0;top:calc(50% - 140px);width:28px;height:280px;z-index:94;
-  display:none;pointer-events:none;
-}
-body.media-panel-open #nav_hover_zone{ display:block; pointer-events:auto; }
 body.media-panel-open .page-tabs{ left:-180px; opacity:0; pointer-events:none; }
 body.nav-show .page-tabs{ left:10px !important; opacity:1 !important; pointer-events:auto !important; }
 body.nav-show .media-panel{ left:150px !important; } /* 导航唤回时把面板挤出一点位置 */
@@ -4752,7 +4746,6 @@ body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
       </div>
     </div>
     <!-- v4.13.4: 左缘悬停感应区（媒体面板开启时悬停唤回左侧导航） -->
-    <div id="nav_hover_zone" aria-hidden="true"></div>
     <!-- v4.10.0: 画廊提示词面板（PC 右侧栏）/ 手机复制按钮 -->
     <button class="gallery-btn" id="gallery_prompt_copy" style="display:none" onclick="copyGalleryPrompt()">📋 复制提示词</button>
     <!-- Batch Delete Bar (hidden by default) -->
@@ -10222,17 +10215,22 @@ async function deleteGroupAll(type, id) {
   });
 
   // 左侧输入框回车添加
-  // v4.13.4: 媒体面板开启时，悬停左缘感应区唤回左侧导航，移开即让位
-(function () {
-  const zone = document.getElementById('nav_hover_zone');
-  const tabs = document.getElementById('page_tabs');
-  if (!zone || !tabs) return;
-  zone.addEventListener('mouseenter', () => {
-    if (document.body.classList.contains('media-panel-open')) document.body.classList.add('nav-show');
-  });
-  zone.addEventListener('mouseleave', () => document.body.classList.remove('nav-show'));
-  tabs.addEventListener('mouseleave', () => document.body.classList.remove('nav-show'));
-})();
+  // v4.13.5: 媒体面板开启时，鼠标靠近左缘（≤170px，覆盖导航条宽度）唤回左侧导航；
+  // 离开该区域延时 350ms 才收回，避免移向导航途中被提前收走
+  const NAV_ZONE = 170, NAV_HIDE_DELAY = 350;
+  let _navHideTimer = null;
+  const navShow = () => { clearTimeout(_navHideTimer); _navHideTimer = null; document.body.classList.add('nav-show'); };
+  const navHideSoon = () => {
+    if (_navHideTimer) return;
+    _navHideTimer = setTimeout(() => { _navHideTimer = null; document.body.classList.remove('nav-show'); }, NAV_HIDE_DELAY);
+  };
+  document.addEventListener('mousemove', (e) => {
+    if (!document.body.classList.contains('media-panel-open')) return;
+    const overNav = e.target.closest && e.target.closest('.page-tabs');
+    if (e.clientX <= NAV_ZONE || overNav) navShow();
+    else navHideSoon();
+  }, { passive: true });
+  document.addEventListener('mouseleave', () => { if (document.body.classList.contains('media-panel-open')) navHideSoon(); });
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'bindmgr_newid') {
@@ -14375,6 +14373,5 @@ async function k2Compose(){
   }
 }
 </script>
-
 </body>
 </html>
