@@ -224,10 +224,10 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
 .mp-tab{flex:1;padding:5px 0;border-radius:8px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text-sub);font-size:11px;cursor:pointer;font-family:inherit;}
 .mp-tab.active{background:var(--gradient-primary);color:#fff;border-color:transparent;font-weight:600;}
 .mp-search{margin:8px 12px;padding:6px 10px;border-radius:8px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;outline:none;flex-shrink:0;}
-.media-panel-list{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:max-content;gap:10px;} /* auto-rows:max-content：默认 auto 行轨道会被压成 ~19px 横条（实测），需显式按内容撑开 */
+.media-panel-list{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:1fr;grid-auto-rows:max-content;gap:10px;} /* 单列（用户要求单图排列）；auto-rows:max-content：默认 auto 行轨道会把条目压成 ~19px 横条（实测），需显式按内容撑开 */
 .mp-item{cursor:pointer;border-radius:10px;overflow:hidden;border:1px solid var(--card-border);background:var(--input-bg);} /* v4.13.5: 改双列网格，flex-shrink 不再需要 */
 .mp-item:hover{border-color:var(--primary);}
-.mp-item-thumb{width:100%;height:260px;object-fit:cover;display:block;background:var(--bg-elevated);} /* v4.13.5: 9:16 竖版预览（格宽146px 固定，260px≈146×16/9；不用 aspect-ratio——网格行轨道会把 auto 高贡献算成 0 导致行塌缩成横条） */
+.mp-item-thumb{width:100%;height:530px;object-fit:cover;display:block;background:var(--bg-elevated);} /* v4.13.5: 9:16 竖版预览（单列全宽≈298px，530px≈298×16/9；不用 aspect-ratio——网格行轨道会把 auto 高贡献算成 0 导致行塌缩成横条） */
 .mp-empty{grid-column:1/-1;padding:28px 8px;text-align:center;color:var(--text-sub2);font-size:11px;}
 .mp-more{grid-column:1/-1;padding:8px 0;text-align:center;font-size:11px;color:var(--accent);cursor:pointer;border:1px dashed var(--card-border);border-radius:8px;}
 .mp-item-meta{padding:6px 8px;}
