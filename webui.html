@@ -215,7 +215,7 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
   z-index:85;display:flex;flex-direction:column;
   transition:left .3s cubic-bezier(.22,1,.36,1);
 }
-.media-panel.show{left:150px;} /* 显示时停在左侧导航右侧；隐藏时滑出屏幕左缘 */
+.media-panel.show{left:0;} /* v4.13.4: 出现时完全贴住左边；导航唤回时被挤到 150px */
 .media-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--card-border);flex-shrink:0;}
 .media-panel-title{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--text);}
 .media-panel-close{background:none;border:none;color:var(--text-sub);cursor:pointer;padding:4px;border-radius:6px;display:flex;}
@@ -4436,7 +4436,7 @@ textarea:focus-visible,
   top:0;bottom:0;left:-330px;right:auto;width:320px;
   border-radius:0;border-top:none;border-bottom:none;border-right:none;
 }
-.media-panel.show{left:150px;} /* 显示时停在左侧导航右侧；隐藏时滑出屏幕左缘 */
+.media-panel.show{left:0;} /* 出现时完全贴左；导航唤回时由 body.nav-show 挤到 150px */
 .media-panel-head{padding:12px 14px;}
 .media-panel-tabs{padding:10px 12px 0;}
 .mp-search{margin:10px 12px 8px;}
@@ -4460,6 +4460,17 @@ body.page-wfmgr .wf-edit-item-actions{border-top:none;padding-top:0;margin-top:0
 body.page-wfmgr .wf-edit-item-actions .wf-edit-preview-btn,
 body.page-wfmgr .wf-edit-item-actions .wf-del-btn{width:34px;height:34px;font-size:15px;}
 body.page-wfmgr .wf-del-btn{width:34px;height:34px;font-size:15px;}
+
+/* 45. 媒体面板开启时左侧导航自动让位，悬停左缘唤回 — v4.13.4 */
+.page-tabs{ transition:left .3s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
+#nav_hover_zone{
+  position:fixed;left:0;top:calc(50% - 140px);width:28px;height:280px;z-index:94;
+  display:none;pointer-events:none;
+}
+body.media-panel-open #nav_hover_zone{ display:block; pointer-events:auto; }
+body.media-panel-open .page-tabs{ left:-180px; opacity:0; pointer-events:none; }
+body.nav-show .page-tabs{ left:10px !important; opacity:1 !important; pointer-events:auto !important; }
+body.nav-show .media-panel{ left:150px !important; } /* 导航唤回时把面板挤出一点位置 */
 /* 分组标题吸顶增强 */
 body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
 
@@ -4740,6 +4751,8 @@ body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
         <button class="gallery-btn gallery-btn-danger" id="gallery_delete_btn" onclick="galleryCurrentDelete()" title="删除"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 删除</button>
       </div>
     </div>
+    <!-- v4.13.4: 左缘悬停感应区（媒体面板开启时悬停唤回左侧导航） -->
+    <div id="nav_hover_zone" aria-hidden="true"></div>
     <!-- v4.10.0: 画廊提示词面板（PC 右侧栏）/ 手机复制按钮 -->
     <button class="gallery-btn" id="gallery_prompt_copy" style="display:none" onclick="copyGalleryPrompt()">📋 复制提示词</button>
     <!-- Batch Delete Bar (hidden by default) -->
@@ -8951,6 +8964,8 @@ function toggleMediaPanel() {
   if (!p) return;
   const show = !p.classList.contains('show');
   p.classList.toggle('show', show);
+  // v4.13.4: 面板出现时左侧导航自动让位（悬停左缘可唤回）
+  document.body.classList.toggle('media-panel-open', show);
   if (show) loadMediaPanel();
 }
 function setMpTab(t) {
@@ -10207,7 +10222,19 @@ async function deleteGroupAll(type, id) {
   });
 
   // 左侧输入框回车添加
-  document.addEventListener('keydown', (e) => {
+  // v4.13.4: 媒体面板开启时，悬停左缘感应区唤回左侧导航，移开即让位
+(function () {
+  const zone = document.getElementById('nav_hover_zone');
+  const tabs = document.getElementById('page_tabs');
+  if (!zone || !tabs) return;
+  zone.addEventListener('mouseenter', () => {
+    if (document.body.classList.contains('media-panel-open')) document.body.classList.add('nav-show');
+  });
+  zone.addEventListener('mouseleave', () => document.body.classList.remove('nav-show'));
+  tabs.addEventListener('mouseleave', () => document.body.classList.remove('nav-show'));
+})();
+
+document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'bindmgr_newid') {
       e.preventDefault();
       bmAddNewItem();
