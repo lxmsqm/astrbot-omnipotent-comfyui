@@ -215,7 +215,7 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
   z-index:85;display:flex;flex-direction:column;
   transition:left .3s cubic-bezier(.22,1,.36,1);
 }
-.media-panel.show{left:0;} /* v4.13.4: 出现时完全贴住左边；导航唤回时被挤到 150px */
+.media-panel.show{left:92px;} /* v4.13.5: 导航是常驻全高竖栏，面板固定停在竖栏右侧（78px+14px 间距） */
 .media-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--card-border);flex-shrink:0;}
 .media-panel-title{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--text);}
 .media-panel-close{background:none;border:none;color:var(--text-sub);cursor:pointer;padding:4px;border-radius:6px;display:flex;}
@@ -3636,19 +3636,26 @@ body.page-gallery{overflow:hidden;}
 @media(max-width:768px){
   .page-tabs{display:none;}
 }
-/* PC：导航改左侧竖排固定（工作流/画廊/工作流管理/设置），内容不被遮挡 */
+/* PC：导航参考 ComfyUI 官方侧栏——贴左全高常驻竖栏（紧贴顶端，不隐藏），图标在上文字在下，选中浅底高亮 */
 @media(min-width:769px){
+  body{padding-left:78px;} /* 给全高竖栏让位（栏宽≈78px） */
   .page-tabs{
-    position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:95;
-    flex-direction:column;align-items:stretch;
+    position:fixed;left:0;top:0;bottom:0;transform:none;z-index:95;
+    flex-direction:column;align-items:stretch;justify-content:flex-start;
     width:auto;max-width:none;margin:0;
-    border-radius:var(--radius);
-    box-shadow:var(--shadow-md);
-    padding:8px;
+    border-radius:0;border-left:none;border-top:none;border-bottom:none;
+    box-shadow:none;
+    padding:12px 6px;
   }
   .page-tab{
-    flex:none;justify-content:flex-start;
-    min-width:112px;padding:11px 14px;min-height:40px;gap:8px;
+    flex:none;flex-direction:column;justify-content:center;align-items:center;
+    min-width:64px;padding:10px 4px;min-height:56px;gap:5px;
+    font-size:11px;text-align:center;border-radius:var(--radius-sm);
+  }
+  .page-tab:hover{background:var(--card-hover);color:var(--text);}
+  .page-tab.active{
+    background:var(--bg-elevated);color:var(--text);
+    box-shadow:none;border:1px solid var(--card-border);
   }
   .page-tab .icon{width:16px;height:16px;}
 }
@@ -4436,7 +4443,7 @@ textarea:focus-visible,
   top:0;bottom:0;left:-330px;right:auto;width:320px;
   border-radius:0;border-top:none;border-bottom:none;border-right:none;
 }
-.media-panel.show{left:0;} /* 出现时完全贴左；导航唤回时由 body.nav-show 挤到 150px */
+.media-panel.show{left:92px;} /* v4.13.5: 导航是常驻全高竖栏，面板固定停在竖栏右侧 */
 .media-panel-head{padding:12px 14px;}
 .media-panel-tabs{padding:10px 12px 0;}
 .mp-search{margin:10px 12px 8px;}
@@ -4460,11 +4467,7 @@ body.page-wfmgr .wf-edit-item-actions .wf-edit-preview-btn,
 body.page-wfmgr .wf-edit-item-actions .wf-del-btn{width:34px;height:34px;font-size:15px;}
 body.page-wfmgr .wf-del-btn{width:34px;height:34px;font-size:15px;}
 
-/* 45. 媒体面板开启时左侧导航自动让位，靠近左缘唤回 — v4.13.5（document 级 mousemove，感应区方案已废弃） */
-.page-tabs{ transition:left .3s cubic-bezier(.22,1,.36,1), opacity .3s ease; }
-body.media-panel-open .page-tabs{ left:-180px; opacity:0; pointer-events:none; }
-body.nav-show .page-tabs{ left:10px !important; opacity:1 !important; pointer-events:auto !important; }
-body.nav-show .media-panel{ left:150px !important; } /* 导航唤回时把面板挤出一点位置 */
+/* 45. 左侧导航常驻全高竖栏（ComfyUI 官方风格，v4.13.5 后期调整：不再隐藏/唤回） — 旧的 media-panel-open 隐藏与左缘 mousemove 唤回逻辑已整体移除 */
 /* 分组标题吸顶增强 */
 body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
 
@@ -10215,22 +10218,7 @@ async function deleteGroupAll(type, id) {
   });
 
   // 左侧输入框回车添加
-  // v4.13.5: 媒体面板开启时，鼠标靠近左缘（≤170px，覆盖导航条宽度）唤回左侧导航；
-  // 离开该区域延时 350ms 才收回，避免移向导航途中被提前收走
-  const NAV_ZONE = 170, NAV_HIDE_DELAY = 350;
-  let _navHideTimer = null;
-  const navShow = () => { clearTimeout(_navHideTimer); _navHideTimer = null; document.body.classList.add('nav-show'); };
-  const navHideSoon = () => {
-    if (_navHideTimer) return;
-    _navHideTimer = setTimeout(() => { _navHideTimer = null; document.body.classList.remove('nav-show'); }, NAV_HIDE_DELAY);
-  };
-  document.addEventListener('mousemove', (e) => {
-    if (!document.body.classList.contains('media-panel-open')) return;
-    const overNav = e.target.closest && e.target.closest('.page-tabs');
-    if (e.clientX <= NAV_ZONE || overNav) navShow();
-    else navHideSoon();
-  }, { passive: true });
-  document.addEventListener('mouseleave', () => { if (document.body.classList.contains('media-panel-open')) navHideSoon(); });
+  // v4.13.5 后期调整：导航改为常驻全高竖栏（ComfyUI 官方风格），旧的左缘 mousemove 唤回/收回逻辑已整体移除
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'bindmgr_newid') {
