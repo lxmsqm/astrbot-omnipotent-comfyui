@@ -4,15 +4,18 @@ v4.13.5 拆分自 main.py（原 29-628 行），行为不变。
 """
 import asyncio
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
 import aiohttp
-from astrbot.api.event import AstrMessageEvent, MessageChain
+from astrbot.api.event import filter, AstrMessageEvent, MessageChain
 from astrbot.api.event.filter import CustomFilter
 from astrbot.api import logger, FunctionTool
+
+from .data_paths import data_dir_resolver
 
 
 class ComfyUITaskError(Exception):
@@ -614,3 +617,373 @@ class ComfyUIRandomImageTool(FunctionTool):
         for coro in asyncio.as_completed(tasks):
             batch_results.append(await coro)
         return f"随机图完成: {'; '.join(batch_results)}{pin_info}"
+
+
+class LLMToolsMixin:
+    """LLM 工具:魔导书搜索/管理/固定/随机池等 llm_* 工具方法。"""
+
+    @filter.llm_tool(name="comfyui_search_tags")
+    async def llm_search_tags(self, event: AstrMessageEvent, keyword: str, source: str = ""):
+        """搜索魔导书中的所有绘画标签。根据关键词在所有数据源或指定数据源中搜索匹配的提示词标签，返回可用于生图的标签。
+
+        Args:
+            keyword (string): 搜索关键词，如"初音未来"、"海滩"、"赛博朋克"、"回眸"、"黄金时刻"
+            source (string): 可选，数据源名称，如 artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing。不传则搜索全部数据源
+        """
+        source = source.strip()
+        # 指定了数据源 → 单源搜索（供固定/随机池操作用）
+        if source:
+            name_map = {
+                "artists": "anima/artists.json", "characters": "anima/characters.json",
+                "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+                "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+                "environment": "scene/environment.json", "framing": "shot/framing.json",
+            }
+            src = name_map.get(source.lower().strip())
+            if not src:
+                src = self._grimoire_find_source_path(source)  # 动态兜底
+            if not src:
+                return f"未知数据源: {source}"
+            fpath = data_dir_resolver() / src.replace('/', os.sep)  # v4.3.0
+            items = []
+            if fpath.exists():
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        items = json.load(f)
+                except Exception:
+                    return f"读取数据源失败: {source}"
+            else:
+                source_name = src.replace(".json", "").split("/")[-1]
+                from .anima_data import load_anima_tools_source, _ANIMA_SOURCE_NAMES
+                anima_names = [s[1] for s in _ANIMA_SOURCE_NAMES]
+                if source_name in anima_names:
+                    items = load_anima_tools_source(source_name)
+                else:
+                    return f"数据源文件不存在: {source}"
+            if not isinstance(items, list):
+                return "数据格式错误"
+            kw = keyword.lower().strip() if keyword else ""
+            matched = []
+            for it in items:
+                name = (it.get("name") or "").lower()
+                name_cn = (it.get("name_cn") or "").lower()
+                tags = (it.get("tags") or "").lower()
+                if not kw or kw in name or kw in name_cn or kw in tags:
+                    matched.append(it)
+            if not matched:
+                return f"在「{source}」中未找到匹配的条目"
+            matched = matched[:20]
+            lines = [f"「{source}」中的条目 ({len(matched)} 条):"]
+            for it in matched:
+                display = it.get("name_cn") or it.get("name") or ""
+                tag = it.get("tags") or ""
+                lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
+            return "\n".join(lines)
+
+        # 没有指定 source → 全局搜索全部数据源
+        results = []
+        # 1. 搜索 Anima 数据
+        if self.anima_data.is_loaded:
+            results.extend(self.anima_data.search(keyword, top_k=10))
+        # 2. 魔导书启用时才搜索数据文件
+        if self.grimoire_enabled:
+            data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
+            kw = keyword.lower().strip()
+            for fpath in data_dir.rglob("*.json"):
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        items = json.load(f)
+                    if not isinstance(items, list):
+                        continue
+                    for it in items:
+                        name = (it.get("name") or "").lower()
+                        name_cn = (it.get("name_cn") or "").lower()
+                        tags = (it.get("tags") or "").lower()
+                        note = (it.get("note") or "").lower()
+                        if kw in name or kw in name_cn or kw in tags or kw in note:
+                            rel_path = str(fpath.relative_to(data_dir.parent))
+                            results.append({
+                                "category": it.get("category") or fpath.stem,
+                                "name": it.get("name_cn") or it.get("name") or "",
+                                "tags": it.get("tags") or "",
+                                "source": rel_path,
+                            })
+                except Exception:
+                    continue
+        # 3. 去重（按 name+tags 去重）
+        seen = set()
+        unique = []
+        for r in results:
+            key = (r.get("name",""), r.get("tags",""))
+            if key not in seen:
+                seen.add(key)
+                unique.append(r)
+        results = unique[:10]
+        if not results:
+            return f"未找到与「{keyword}」相关的标签"
+        lines = [f"搜索「{keyword}」结果:"]
+        for r in results:
+            src_parts = (r.get("source") or "").replace("\\","/").split("/")
+            src = src_parts[-2] if len(src_parts) >= 2 else (src_parts[-1] if src_parts else r.get("category",""))
+            lines.append(f"  [{src}] {r['name']}: {r['tags']}")
+        lines.append(f"\n共 {len(results)} 条结果")
+        return "\n".join(lines)
+
+    @filter.llm_tool(name="comfyui_list_grimoire")
+    async def llm_list_grimoire(self, event: AstrMessageEvent):
+        """列出魔导书的随机池子来源和已固定的标签。返回所有可用的随机池子名称和已固定的标签信息。"""
+        wc = self.workflow_config
+        pool = wc.get('__grimoire_rand_pool__', [])
+        pins = wc.get('__grimoire_pins__', {})
+        enabled = self.grimoire_enabled
+        if not pool and not pins:
+            return f"魔导书当前{'已启用' if enabled else '已禁用'}，随机池和固定标签均为空"
+        lines = [f"魔导书: {'✅ 已启用' if enabled else '❌ 已禁用'}"]
+        all_sources = self._grimoire_sources()
+        lines.append(f"\n📦 可用数据源 ({len(all_sources)} 个):")
+        for s in all_sources:
+            src_path = s["path"]
+            name = s["name"]
+            in_pool = "⭐ 池中" if src_path in pool else ""
+            pinned_name = ""
+            for ps, pi in pins.items():
+                if ps.replace('\\','/') == src_path:
+                    pinned_name = f"📌 {pi.get('name','')}"
+                    break
+            lines.append(f"  {name}{' ('+s['dir']+')' if s['dir'] else ''}: {s['count']}条 {in_pool} {pinned_name}".strip())
+        if pool:
+            lines.append(f"\n🎲 随机池中的源 ({len(pool)} 个): {', '.join(s.split('/')[-1].replace('.json','') for s in pool)}")
+        if pins:
+            lines.append(f"\n📌 固定标签:")
+            for ps, pi in pins.items():
+                src_name = ps.replace('\\','/').split('/')[-1].replace('.json','')
+                lines.append(f"  {src_name} → {pi.get('name','')}: {pi.get('tags','')}")
+        return "\n".join(lines)
+
+    @filter.llm_tool(name="comfyui_manage_pool")
+    async def llm_manage_pool(self, event: AstrMessageEvent, action: str, source: str):
+        """管理魔导书随机池。添加或移除数据源到随机池中，随机池中的数据源会参与随机抽取。
+
+        Args:
+            action (string): 操作类型，"add" 表示添加到随机池，"remove" 表示从随机池移除
+            source (string): 数据源名称，可选值: artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用，请先在 WebUI 中启用魔导书"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            src = self._grimoire_find_source_path(source)
+        if not src:
+            return f"未知数据源: {source}，可选: {', '.join(name_map.keys())}"
+        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        action = action.lower().strip()
+        if action == "add":
+            if src in pool:
+                return f"「{source}」已在随机池中"
+            pool.append(src)
+            self.workflow_config['__grimoire_rand_pool__'] = pool
+            await self._save_workflow_config()
+            return f"✅ 已将「{source}」添加到随机池"
+        elif action == "remove":
+            if src not in pool:
+                return f"「{source}」不在随机池中"
+            pool.remove(src)
+            self.workflow_config['__grimoire_rand_pool__'] = pool
+            await self._save_workflow_config()
+            return f"✅ 已将「{source}」从随机池移除"
+        else:
+            return f"未知操作: {action}，请使用 add 或 remove"
+
+    async def llm_rand_pool_remove(self, event: AstrMessageEvent, source: str):
+        """将某个数据源从魔导书随机池中移除。移除后该数据源不再参与随机抽取。
+
+        Args:
+            source (string): 数据源名称，可选值: artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        if src not in pool:
+            return f"「{source}」不在随机池中"
+        pool.remove(src)
+        self.workflow_config['__grimoire_rand_pool__'] = pool
+        await self._save_workflow_config()
+        return f"✅ 已将「{source}」从随机池移除"
+
+    @filter.llm_tool(name="comfyui_manage_pin")
+    async def llm_manage_pin(self, event: AstrMessageEvent, action: str, source: str, name: str = "", tags: str = ""):
+        """管理魔导书的固定标签。固定某个数据源中的一条标签后，该标签会固定出现在每次随机/生图中。
+
+        Args:
+            action (string): 操作类型，"pin" 表示固定标签，"unpin" 表示取消固定
+            source (string): 数据源名称，如 artists, characters, clothing
+            name (string): 要固定的条目名称，取消固定时不需传
+            tags (string): 要固定条目对应的英文提示词标签，取消固定时不需传
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            src = self._grimoire_find_source_path(source)
+        if not src:
+            return f"未知数据源: {source}"
+        action = action.lower().strip()
+        if action == "pin":
+            if not name or not tags:
+                return "固定标签需要提供 name 和 tags 参数"
+            source_key = src.replace('/', '\\')
+            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            # 兼容：统一用列表格式
+            if source_key not in pins:
+                pins[source_key] = []
+            elif isinstance(pins[source_key], dict):
+                pins[source_key] = [pins[source_key]]
+            if not any(e.get('name') == name for e in pins[source_key]):
+                pins[source_key].append({"name": name, "tags": tags})
+            self.workflow_config['__grimoire_pins__'] = pins
+            await self._save_workflow_config()
+            return f"✅ 已固定 {source}/{name}: {tags}"
+        elif action == "unpin":
+            source_key = src.replace('/', '\\')
+            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            matched = [k for k in pins if k.replace('\\','/') == src]
+            if not matched:
+                return f"「{source}」没有固定的标签"
+            for k in matched:
+                pins.pop(k, None)
+            self.workflow_config['__grimoire_pins__'] = pins
+            await self._save_workflow_config()
+            return f"✅ 已取消固定 {source}"
+        else:
+            return f"未知操作: {action}，请使用 pin 或 unpin"
+
+    async def llm_unpin_tag(self, event: AstrMessageEvent, source: str):
+        """取消固定某个数据源的标签。取消后该数据源不再固定出现在随机/生图中。
+
+        Args:
+            source (string): 数据源名称，如 artists, characters, clothing
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        source_key = src.replace('/', '\\')
+        pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+        matched = [k for k in pins if k.replace('\\','/') == src]
+        if not matched:
+            return f"「{source}」没有固定的标签"
+        for k in matched:
+            pins.pop(k, None)
+        self.workflow_config['__grimoire_pins__'] = pins
+        await self._save_workflow_config()
+        return f"✅ 已取消固定 {source}"
+
+    async def llm_search_grimoire_items(self, event: AstrMessageEvent, source: str, keyword: str = ""):
+        """在魔导书的某个数据源中搜索条目。返回匹配的条目名称和标签，供固定/添加到随机池用。
+
+        Args:
+            source (string): 数据源名称，如 artists, characters, clothing, lighting, "Normal posture", "Sex positions", environment, framing
+            keyword (string): 搜索关键词，可选，为空则列出所有条目
+        """
+        if not self.grimoire_enabled:
+            return "魔导书已禁用"
+        name_map = {
+            "artists": "anima/artists.json", "characters": "anima/characters.json",
+            "clothing": "anima/clothing.json", "lighting": "lighting/lighting.json",
+            "normal posture": "pose_action/Normal posture.json", "sex positions": "pose_action/Sex positions.json",
+            "environment": "scene/environment.json", "framing": "shot/framing.json",
+        }
+        src = name_map.get(source.lower().strip())
+        if not src:
+            return f"未知数据源: {source}"
+        fpath = data_dir_resolver() / src.replace('/', os.sep)  # v4.3.0
+        items = []
+        if fpath.exists():
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    items = json.load(f)
+            except Exception:
+                return f"读取数据源失败: {source}"
+        else:
+            # JSON 文件不存在 → 尝试从 Anima-Tools JS 加载（只读源）
+            source_name = src.replace(".json", "").split("/")[-1]
+            from .anima_data import load_anima_tools_source, _ANIMA_SOURCE_NAMES
+            anima_names = [s[1] for s in _ANIMA_SOURCE_NAMES]
+            if source_name in anima_names:
+                items = load_anima_tools_source(source_name)
+            else:
+                return f"数据源文件不存在: {source}"
+        if not isinstance(items, list):
+            return "数据格式错误"
+        kw = keyword.lower().strip() if keyword else ""
+        matched = []
+        for it in items:
+            name = (it.get("name") or "").lower()
+            name_cn = (it.get("name_cn") or "").lower()
+            tags = (it.get("tags") or "").lower()
+            if not kw or kw in name or kw in name_cn or kw in tags:
+                matched.append(it)
+        if not matched:
+            return f"在「{source}」中未找到匹配的条目"
+        matched = matched[:30]
+        lines = [f"「{source}」中的条目 ({len(matched)} 条):"]
+        for it in matched:
+            display = it.get("name_cn") or it.get("name") or ""
+            tag = it.get("tags") or ""
+            lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
+        return "\n".join(lines)
+
+    @filter.llm_tool(name="comfyui_get_prompt")
+    async def llm_get_prompt(self, event: AstrMessageEvent, message_id: str = ""):
+        """查询某条图片消息对应的生图提示词。用于从已生成的图片中提取完整描述。
+
+        Args:
+            message_id (string): 图片消息的 ID。如果不传，会自动从你回复的图片消息中提取。
+        """
+        if not message_id:
+            # 自动从事件上下文中提取回复的消息 ID
+            for comp in event.get_messages():
+                d = comp.__dict__ if hasattr(comp, '__dict__') else {}
+                if d.get('type') == 'Reply':
+                    message_id = str(d.get('id', '') or '')
+                    break
+        if not message_id:
+            return "请提供图片消息的 message_id"
+
+        results = []
+        for r in reversed(self._prompt_log):
+            if r['message_id'] == message_id:
+                results.append(f"提示词: {r['prompt']}")
+                break
+
+        if not results:
+            return f"未找到 message_id 为「{message_id}」的提示词记录（可能已过期，默认保留 {self.prompt_log_days} 天）"
+        return "\n".join(results)
