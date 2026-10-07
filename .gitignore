@@ -15,8 +15,12 @@ build/
 *.swo
 *~
 
+
 # Local runtime config (contains user machine paths)
 plugin_config.json
+
+# Local dev scratch folder (patch/queue scripts, word-list temp output)
+theme_work/
 
 # User data directory (gitignored — each user's personal config)
 data/user/
@@ -43,7 +47,6 @@ Thumbs.db
 data/cache/
 
 # Local user data (runtime)
-data/user/
 
 
 

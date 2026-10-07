@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#faf5ec" media="(prefers-color-scheme:light)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>魔导书 — AStrBot ComfyUI [v4.4.0]</title>
+<title>魔导书 — AstrBot ComfyUI</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -205,26 +205,25 @@ a,button,input,select,textarea,label,[role="button"],[tabindex]{
 }
 ::selection{background:oklch(60% 0.19 28 / 0.3);color:var(--text)}
 
-/* ========== 媒体资产侧边栏（ComfyUI 风格） ========== */
-/* v4.13.3: 媒体资产移到左侧（与右侧魔导书面板错开），向左滑出隐藏 */
+/* ========== 媒体资产侧边栏（ComfyUI 风格，全部规则集中在此处，勿在别处另写覆盖） ========== */
+/* 历史：v4.13.3 移到左侧，v4.13.5 定型 ComfyUI 官方风格（单列大卡片+contain 竖图） */
 .media-panel{
-  position:fixed;top:0;left:-330px;right:auto;width:300px;max-width:86vw;bottom:0;
-  background:var(--card);border:1px solid var(--card-border);border-radius:0;
-  border-top:none;border-bottom:none;border-left:none;
+  position:fixed;top:0;left:-332px;right:auto;width:320px;max-width:86vw;bottom:0;
+  background:var(--card);border:none;border-radius:0;
   box-shadow:var(--shadow-xl);backdrop-filter:blur(20px) saturate(1.3);
   z-index:85;display:flex;flex-direction:column;
   transition:left .3s cubic-bezier(.22,1,.36,1);
 }
 .media-panel.show{left:92px;} /* v4.13.5: 导航是常驻全高竖栏，面板固定停在竖栏右侧（78px+14px 间距） */
-.media-panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--card-border);flex-shrink:0;}
+.media-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--card-border);flex-shrink:0;}
 .media-panel-title{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--text);}
 .media-panel-close{background:none;border:none;color:var(--text-sub);cursor:pointer;padding:4px;border-radius:6px;display:flex;}
 .media-panel-close:hover{background:var(--card-hover);color:var(--text);}
-.media-panel-tabs{display:flex;gap:8px;padding:8px 12px 0;flex-shrink:0;}
+.media-panel-tabs{display:flex;gap:8px;padding:10px 12px 0;flex-shrink:0;}
 .mp-tab{flex:0 0 auto;padding:6px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--text-sub);font-size:12px;cursor:pointer;font-family:inherit;} /* ComfyUI 官方风格：胶囊标签，选中=浅底描边 */
 .mp-tab.active{background:var(--bg-elevated);color:var(--text);border-color:var(--card-border);font-weight:600;}
-.mp-search{margin:8px 12px;padding:8px 10px 8px 32px;border-radius:999px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;outline:none;flex-shrink:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2399908c' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;} /* ComfyUI 官方风格：圆角搜索框+放大镜 */
-.media-panel-list{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:1fr;grid-auto-rows:max-content;gap:14px;} /* 单列（用户要求单图排列）；auto-rows:max-content：默认 auto 行轨道会把条目压成 ~19px 横条（实测），需显式按内容撑开 */
+.mp-search{margin:10px 12px 8px;padding:8px 10px 8px 32px;border-radius:999px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;outline:none;flex-shrink:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2399908c' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;} /* ComfyUI 官方风格：圆角搜索框+放大镜 */
+.media-panel-list{flex:1;overflow-y:auto;padding:8px 12px 12px;display:grid;grid-template-columns:1fr;grid-auto-rows:max-content;gap:14px;} /* 单列（用户要求单图排列）；auto-rows:max-content：默认 auto 行轨道会把条目压成 ~19px 横条（实测），需显式按内容撑开 */
 .mp-item{cursor:pointer;border-radius:12px;overflow:hidden;border:1px solid var(--card-border);background:var(--input-bg);} /* ComfyUI 官方风格：大圆角卡片 */
 .mp-item:hover{border-color:var(--primary);}
 .mp-item-thumb{width:100%;height:530px;object-fit:contain;display:block;background:#000;} /* ComfyUI 官方风格：contain 完整显示不裁切，黑底 letterbox（9:16 图全宽时无黑边） */
@@ -4437,18 +4436,7 @@ textarea:focus-visible,
 }
 
 
-/* 44. 媒体资产全高贴边 + 工作流编辑横版卡片 — v4.12.1 */
-/* 媒体资产：顶部与浏览器同高、贴右贴底不封顶 */
-.media-panel{
-  top:0;bottom:0;left:-330px;right:auto;width:320px;
-  border-radius:0;border-top:none;border-bottom:none;border-right:none;
-}
-.media-panel.show{left:92px;} /* v4.13.5: 导航是常驻全高竖栏，面板固定停在竖栏右侧 */
-.media-panel-head{padding:12px 14px;}
-.media-panel-tabs{padding:10px 12px 0;}
-.mp-search{margin:10px 12px 8px;}
-.media-panel-list{gap:14px;padding:8px 12px 12px;}
-/* v4.13.5: 移除 height:96px 横条覆盖，缩略图回到 9:16 竖版（见 .mp-item-thumb 基础规则） */
+/* 44. 工作流编辑横版卡片 — v4.12.1（媒体面板规则已全部上移合并到基础块，勿在此处再写覆盖） */
 .mp-item{transition:transform .15s ease,border-color .15s ease;}
 .mp-item:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
 /* 工作流编辑：横版 16:10 缩略图，紧凑多列，一屏更多卡片 */
