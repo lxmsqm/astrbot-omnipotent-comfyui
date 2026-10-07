@@ -31,7 +31,7 @@ try:
     from .data_paths import anima_tools_dir_resolver as _anima_tools_resolver
     _ANIMA_TOOLS_JS_DIR = Path(_anima_tools_resolver())
 except Exception:
-    _ANIMA_TOOLS_JS_DIR = Path(__file__).resolve().parent / "data" / "anima_tools"
+    _ANIMA_TOOLS_JS_DIR = Path(__file__).resolve().parent.parent / "data" / "anima_tools"
 
 # 萌娘百科风格的角色作品分类中文翻译（覆盖全部已知版权）
 _CHARACTER_CATEGORY_CN = {

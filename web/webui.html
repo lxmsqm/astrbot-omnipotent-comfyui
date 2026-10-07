@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0,viewport-fit=cover">
+<meta name="theme-color" content="#120c0c" media="(prefers-color-scheme:dark)">
+<meta name="theme-color" content="#faf5ec" media="(prefers-color-scheme:light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>魔导书 — AstrBot ComfyUI</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/webui.css">
+</head>
+<body>
+<div id="bg_particles" aria-hidden="true">
+  <div class="orb"></div><div class="orb"></div>
+  <div class="orb"></div><div class="orb"></div>
+  <div class="orb"></div>
+  <div class="grid-overlay"></div>
+  <div class="noise"></div>
+  <div class="vignette"></div>
+</div>
+<!-- SVG Icon Sprite -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <!-- Keep all icon definitions from the original -->
+  <defs>
+    <!-- Menu / Hamburger -->
+    <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+    <!-- Sun / Light mode -->
+    <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+    <!-- Moon / Dark mode -->
+    <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+    <!-- Image -->
+    <symbol id="icon-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+    <!-- Settings / Gear -->
+    <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <!-- Lora -->
+    <symbol id="icon-lora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/><circle cx="12" cy="12" r="2" fill="currentColor"/></symbol>
+    <!-- 风格预设 -->
+    <symbol id="icon-style" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></symbol>
+    <!-- K2 字段锁定 -->
+    <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <!-- Plus -->
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <!-- Save / Floppy -->
+    <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+    <!-- Folder / Open -->
+    <symbol id="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <!-- Folder Closed -->
+    <symbol id="icon-folder-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1"/><line x1="2" y1="11" x2="22" y2="11"/></symbol>
+    <!-- Refresh -->
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+    <!-- Plug / Connect -->
+    <symbol id="icon-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v5M6 7h12v4a6 6 0 0 1-12 0V7z"/><line x1="2" y1="14" x2="6" y2="11"/><line x1="18" y1="11" x2="22" y2="14"/></symbol>
+    <!-- Warning -->
+    <symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <!-- Search -->
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <!-- Edit / Pencil -->
+    <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <!-- Link / Paperclip -->
+    <symbol id="icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <!-- Unlock -->
+    <symbol id="icon-unlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+    <!-- Target / Crosshair -->
+    <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <!-- Prohibited / X Circle -->
+    <symbol id="icon-prohibited" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></symbol>
+    <!-- Ban / No Entry (禁用节点专用，圆+横线区别于斜线的 🚫) -->
+    <symbol id="icon-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <!-- Ruler / Resolution -->
+    <symbol id="icon-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><line x1="8" y1="8" x2="8" y2="16"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/></symbol>
+    <!-- Box / Package -->
+    <symbol id="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+    <!-- Trash -->
+    <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+    <!-- Close / X -->
+    <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <!-- Globe / Network -->
+    <symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <!-- Cloud -->
+    <symbol id="icon-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+    <!-- Home -->
+    <symbol id="icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+    <!-- Download -->
+    <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <!-- Zoom In -->
+    <symbol id="icon-zoom-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+    <!-- Zoom Out -->
+    <symbol id="icon-zoom-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+    <!-- Scissors / Crop -->
+    <symbol id="icon-scissors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol>
+    <!-- Plus -->
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <!-- Palette / Art -->
+    <symbol id="icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10h2a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h4a2 2 0 0 0 2-2v-5c0-5.5-4.5-10-10-10z"/></symbol>
+    <!-- Ribbon / Decoration -->
+    <symbol id="icon-ribbon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+    <!-- Chat / Message -->
+    <symbol id="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <!-- User / Person -->
+    <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <!-- Document / File -->
+    <symbol id="icon-document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+    <!-- Monitor / Screen -->
+    <symbol id="icon-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+    <!-- Reset / Rotate -->
+    <symbol id="icon-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+    <!-- Check / Success -->
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <!-- Error / X Circle -->
+    <symbol id="icon-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+    <!-- Info -->
+    <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+    <!-- Network / Wifi -->
+    <symbol id="icon-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></symbol>
+    <!-- Clipboard -->
+    <symbol id="icon-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></symbol>
+    <!-- Arrow Up -->
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol>
+    <!-- Arrow Down -->
+    <symbol id="icon-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+    <!-- Undo / Recall -->
+    <symbol id="icon-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+    <!-- Upload -->
+    <symbol id="icon-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <!-- Collapse / Chevron Down -->
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
+    <!-- Grid / Layout -->
+    <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+    <!-- X Close -->
+    <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+        <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+    <!-- Video -->
+    <symbol id="icon-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></symbol>
+    <!-- Folder Open -->
+    <symbol id="icon-folder-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v1l-8.7 3.48A2 2 0 0 0 12 16.44V19"/></symbol>
+    <!-- Rotate CCW / Recall -->
+    <symbol id="icon-rotate-ccw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+    <!-- Check Square / Batch Select -->
+    <symbol id="icon-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+    <!-- Grip Vertical / Drag Handle -->
+    <symbol id="icon-grip-vertical" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5.5" r="1.5"/><circle cx="15" cy="5.5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18.5" r="1.5"/><circle cx="15" cy="18.5" r="1.5"/></symbol>
+    <!-- Alert Circle / Error -->
+    <symbol id="icon-alert-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+    <!-- Alert Triangle / Warning -->
+    <symbol id="icon-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <!-- Check Circle / Success -->
+    <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+    <!-- Upload Cloud -->
+    <symbol id="icon-upload-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></symbol>
+    <!-- Loader / Spinner -->
+    <symbol id="icon-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></symbol>
+    <!-- Pin / Pushpin -->
+    <symbol id="icon-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17l-3-3c-2-1.5-4-4-4-7 0-2.5 1-4 4-5l3 1 3-1c3 1 4 2.5 4 5 0 3-2 5.5-4 7l-3 3z"/><path d="M12 17v5"/><line x1="9" y1="22" x2="15" y2="22"/></symbol>
+    <!-- Plus / Add -->
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <!-- Trash / Delete -->
+    <symbol id="icon-trash2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <!-- Shuffle / Random Pool -->
+    <symbol id="icon-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></symbol>
+    <!-- Star / Favorite -->
+    <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <!-- Gradient Logo (color version for app logo) -->
+    <symbol id="icon-logo" viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#d4453a"/>
+          <stop offset="100%" stop-color="#d9a441"/>
+        </linearGradient>
+      </defs>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="url(#logoGrad)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="8" y1="7" x2="16" y2="7" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="8" y1="11" x2="14" y2="11" stroke="url(#logoGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ==================== ⚡ Unified Header ==================== -->
+  <header class="unified-header" role="banner">
+    <div class="header-top">
+      <div class="header-left">
+        <div class="logo" aria-hidden="true"><img src="/theme-xin-icon-logo.webp" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
+        <h1>ComfyUI <span class="desktop-only">创作画室</span></h1>
+      </div>
+      <div class="header-right">
+        <div class="theme-group">
+          <button class="theme-btn" data-action="toggleMediaPanel" title="媒体资产" aria-label="媒体资产侧边栏"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg></button>
+          <button class="theme-btn" data-action="toggleTheme" title="昼夜切换" aria-label="切换昼夜模式"><svg class="icon" aria-hidden="true"><use id="theme_toggle_icon" href="#icon-sun"/></svg></button>
+          <button class="theme-btn" data-action="showBgModal" title="背景设置" aria-label="打开背景设置"><svg class="icon" aria-hidden="true"><use href="#icon-image"/></svg></button>
+          <button class="theme-btn" id="settings_toggle" data-action="toggleSettings" title="设置" aria-label="打开设置"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-bottom" role="status" aria-live="polite">
+      <button class="btn-back-wf" data-action="backToWorkflows" aria-label="返回工作流选择" title="返回工作流选择"><svg class="icon" aria-hidden="true"><use href="#icon-arrow-left"/></svg> <span class="desktop-only">返回工作流</span></button>
+      <span class="current-wf-title" id="current_wf_title" title="当前生成台工作流"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder"/></svg> <b id="current_wf_title_name">当前工作流</b></span>
+      <div class="status-bar">
+        <div class="status-dot" id="status_dot" aria-hidden="true"></div>
+        <span id="comfyui_status"><span class="status-label">ComfyUI</span> 连接中...</span>
+        <span class="spacer" style="flex:1;min-width:4px"></span>
+        <span class="text-muted">队列: <b id="queue_count">0</b></span>
+        <span class="opacity-wrap" style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-sub)">
+          <svg class="icon-sm" aria-hidden="true"><use href="#icon-cloud"/></svg>
+          <input type="range" id="opacity_slider" min="30" max="100" value="100" oninput="changeOpacity(this.value)" aria-label="透明度">
+        </span>
+    </div>
+  </header>
+
+  <!-- ==================== ⚡ PC 页面导航 Tabs ==================== -->
+  <nav class="page-tabs" id="page_tabs" aria-label="页面导航">
+    <button class="page-tab active" data-page="wf" onclick="switchPage('wf')"><img src="/theme-xin-icon-nav-workflow.webp" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-4px"> 工作流</button>
+    <button class="page-tab" data-page="gallery" onclick="galleryTabTap()" ondblclick="galleryTabDbl()"><img src="/theme-xin-icon-nav-gallery.webp" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-4px"> 画廊</button>
+    <button class="page-tab" data-page="grimoire" onclick="toggleGrimoire()"><img src="/theme-xin-icon-grimoire.webp" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-4px"> 魔导书</button>
+    <button class="page-tab" data-page="wfmgr" onclick="switchPage('wfmgr')"><img src="/theme-xin-icon-nav-manage.webp" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-4px"> 工作流管理</button>
+    <button class="page-tab" data-page="settings" onclick="switchPage('settings')"><img src="/theme-xin-icon-nav-settings.webp" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:-4px"> 设置</button>
+  </nav>
+
+  <!-- ==================== ⚡ Progress Bar ==================== -->
+  <div id="progress_section">
+    <div class="progress-stage" id="progress_stage">
+      <svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>
+      <span id="progress_label">就绪</span>
+    </div>
+    <span class="progress-sep" aria-hidden="true">·</span>
+    <span id="progress_node_name" class="progress-node"></span>
+    <span class="progress-sep progress-sep--node" aria-hidden="true">·</span>
+    <span id="progress_pct">0%</span>
+    <div class="progress-bar-bg">
+      <div id="progress_bar"></div>
+    </div>
+    <span id="progress_detail" class="progress-detail"></span>
+    <span id="progress_step_detail" class="progress-step"></span>
+  </div>
+
+  <!-- ==================== Gallery Single Image Viewer ==================== -->
+  <div class="gallery-backdrop" id="gallery_backdrop"></div>
+  <div class="gallery-dropdown" id="gallery_dropdown">
+    <div class="gallery-dropdown-header">
+      <div class="gallery-tabs" id="gallery_type_tabs">
+        <button class="gallery-tab active" data-type="image"><svg class="icon-sm" aria-hidden="true"><use href="#icon-image"/></svg> 图片</button>
+        <button class="gallery-tab" data-type="video"><svg class="icon-sm" aria-hidden="true"><use href="#icon-video"/></svg> 视频</button>
+      </div>
+      <div class="gallery-time-filters" id="gallery_time_filters">
+        <button class="gallery-filter active" data-filter="today">今天</button>
+        <button class="gallery-filter" data-filter="1day">1天前</button>
+        <button class="gallery-filter" data-filter="2day">2天前</button>
+        <button class="gallery-filter" data-filter="all">全部</button>
+      </div>
+      <button class="gallery-view-toggle" id="gallery_view_toggle" onclick="toggleGalleryView()" title="切换单图/多图显示"><svg class="icon-sm" aria-hidden="true"><use href="#icon-grid"/></svg> 多图</button>
+      <button class="gallery-close" id="gallery_dropdown_close" aria-label="关闭画廊"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="gallery-single-wrap" id="gallery_single_wrap">
+    <div class="gallery-viewer" id="gallery_viewer">
+      <div class="gallery-empty" id="gallery_default_empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;">
+        <svg class="gallery-empty-svg" width="80" height="80" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="16" width="60" height="48" rx="4"/><circle cx="30" cy="34" r="6"/><path d="M12 60l18-22 14 16 10-8 16 14"/></svg>
+        <span class="gallery-empty-text" style="font-size:13px;font-weight:600;color:var(--text-sub);">暂无内容</span>
+      </div>
+      <div class="gallery-scroll-view" id="gallery_scroll_view" style="display:none">
+        <div class="gallery-scroll-track" id="gallery_scroll_track"></div>
+      </div>
+      <button class="gv-arrow gv-prev" onclick="galleryPrev()" title="上一张">‹</button>
+      <button class="gv-arrow gv-next" onclick="galleryNext()" title="下一张">›</button>
+      <div class="gv-thumbstrip" id="gv_thumbstrip"></div>
+    </div>
+      <div class="gallery-prompt-panel" id="gallery_prompt_panel" style="display:none">
+      <div class="gpp-head"><span>📝 提示词</span><button class="gallery-btn" onclick="toggleGalleryPrompt()" title="收起">×</button></div>
+      <div class="gpp-body" id="gpp_body">--</div>
+      <div class="gpp-foot"><button class="gallery-btn" onclick="copyGalleryPrompt()">📋 复制全文</button></div>
+      </div>
+    </div>
+    <div class="gallery-toolbar" id="gallery_toolbar">
+      <div class="gallery-info" id="gallery_info">
+        <span class="gallery-info-name" id="gallery_info_name">--</span>
+        <span class="gallery-info-time" id="gallery_info_time">--</span>
+      </div>
+      <div class="gallery-counter" id="gallery_counter">0 / 0</div>
+      <div class="gallery-actions">
+        <button class="gallery-btn" id="gallery_accept_btn" onclick="toggleAcceptData()" title="数据接收中"><svg class="icon-sm" aria-hidden="true"><use href="#icon-wifi"/></svg> <span id="gallery_accept_label">接收</span></button>
+        <button class="gallery-btn" id="gallery_prompt_toggle" onclick="toggleGalleryPrompt()" title="提示词面板">📝 提示词</button>
+        <button class="gallery-btn" id="gallery_batch_toggle" onclick="toggleGalleryBatchDel()" title="批量选择"><svg class="icon-sm" aria-hidden="true"><use href="#icon-check-square"/></svg> 批量</button>
+        <button class="gallery-btn gallery-btn-danger" id="gallery_delete_btn" onclick="galleryCurrentDelete()" title="删除"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 删除</button>
+      </div>
+    </div>
+    <!-- v4.13.4: 左缘悬停感应区（媒体面板开启时悬停唤回左侧导航） -->
+    <!-- v4.10.0: 画廊提示词面板（PC 右侧栏）/ 手机复制按钮 -->
+    <button class="gallery-btn" id="gallery_prompt_copy" style="display:none" onclick="copyGalleryPrompt()">📋 复制提示词</button>
+    <!-- Batch Delete Bar (hidden by default) -->
+    <div class="gallery-batch-bar" id="gallery_batch_bar" style="display:none">
+      <span class="gallery-batch-count" id="gallery_batch_count">已选 0 项</span>
+      <div class="gallery-batch-actions">
+        <button class="gallery-btn" id="gallery_batch_exit" onclick="exitBatchMode()">取消</button>
+        <button class="gallery-btn" id="gallery_batch_select_all" onclick="toggleSelectAllGallery()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-check-square"/></svg> 全选</button>
+        <button class="gallery-btn gallery-btn-danger" id="gallery_batch_del_btn" onclick="executeBatchDelete()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 删除选中</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebar_backdrop" data-action="closeSidebar" aria-hidden="true"></div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings_modal" role="dialog" aria-modal="true" aria-label="设置面板" style="display:none" onclick="if(event.target===this && !document.body.classList.contains('page-settings'))closeSettingsModal()">
+    <div class="modal-panel settings-modal">
+      <div class="modal-header">
+        <span class="modal-title"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg> 设置</span>
+        <button class="modal-close" data-action="closeSettings" aria-label="关闭设置"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-col">
+          <!-- 分组 1：路径与连接 -->
+          <div class="settings-group">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg> 路径与连接</div>
+            <div class="settings-row">
+              <span class="settings-label">工作流目录</span>
+              <input type="text" id="cfg_workflow_dir" class="settings-input" aria-label="工作流目录路径" autocomplete="off" placeholder="点击选择文件夹...">
+              <button class="btn btn-xs btn-secondary" data-action="openWorkflowDir" aria-label="打开目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+              <button class="btn btn-xs btn-primary" id="btn_save_wf_dir" onclick="pickDir('workflow')" aria-label="选择并保存工作流目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg> 选择</button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">输出目录</span>
+              <input type="text" id="cfg_output_dir" class="settings-input" aria-label="输出目录路径" autocomplete="off" placeholder="点击选择文件夹...">
+              <button class="btn btn-xs btn-secondary" data-action="openOutputDir" aria-label="打开目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg></button>
+              <button class="btn btn-xs btn-primary" id="btn_save_output_dir" onclick="pickDir('output')" aria-label="选择并保存输出目录"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg> 选择</button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">ComfyUI 地址</span>
+              <input type="text" id="cfg_comfyui_url" value="127.0.0.1:8188" class="settings-input" aria-label="ComfyUI 服务地址" autocomplete="url">
+              <button class="btn btn-xs btn-secondary" data-action="saveComfyUrl" aria-label="保存地址"><svg class="icon-sm" aria-hidden="true"><use href="#icon-save"/></svg></button>
+              <button class="btn btn-xs btn-secondary" data-action="testComfyUI" aria-label="测试连接"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plug"/></svg> 测试</button>
+            </div>
+          </div>
+
+          <!-- 分组 2：部署与外观 -->
+          <div class="settings-group">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-moon"/></svg> 部署与外观</div>
+            <div class="settings-row">
+              <span class="settings-label">部署模式</span>
+              <select id="cfg_deploy_mode" class="settings-input" style="flex:0.6" onchange="saveDeployMode()">
+                <option value="windows">Windows</option>
+                <option value="linux">Linux</option>
+              </select>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px">
+              <input type="checkbox" id="cfg_show_prompt" style="accent-color:var(--primary)" onchange="saveShowPrompt()">
+              <label for="cfg_show_prompt" style="font-size:12px;cursor:pointer">图片消息附带提示词</label>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px">
+              <input type="checkbox" id="cfg_anima_enhance" style="accent-color:var(--primary)" onchange="saveAnimaEnhance()">
+              <label for="cfg_anima_enhance" style="font-size:12px;cursor:pointer" title="按 Anima 官方规范组织随机图提示词：固定开头(masterpiece/best quality/score_7/safe)+补主体数+追加自然语言句。score_7 仅适用于 Base 版模型，Aesthetic 版请关闭">Anima 随机规范增强（Base版）</label>
+            </div>
+            <!-- NSFW 开关已移至魔导书工具栏（🔞 按钮），设置页不再重复 -->
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">结果发送平台</span>
+              <select id="send_platform" onchange="saveSendPlatform()" style="flex:1;min-width:140px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
+                <option value="auto">🔀 自动（跟随来源平台）</option>
+                <option value="qq">🐧 固定发 QQ</option>
+                <option value="feishu">🕊️ 固定发飞书</option>
+                <option value="both">📤 两边都发</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 分组 3：生成与随机 -->
+          <div class="settings-group">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 生成与随机</div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">随机图抽取</span>
+              <select id="random_pick_mode" style="flex:1;min-width:120px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer">
+                <option value="all">📋 全部标签</option>
+                <option value="starred_only">⭐ 仅收藏标签</option>
+                <option value="exclude_starred">🚫 排除收藏标签</option>
+              </select>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">提示词随机输出方式</span>
+              <select id="k2_compose_mode" style="flex:1;min-width:120px;padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer" title="选择随机生成提示词的输出方式">
+                <option value="anima">Anima · 原有方式</option>
+                <option value="k2">K2 · 引擎组句</option>
+              </select>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <span class="settings-label" style="min-width:auto">生成后发送到</span>
+              <select id="cfg_target_platform" onchange="saveTarget()" style="padding:6px 10px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;cursor:pointer;min-width:110px">
+                <option value="qq">🐧 QQ</option>
+                <option value="feishu">🕊️ 飞书</option>
+              </select>
+              <input type="text" id="cfg_target_id" class="settings-input" placeholder="填写 QQ号/QQ群号，或飞书 open_id(ou_xxx)/群 oc_xxx（留空不发送）" style="flex:1;min-width:150px"
+                onchange="saveTarget()">
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px">
+              <input type="checkbox" id="cfg_target_group" style="accent-color:var(--primary)" onchange="saveTarget()">
+              <label for="cfg_target_group" style="font-size:12px;cursor:pointer">目标是群聊（QQ群 / 飞书群，按群消息发送）</label>
+            </div>
+          </div>
+
+          <!-- 分组 3.5：云端数据库同步（v4.3.6：零配置，无自定义源） -->
+          <div class="settings-group">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 云端数据库</div>
+            <div class="settings-row" style="justify-content:flex-start;gap:14px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="cfg_sync_artists" style="accent-color:var(--primary)"><label for="cfg_sync_artists">画师缓存 (4MB)</label>
+              </span>
+              <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+                <input type="checkbox" id="cfg_sync_characters" style="accent-color:var(--primary)"><label for="cfg_sync_characters">角色缓存 (28MB)</label>
+              </span>
+            </div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;align-items:center">
+              <button class="btn btn-xs btn-primary" id="btn_gitee_sync" onclick="runGiteeSync()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg> 📥 同步云端数据库</button>
+              <span id="gitee_sync_state" style="font-size:11px;color:var(--text-sub2)"></span>
+            </div>
+            <div id="gitee_progress_box" style="display:none;margin-top:4px">
+              <div style="height:8px;border-radius:4px;background:var(--card-border,#333);overflow:hidden">
+                <div id="gitee_progress_bar" style="height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--primary-2,#7c6cff));transition:width .4s"></div>
+              </div>
+              <div id="gitee_progress_text" style="font-size:10px;color:var(--text-sub);margin-top:3px;word-break:break-all"></div>
+            </div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">从官方 GitHub 公开镜像拉取最新词库（39 个分类 + K2）覆盖本地，开箱即用无需任何配置；缓存体积大，仅勾选时下载且本地已一致会自动跳过。国内直连 GitHub 偶发超时，失败时再点一次即可。同步完成自动重载词库，无需重启。</div>
+          </div>
+
+          <!-- 分组 4：危险操作 -->
+          <div class="settings-group settings-group-danger">
+            <div class="settings-group-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-warning"/></svg> 危险操作</div>
+            <div class="settings-row" style="justify-content:flex-start;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-xs btn-secondary" data-action="clearLocalCache"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash2"/></svg> 一键清理本地缓存</button>
+              <button class="btn btn-xs btn-danger" data-action="resetAll"><svg class="icon" aria-hidden="true"><use href="#icon-warning"/></svg> 重置所有用户设定</button>
+            </div>
+            <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">清理网页缓存过的所有图片信息：工作流预览图、画廊图片、魔导书画师/角色标签图。清理后首次加载需重新下载图片。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Main Content ==================== -->
+  <div class="main-content">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar" aria-label="工作流侧栏">
+        <div class="card-header">
+          <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-folder-closed"/></svg> 工作流</span>
+          <button class="btn btn-xs btn-secondary" data-action="loadWorkflows" aria-label="刷新工作流"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg></button>
+        </div>
+        <div class="wf-search">
+          <input type="text" id="wf_search" placeholder="搜索..." oninput="filterWorkflows()" aria-label="搜索工作流" autocomplete="off">
+        </div>
+        <div style="padding:0 12px 6px">
+          <button class="btn btn-xs btn-secondary" data-action="showWfMgrModal" style="width:100%"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> 工作流独立/编辑</button>
+        </div>
+        <div class="wf-list" id="wf_list" role="list" aria-label="工作流列表">
+          <div class="wf-skeleton" id="wf_skeleton">
+            <div class="skeleton-line" style="width:85%"></div>
+            <div class="skeleton-line" style="width:60%"></div>
+            <div class="skeleton-line" style="width:75%"></div>
+            <div class="skeleton-line" style="width:45%"></div>
+            <div class="skeleton-line" style="width:70%"></div>
+          </div>
+          <div class="empty-state" id="wf_empty" style="display:none">暂无工作流</div>
+        </div>
+    </nav>
+
+    <!-- Canvas -->
+    <main class="canvas">
+      <!-- 生成操作区（卡片化：生成 / 随机 / 数量 / 停止） -->
+      <div class="gen-quick" id="gen_quick_bar">
+        <button id="gen_btn" class="gq-btn gq-primary" onclick="webuiGenerate(false)"><svg class="icon-sm" aria-hidden="true"><use href="#icon-check"/></svg> 生成</button>
+        <button id="rand_btn" class="gq-btn gq-secondary" aria-label="从随机池抽取标签生成" onclick="webuiGenerate(true)"><svg class="icon-sm" aria-hidden="true"><use href="#icon-shuffle"/></svg> 随机</button>
+        <span class="gq-divider" aria-hidden="true"></span>
+        <label class="gq-count" title="生成几张">
+          <span>数量</span>
+          <select id="gen_count" aria-label="生成数量" onchange="window._genCount=parseInt(this.value,10)||1">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+          </select>
+        </label>
+        <button id="stop_btn" class="gq-btn gq-stop" onclick="webuiStop()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-ban"/></svg> 停止</button>
+      </div>
+
+      <div class="card" style="display:none" id="conn_settings">
+        <div class="card-header"><span class="card-title">🖥 ComfyUI 连接</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="cfg_conn_url" value="127.0.0.1:8188" class="settings-input" style="flex:2;min-width:120px" aria-label="ComfyUI 地址">
+          <input type="text" id="cfg_conn_input_dir" placeholder="input 目录" class="settings-input" style="flex:1;min-width:80px" aria-label="ComfyUI input 目录">
+          <button class="btn btn-sm btn-secondary" data-action="saveComfyUrl">💾</button>
+          <button class="btn btn-sm btn-secondary" data-action="testComfyUI">🔌 测试</button>
+        </div>
+      </div>
+
+      <!-- Prep Panel -->
+      <div class="prep-panel" id="prep_panel">
+        <div class="prep-section" id="prep_positive" style="display:none">
+          <div class="section-title section-title-row">
+            <span><svg class="icon-sm" aria-hidden="true"><use href="#icon-check"/></svg> 正面提示词 <span class="section-badge" id="prep_pos_node_badge">节点: 自动</span></span>
+            <button class="btn btn-xs btn-secondary" data-action="showGrimoire" id="grimoire_btn_prompt" title="打开魔导书">
+              <svg class="icon-sm" aria-hidden="true"><use href="#icon-book"/></svg> 魔导书
+            </button>
+          </div>
+          <textarea id="prompt_textarea" placeholder="输入正面提示词..." oninput="autoSavePrompt()" aria-label="正面提示词输入框"></textarea>
+          <!-- 魔导书固定标签 / 随机池展示区（真实注入正面提示词的标签） -->
+          <div id="prompt_pins_bar" class="prompt-pins-bar" style="display:none"></div>
+        </div>
+        
+        <div class="prep-section" id="prep_negative" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-prohibited"/></svg> 负面提示词 <span class="section-badge" id="prep_neg_node_badge">节点: 自动</span></div>
+          <textarea id="neg_textarea" placeholder="输入负面提示词..." oninput="autoSaveNeg()" aria-label="负面提示词输入框"></textarea>
+        </div>
+        
+        <div class="prep-section" id="prep_resolution" style="display:none">
+          <div class="section-title" onclick="togglePrepSection(this)" title="点击折叠/展开"><svg class="icon-sm" aria-hidden="true"><use href="#icon-ruler"/></svg> 分辨率 <span class="section-badge" id="prep_res_node_badge">节点: 自动</span><span class="collapse-arrow">▼</span></div>
+          <!-- 官方原生 ResolutionSelector 节点方案（检测到官方节点时显示） -->
+          <div id="official_res_panel" style="display:none">
+            <div class="official-res-row">
+              <label class="official-res-label">宽高比</label>
+              <select id="official_aspect_ratio" class="official-res-select" onchange="setOfficialRes()"></select>
+            </div>
+            <div class="official-res-row">
+              <label class="official-res-label">百万像素</label>
+              <input type="number" id="official_megapixels" class="official-res-input" min="0.1" max="16" step="0.1" value="1.0" onchange="setOfficialRes()" oninput="setOfficialResDebounced()">
+              <span class="official-res-unit">MP</span>
+            </div>
+            <div class="official-res-row">
+              <label class="official-res-label">倍数</label>
+              <input type="number" id="official_multiple" class="official-res-input" min="8" max="128" step="4" value="32" onchange="setOfficialRes()" oninput="setOfficialResDebounced()">
+            </div>
+          </div>
+          <!-- 官方原生时长节点方案（检测到 PrimitiveFloat/Float 节点时显示） -->
+          <div id="official_duration_panel" style="display:none">
+            <div class="official-res-row">
+              <label class="official-res-label">视频时长</label>
+              <input type="number" id="official_duration" class="official-res-input" min="1" step="1" value="5" onchange="setOfficialDuration()" oninput="setOfficialDurationDebounced()">
+              <span class="official-res-unit">秒</span>
+            </div>
+          </div>
+          <!-- 旧版方案：无官方节点时由 updateResPanels() 统一控制显示（默认隐藏） -->
+          <div id="legacy_res_panel" style="display:none">
+            <div class="res-presets" id="res_presets" role="group" aria-label="分辨率预设">
+              <button class="res-preset-btn preset-480p" data-action="setRes480p">480p SD</button>
+              <button class="res-preset-btn preset-720p active" data-action="setRes720p">720p 标清</button>
+              <button class="res-preset-btn preset-960p" data-action="setRes960p">960p 高清+</button>
+              <button class="res-preset-btn preset-1080p" data-action="setRes1080p">1080p 高清</button>
+              <button class="res-preset-btn preset-2K" data-action="setRes2K">2K 超清</button>
+              <button class="res-preset-btn preset-4K" data-action="setRes4K">4K 原画</button>
+            </div>
+            <div class="res-info" id="res_info">分辨率: 480 x 852</div>
+            <div class="ratio-group" id="ratio_group" role="group" aria-label="比例选择">
+              <button class="ratio-btn" data-r="9:16" data-action="setRatio">9:16</button>
+              <button class="ratio-btn active" data-r="1:1" data-action="setRatio">1:1</button>
+              <button class="ratio-btn" data-r="16:9" data-action="setRatio">16:9</button>
+              <button class="ratio-btn" data-r="21:9" data-action="setRatio">21:9</button>
+              <button class="ratio-btn" data-r="3:4" data-action="setRatio">3:4</button>
+              <button class="ratio-btn" data-r="4:3" data-action="setRatio">4:3</button>
+              <button class="ratio-btn" data-r="2:3" data-action="setRatio">2:3</button>
+              <button class="ratio-btn" data-r="3:2" data-action="setRatio">3:2</button>
+            </div>
+            <div class="vram-warn" id="vram_warn_2k"><svg class="icon-sm" aria-hidden="true"><use href="#icon-warning"/></svg> 2K需要12GB+显存</div>
+            <div class="vram-warn" id="vram_warn_4k"><svg class="icon-sm" aria-hidden="true"><use href="#icon-warning"/></svg> 4K需要24GB+显存</div>
+          </div>
+          <!-- 视频专属：BasicScheduler 基本调度器（scheduler/steps/denoise） -->
+          <div id="basic_scheduler_panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--card-border)">
+            <div class="official-res-row" style="align-items:center">
+              <label class="official-res-label">调度器</label>
+              <select id="bs_scheduler_select" class="official-res-select" onchange="saveParams()"></select>
+            </div>
+            <div class="official-res-row">
+              <label class="official-res-label">步数</label>
+              <input type="number" id="bs_steps_input" class="official-res-input" min="1" max="100" step="1" value="20" onchange="saveParams()">
+            </div>
+            <div class="official-res-row">
+              <label class="official-res-label">降噪</label>
+              <input type="number" id="bs_denoise_input" class="official-res-input" min="0" max="1" step="0.05" value="1" onchange="saveParams()">
+            </div>
+          </div>
+        </div>
+
+        <div class="prep-section" id="prep_upload_image" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <span class="section-badge" id="prep_img_node_badge">节点: 自动</span></div>
+          <div id="upload_image_rows"></div>
+        </div>
+
+        <div class="prep-section" id="prep_unet_models" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-model"/></svg> UNet 模型 <span class="section-badge" id="prep_unet_badge">节点: 自动</span></div>
+          <div id="unet_model_list"></div>
+        </div>
+
+        <div class="prep-section" id="prep_loras" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 管理 <span class="section-badge" id="prep_lora_node_badge">节点: 自动</span></div>
+          <div id="lora_panel_content"></div>
+        </div>
+
+        <div class="prep-section" id="prep_styles" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-style"/></svg> 风格预设 <span class="section-badge" id="prep_style_node_badge">节点: 自动</span></div>
+          <div id="style_panel_content"></div>
+        </div>
+
+        <div class="prep-section" id="prep_expanded_text" style="display:none">
+          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-document"/></svg> 扩写后文本 <span class="section-badge" id="prep_exp_node_badge">节点: 无</span></div>
+          <div class="param-row" style="padding:8px 16px;font-size:11px;color:var(--text-sub)">将从此节点读取扩写后的提示词，取代原始输入存入提示词记录</div>
+        </div>
+
+        <div class="prep-section" id="prep_unassigned_hint" style="display:none">
+          <div class="section-title"><svg class="icon" aria-hidden="true"><use href="#icon-target"/></svg> 节点参数</div>
+          <div class="empty-state empty-state-compact" style="padding:24px 16px;">
+            <svg class="empty-state-icon" aria-hidden="true"><use href="#icon-box"/></svg>
+            <p class="empty-state-desc">下方节点列表中指定节点后，对应参数区域将自动显示</p>
+          </div>
+        </div>
+
+        <!-- 🚀 生成 / 🎲 随机图 / 数量 三控件并排（配置了"生成发送QQ"则结果私聊发送） -->
+              </div>
+
+      <!-- Tool Row -->
+      <div class="tool-row">
+        <div class="card tool-card" id="groups_bar">
+          <div class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-ribbon"/></svg> 组控制 <span class="text-muted" id="groups_source"></span></div>
+          <div class="groups-tags" id="groups_list"></div>
+          <div class="groups-actions">
+            <button class="btn btn-xs btn-secondary" data-action="extractGroups" id="btn_extract"><svg class="icon" aria-hidden="true"><use href="#icon-box"/></svg> 提取</button>
+            <button class="btn btn-xs btn-danger" data-action="clearExtractGroups" id="btn_clear_extract" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-trash"/></svg> 清除组</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node List -->
+      <div class="card">
+        <div class="card-header nodes-header">
+          <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 节点列表</span>
+          <button class="btn btn-xs btn-danger" id="clear_all_roles_btn" data-action="clearAllNodeRoles" aria-label="清除所有指定" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 清除所有指定</button>
+        </div>
+        <input type="text" id="search_nodes" placeholder="搜索节点名称或ID..." oninput="filterNodes()" aria-label="搜索节点" class="settings-input" style="margin-bottom:6px" autocomplete="off">
+        <div class="node-help-bar"><span class="node-help-dot pos"></span><img class="xin-ic" src="/theme-xin-icon-role-prompt.webp" alt="">正面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span><img class="xin-ic" src="/theme-xin-icon-role-negative.webp" alt="">负面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span><img class="xin-ic" src="/theme-xin-icon-role-load.webp" alt="">图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span><img class="xin-ic" src="/theme-xin-icon-role-res.webp" alt="">尺寸 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot exp"></span><img class="xin-ic" src="/theme-xin-icon-role-exp.webp" alt="">文本 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot lora"></span><img class="xin-ic" src="/theme-xin-icon-role-lora.webp" alt="">Lora <span style="color:var(--text-muted)">·</span> <span class="node-help-dot dis"></span><img class="xin-ic" src="/theme-xin-icon-role-disabled.webp" alt="">禁用</div>
+        <div class="node-grid" id="node_grid">
+          <div class="empty-state" style="grid-column:1/-1">请先选择工作流</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== ⚡ 工作流独立页（PC） ==================== -->
+  <div class="wf-page" id="wf_page">
+    <div class="wf-page-header">
+      <div class="wf-page-title-wrap">
+        <span class="wf-page-title"><svg class="icon" aria-hidden="true"><use href="#icon-folder-closed"/></svg> 工作流</span>
+        <span class="wf-page-count" id="wf_page_count">0</span>
+      </div>
+      <div class="wf-page-tools">
+        <input type="text" id="wf_page_search" placeholder="搜索工作流..." oninput="filterWorkflowsPage()" autocomplete="off">
+        <button class="btn btn-xs btn-secondary" data-action="loadWorkflows" aria-label="刷新工作流"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg></button>
+      </div>
+    </div>
+    <div class="wf-page-grid" id="wf_page_grid"></div>
+  </div>
+</div>
+
+<!-- ==================== Bottom Nav (Mobile) ==================== -->
+<nav class="bottom-nav" id="bottom_nav" aria-label="底部导航">
+  <button class="bn-item" data-action="toggleSidebar" aria-label="工作流">
+    <span class="bn-icon"><img src="/theme-xin-icon-nav-workflow.webp" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-4px"></span>工作流
+  </button>
+  <button class="bn-item" data-action="showGrimoire" aria-label="魔导书" id="bn_grimoire">
+    <span class="bn-icon"><img src="/theme-xin-icon-grimoire.webp" alt="" style="width:24px;height:24px;object-fit:contain;filter:drop-shadow(0 1px 3px oklch(0% 0 0 / 0.3))"></span>魔导书
+  </button>
+  <button class="bn-item" data-action="toggleGalleryDropdown" aria-label="画廊">
+    <span class="bn-icon"><img src="/theme-xin-icon-nav-gallery.webp" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-4px"></span>画廊
+  </button>
+  <button class="bn-item bn-generate" data-action="refreshAll" aria-label="生成" id="bn_generate">
+    <span class="bn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg></span>生成
+  </button>
+  <button class="bn-item" data-action="toggleSettings" aria-label="设置">
+    <span class="bn-icon"><img src="/theme-xin-icon-nav-settings.webp" alt="" style="width:24px;height:24px;object-fit:contain;vertical-align:-4px"></span>设置
+  </button>
+</nav>
+
+<!-- ==================== 🖼️ 媒体资产侧边栏 ==================== -->
+<aside class="media-panel" id="media_panel" aria-label="媒体资产">
+  <div class="media-panel-head">
+    <span class="media-panel-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-image"/></svg> 媒体资产</span>
+    <button class="media-panel-close" data-action="toggleMediaPanel" aria-label="关闭媒体资产"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+  </div>
+  <div class="media-panel-tabs">
+    <button class="mp-tab active" data-mp="image" onclick="setMpTab('image')">图片</button>
+    <button class="mp-tab" data-mp="video" onclick="setMpTab('video')">视频</button>
+  </div>
+  <input class="mp-search" id="mp_search" type="text" placeholder="搜索资产名称..." aria-label="搜索资产">
+  <div class="media-panel-list" id="media_panel_list"><div class="mp-empty">暂无资产</div></div>
+</aside>
+
+<!-- ==================== Node Detail Modal ==================== -->
+<div class="modal" id="node_modal" role="dialog" aria-modal="true" aria-label="节点详情">
+  <div class="modal-content">
+    <button class="modal-close" data-action="closeNodeModal" aria-label="关闭节点详情"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    <h3 id="node_modal_title">#节点详情</h3>
+    <div id="node_modal_body"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-sm btn-secondary" data-action="closeNodeModal">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 魔导书 Bottom Sheet ==================== -->
+<div class="grimoire-backdrop" id="grimoire_backdrop" onclick="hideGrimoire()"></div>
+<div class="grimoire-sheet" id="grimoire_sheet">
+  <div class="grip-bar"></div>
+  <!-- Header -->
+  <div class="grimoire-header">
+    <button class="btn btn-xs btn-secondary" id="grm_back_btn" onclick="backToGrimoireSources()" style="display:none;font-size:12px;padding:0 4px;min-height:24px;background:transparent;border:none;color:var(--text-sub)"><svg class="icon-sm" aria-hidden="true"><use href="#icon-arrow-left"/></svg></button>
+    <svg class="icon" aria-hidden="true" style="color:var(--primary)"><use href="#icon-book"/></svg>
+    <h2>魔导书</h2>
+    <label class="toggle-label" title="开启后 /文生图 命令会自动追加固定的标签到提示词">
+      <span>启用</span>
+      <div class="toggle-switch" id="grimoire_toggle" onclick="toggleGrimoireSwitch()">
+        <div class="toggle-knob"></div>
+      </div>
+    </label>
+    <!-- 模型切换 + 添加子分类 -->
+    <div class="grm-model-select" style="display:flex;align-items:center;gap:4px;margin:0 4px">
+      <select id="grm_model_selector" class="grm-model-dropdown" onchange="changeGrimoireModel(this.value)" style="font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);cursor:pointer;max-width:80px">
+        <option value="anima">Anima</option>
+      </select>
+      <button class="btn btn-xs btn-secondary" onclick="addGrimoireSubCategory('','')" title="添加子分类" style="font-size:14px;padding:0 6px;line-height:20px">＋</button>
+    </div>
+    <button class="btn btn-xs btn-secondary" onclick="hideGrimoire()" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+  </div>
+
+  <!-- Body -->
+  <div class="grimoire-body">
+    <!-- Left: Sources -->
+    <div class="grimoire-sources">
+      <div class="grimoire-source-list" id="grimoire_source_list">
+        <div style="padding:20px;text-align:center;color:var(--text-sub2);font-size:12px">加载中...</div>
+      </div>
+    </div>
+
+    <!-- Right: Detail -->
+    <div class="grimoire-detail">
+      <div class="grimoire-detail-header">
+        <span class="grimoire-detail-title" id="grimoire_detail_title">请选择数据源</span>
+        <span class="grimoire-detail-count" id="grimoire_detail_count"></span>
+        <div class="grimoire-cat-filter" id="grimoire_cat_filter" style="display:none">
+          <div class="grm-cat-dropdown" id="grm_cat_dropdown">
+            <button class="grm-cat-trigger" id="grm_cat_trigger" onclick="toggleGrmCatDropdown()" aria-expanded="false" aria-haspopup="listbox" aria-label="选择IP分类">
+              <span id="grm_cat_label">全部IP分类</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="grm-cat-panel" id="grm_cat_panel" style="display:none" role="listbox" aria-label="IP分类列表">
+              <input type="text" class="grm-cat-search" id="grm_cat_search_input" placeholder="搜索IP分类..." oninput="filterGrmCatOptions()" autocomplete="off">
+              <div class="grm-cat-options" id="grm_cat_options">
+                <div class="grm-cat-option active" data-value="" role="option" onclick="selectGrmCatOption('')">全部</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <!-- ★ Anima 随机 NSFW 开关（放在魔导书里，手机端同样可见）
+             关闭（默认）= 过滤裸体/性行为/性器官/BDSM（内衣/泳装/透视保留）
+             开启 = 完全放开，不做任何过滤 -->
+        <button class="btn btn-xs btn-secondary" id="grm_rules_btn" onclick="toggleGrimoireRules()" title="LLM 提示词规则：文生图规划 / 图片反推（QQ/飞书对话生成时注入给 AI）">📜 <span class="desktop-only">规则</span></button>
+        <button class="btn btn-xs btn-secondary" id="grm_anima_nsfw_btn" onclick="toggleAnimaNsfw()" title="Anima 随机是否允许 NSFW：关闭时过滤裸体/性行为/性器官/BDSM（内衣泳装保留），开启后完全放开">🔞 <span id="grm_anima_nsfw_text">SFW</span></button>
+        <input type="text" class="grimoire-detail-search desktop-only" id="grimoire_data_search" placeholder="搜索条目..." oninput="filterGrimoireData()">
+        <button class="btn btn-xs btn-secondary" id="btn_grimoire_edit_toggle" onclick="toggleGrimoireEditMode()" title="切换编辑模式"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> <span id="grm_edit_toggle_text">编辑</span></button>
+        <button class="btn btn-xs btn-secondary" id="btn_grimoire_batch" onclick="showGrimoireBatchModal()" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-upload"/></svg> <span>批量导入</span></button>
+        <button class="btn btn-xs btn-primary" id="btn_grimoire_add" onclick="showGrimoireAddModal()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg> <span class="desktop-only">新增</span></button>
+      </div>
+      <div class="grimoire-data-table" id="grimoire_data_table">
+        <div style="padding:40px;text-align:center;color:var(--text-sub2);font-size:13px">请在左侧选择一个数据源</div>
+      </div>
+      <div class="grimoire-pagination" id="grimoire_pagination" style="display:none">
+        <button class="btn btn-xs btn-secondary" id="btn_grimoire_prev" onclick="grimoirePage(-1)">← 上一页</button>
+        <span id="grimoire_page_info" style="font-size:11px;color:var(--text-sub)"></span>
+        <input type="number" id="grimoire_page_jump" class="grm-page-jump" min="1" value="1" placeholder="页" onkeydown="if(event.key==='Enter')jumpGrimoirePage()">
+        <button class="btn btn-xs btn-secondary" onclick="jumpGrimoirePage()">跳转</button>
+        <button class="btn btn-xs btn-secondary" id="btn_grimoire_next" onclick="grimoirePage(1)">下一页 →</button>
+      </div>
+    </div>
+    <!-- 【LLM 提示词规则】规则库管理（文生图规划 / 图片反推·多图结构化），覆盖式面板 -->
+    <div class="grimoire-rules-panel" id="grimoire_rules_panel" style="display:none;flex:1;min-height:0;overflow:auto;padding:10px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-weight:700;font-size:13px">📜 LLM 提示词规则</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-secondary" onclick="toggleGrimoireRules()">关闭</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-xs btn-primary" id="grm_rules_tab_t2i" onclick="grimRulesTab('t2i')">文生图·纯文字规划</button>
+        <button class="btn btn-xs btn-secondary" id="grm_rules_tab_imgrev" onclick="grimRulesTab('imgrev')">图片反推·多图结构化</button>
+        <button class="btn btn-xs btn-secondary" id="grm_rules_tab_bind" onclick="grimRulesTab('bind')">工作流绑定</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-xs btn-primary" onclick="grimRulesAdd()">＋新增规则</button>
+      </div>
+      <div id="grm_rules_list" style="display:flex;flex-direction:column;gap:4px"></div>
+      <div id="grm_rules_editor" style="display:none;flex-direction:column;gap:6px;margin-top:8px">
+        <input type="text" id="grm_rule_name" placeholder="规则名称" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px">
+        <textarea id="grm_rule_content" rows="12" placeholder="规则内容：写给 AI 的提示词改写规则（对话生成时注入）" style="padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:12px;font-family:inherit;line-height:1.6"></textarea>
+        <div style="display:flex;gap:12px;align-items:center;font-size:11px;color:var(--text-sub);flex-wrap:wrap">
+          <span style="font-weight:600">提交前硬校验（插件自动修正/警告，LLM 违规兜底）：</span>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="grm_rule_chk_quality" style="accent-color:var(--primary)"> 剥离质量词</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="grm_rule_chk_weights" style="accent-color:var(--primary)"> 剥离权重语法</label>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer">逗号上限(0=关) <input type="number" id="grm_rule_chk_commas" min="0" max="60" value="0" style="width:52px;padding:2px 4px;border-radius:6px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text)"></label>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-xs btn-primary" onclick="grimRulesSave()">保存</button>
+          <button class="btn btn-xs btn-secondary" onclick="grimRulesCancel()">取消</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--text-sub2);border-top:1px solid var(--card-border)">
+        默认全部不注入。到「工作流绑定」标签给工作流选定规则后，QQ/飞书对话要求生成时才会注入给 AI（文生图规则 → comfyui_draw；图片反推规则 → comfyui_img2img / comfyui_video）。标签化词库与 K2 仍可由 AI 自行选择使用。
+      </div>
+    </div>
+    <!-- 【K2 控制】K2 模式专属控制面板（替代 anima 标签浏览，仅 K2 模式显示；对应 JS 见【K2 控制 · 前端】） -->
+    <div class="grimoire-k2-panel" id="grimoire_k2_panel" style="display:none">
+      <div class="grm-k2-toolbar" style="flex-wrap:wrap">
+        <span class="grm-k2-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lock"/></svg> K2 字段锁定 <span class="section-badge" id="grimoire_k2_badge">随机</span></span>
+        <button class="btn btn-xs btn-secondary" id="grm_k2_nsfw_btn" onclick="toggleK2Nsfw()" title="K2 随机是否允许 NSFW（交合/裸露强化）">🔞 <span id="grm_k2_nsfw_text">NSFW关</span></button>
+        <!--【K2】生成随机：调用K2引擎组一句中文提示词并「直接复制到剪贴板」（不生成图片、不回填输入框）。仅K2模式可见（面板本身只在K2模式显示） -->
+        <button class="btn btn-xs btn-primary" id="grm_k2_rand_copy_btn" onclick="k2ComposeAndCopy()" title="用K2引擎随机组一句中文提示词，并直接复制到剪贴板（遵守当前字段锁定/NSFW/预设）"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> 生成随机</button>
+        <span style="display:inline-flex;gap:4px;margin-left:2px">
+          <button class="btn btn-xs btn-secondary" id="grm_k2_all_toggle" onclick="toggleAllK2Locks()" title="一键全选(全部随机) / 反选(全部排除)"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_k2_all_text">全选随机</span></button>
+          <button class="btn btn-xs btn-secondary" id="grm_k2_collapse_all" onclick="toggleAllK2SecCollapse()" title="展开/收起全部分类"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder"/></svg> <span id="grm_k2_collapse_text">收起全部</span></button>
+        </span>
+        <span style="display:inline-flex;gap:4px;align-items:center;position:relative">
+          <button id="grm_k2_preset_btn" onclick="showK2PresetDropdown()" style="font-size:10px;padding:3px 8px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit"><svg class="icon-xs" aria-hidden="true"><use href="#icon-bookmark"/></svg> <span id="grm_k2_preset_label">预设</span></button>
+          <button class="btn btn-xs btn-secondary" onclick="deleteK2Preset()" title="删除当前选中的 K2 预设" style="font-size:9px;padding:0 4px;min-height:18px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--card-border);color:var(--text-sub);cursor:pointer">✕</button>
+          <div id="grm_k2_preset_menu" style="display:none;position:absolute;top:100%;left:0;min-width:150px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-xs);box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;padding:4px 0;margin-top:4px"></div>
+        </span>
+      </div>
+      <div class="param-row" style="padding:6px 12px;font-size:11px;color:var(--text-sub)">固定想锁定的字段（如年龄=18岁）、或关闭不想出现的分类；其余字段每次随机重掷。设置同时作用于 WebUI 与 QQ /随机图。</div>
+      <div id="k2_locks_panel" style="padding:0 12px 12px"></div>
+    </div>
+  </div>
+  <!-- PC 右下角缩放手柄（拖动自由调整大小） -->
+  <div class="grimoire-resize-handle" id="grimoire_resize_handle" title="拖动调整大小"></div>
+</div>
+
+<!-- ===== 魔导书图片放大灯箱 ===== -->
+<div class="grm-img-lightbox" id="grm_lightbox" onclick="closeGrimoireLightbox()" role="dialog" aria-modal="true" aria-label="图片预览">
+  <button class="lightbox-close" onclick="closeGrimoireLightbox(event)" aria-label="关闭">✕</button>
+  <img id="grm_lightbox_img" src="" alt="">
+</div>
+
+<!-- ==================== 魔导书 Add/Edit Modal ==================== -->
+<div class="modal-overlay grm-item-modal" id="grimoire_item_modal" style="display:none" onclick="if(event.target===this)hideModal('grimoire_item_modal')" role="dialog" aria-modal="true" aria-label="编辑条目">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="grimoire_item_modal_title">新增条目</span>
+      <button class="modal-close" onclick="hideModal('grimoire_item_modal')" aria-label="关闭"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="modal-body grm-item-form">
+      <div class="grm-item-source">
+        <svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg>
+        <span>数据源: <strong id="grm_current_source_label">请先选择数据源</strong></span>
+      </div>
+      <div class="grm-item-source" id="grm_current_category_row" style="display:none">
+        <svg class="icon-sm" aria-hidden="true"><use href="#icon-grid"/></svg>
+        <span>所属分类: <strong id="grm_current_category_label">-</strong></span>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_category">IP 分类</label>
+        <div class="grm-cat-dropdown grm-cat-dropdown--form" id="grm_category_dropdown">
+          <button class="grm-cat-trigger" id="grm_category_trigger" type="button" onclick="toggleGrmCategoryDropdown()" aria-expanded="false" aria-haspopup="listbox" aria-label="选择IP分类">
+            <span id="grm_category_trigger_text">未分类</span>
+            <svg class="icon-xs" aria-hidden="true"><use href="#icon-chevron-down"/></svg>
+          </button>
+          <div class="grm-cat-panel" id="grm_category_panel" style="display:none" role="listbox" aria-label="IP分类列表">
+            <input type="text" class="grm-cat-search" id="grm_category_search_input" placeholder="搜索IP分类..." oninput="filterGrmCategoryDropdown()" autocomplete="off">
+            <div class="grm-cat-options" id="grm_category_options">
+              <div class="grm-cat-option active" data-value="" role="option" onclick="selectGrmCategoryOption('')">未分类</div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="grm_category" value="">
+        <span class="grm-item-hint">选择后该条目会出现在对应 IP 分类筛选下</span>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_name">英文名称 / 原名 <span class="required">*</span></label>
+        <input type="text" id="grm_name" class="settings-input" placeholder="如：corner standing">
+        <span class="grm-item-hint">原始标签名，用于映射和搜索</span>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_name_cn">中文名称</label>
+        <input type="text" id="grm_name_cn" class="settings-input" placeholder="如：墙角站立">
+        <span class="grm-item-hint">显示用中文翻译，留空则显示原名</span>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_tags">标签（tags）<span class="required">*</span></label>
+        <textarea id="grm_tags" class="settings-input grm-item-textarea" placeholder="corner standing sex, pinned"></textarea>
+        <span class="grm-item-hint">真正传给 ComfyUI 的英文提示词标签</span>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_style">风格（style）</label>
+        <select id="grm_style" class="settings-input">
+          <option value="general">通用 general</option>
+          <option value="anime">二次元 anime</option>
+          <option value="realistic">写实 realistic</option>
+        </select>
+      </div>
+      <div class="grm-item-field">
+        <label class="grm-item-label" for="grm_note">备注（可选）</label>
+        <textarea id="grm_note" class="settings-input grm-item-textarea" placeholder="添加备注说明..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('grimoire_item_modal')">取消</button>
+      <button class="btn btn-primary" id="btn_grm_save" onclick="saveGrimoireItem()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 魔导书批量导入 Modal ==================== -->
+<div class="modal-overlay batch-import-modal" id="grimoire_batch_modal" style="display:none"
+     onclick="if(event.target===this)hideModal('grimoire_batch_modal')" role="dialog" aria-modal="true" aria-label="批量导入">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title"><svg class="icon" aria-hidden="true"><use href="#icon-upload"/></svg> 批量导入</span>
+      <button class="modal-close" onclick="hideModal('grimoire_batch_modal')" aria-label="关闭"><svg class="icon-sm" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+      <!-- 导入目标 -->
+      <div class="batch-import-section">
+        <div class="batch-import-source-row">
+          <svg class="icon-sm" aria-hidden="true"><use href="#icon-folder-open"/></svg>
+          <span>导入到:</span>
+          <span class="batch-import-source-name" id="grm_batch_source_label">请先选择数据源</span>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="batch-import-section">
+        <div class="batch-import-section-label"><svg class="icon-sm" aria-hidden="true"><use href="#icon-upload-cloud"/></svg> 上传 JSON 文件</div>
+        <div class="batch-import-dropzone" id="batch_dropzone" tabindex="0" role="button" aria-label="点击或拖拽上传JSON文件">
+          <svg class="batch-import-dropzone-icon" aria-hidden="true" id="batch_dropzone_icon"><use href="#icon-upload-cloud"/></svg>
+          <div class="batch-import-dropzone-text" id="batch_dropzone_text">
+            拖拽 JSON 文件到此处<br>
+            或点击选择
+          </div>
+          <div class="batch-import-dropzone-hint">支持 .json 格式</div>
+          <div class="batch-import-file" id="batch_file_info" style="display:none">
+            <svg class="batch-import-file-icon icon-sm" aria-hidden="true"><use href="#icon-document"/></svg>
+            <span class="batch-import-file-name" id="batch_file_name"></span>
+            <span class="batch-import-file-remove" id="batch_file_remove" onclick="clearBatchFile()" title="移除文件"><svg class="icon-xs" aria-hidden="true"><use href="#icon-x"/></svg></span>
+          </div>
+          <input type="file" id="batch_file_input" accept=".json" style="display:none" onchange="handleBatchFile(this)">
+        </div>
+      </div>
+
+      <!-- Or Manual Input -->
+      <div class="batch-import-section">
+        <div class="batch-import-divider"><span>或手动输入 JSON</span></div>
+        <textarea id="grm_batch_input" class="settings-input" rows="4" style="resize:vertical;font-size:12px;font-family:'JetBrains Mono',monospace;line-height:1.6;min-height:80px" placeholder='[
+  {"name": "携手散步", "tags": "holding hands walking, couple stroll"},
+  {"name": "晨间拥抱", "tags": "morning hug, warm embrace"}
+]' oninput="updateBatchPreview(this.value)"></textarea>
+        <div style="font-size:10px;color:var(--text-sub2);line-height:1.5">
+          每条数据包含 <code>name</code>（名称）和 <code>tags</code>（英文标签）。可选：<code>note</code>、<code>style</code>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="batch-import-section" id="batch_preview_section" style="display:none">
+        <div class="batch-import-section-label"><svg class="icon-sm" aria-hidden="true"><use href="#icon-grid"/></svg> 预览（<span id="batch_preview_count">0</span> 条）</div>
+        <div class="batch-import-preview" id="batch_preview_list"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="batch-import-footer">
+        <div class="batch-import-count" id="batch_import_count"></div>
+        <div class="batch-import-actions">
+          <button class="btn btn-sm btn-secondary" onclick="hideModal('grimoire_batch_modal')">取消</button>
+          <button class="btn btn-sm btn-primary" id="btn_grm_batch_import" onclick="executeGrimoireBatchImport()">
+            <svg class="icon-sm" aria-hidden="true"><use href="#icon-upload"/></svg> 导入
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input for batch upload -->
+<input type="file" id="batch_file_input_hidden" accept=".json" style="display:none">
+
+<!-- ==================== Background Modal ==================== -->
+<div class="modal" id="bg_modal" role="dialog" aria-modal="true" aria-label="背景设置">
+  <div class="modal-content" style="max-width:440px">
+    <button class="modal-close" data-action="closeBgModal" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
+    <h3><svg class="icon" aria-hidden="true"><use href="#icon-image"/></svg> 背景设置</h3>
+    <div class="bg-preview" id="bg_preview" data-action="pickBgFile" role="button" tabindex="0" aria-label="上传背景图片" onkeydown="if(event.key==='Enter')document.getElementById('bg_file_input').click()" style="height:140px;border-radius:var(--radius-sm);border:1px dashed var(--card-border);display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;margin-bottom:10px;cursor:pointer;">
+      <span id="bg_preview_text" style="font-size:12px;color:var(--text-sub2)">点击或拖拽上传图片</span>
+    </div>
+    <input type="file" id="bg_file_input" accept="image/*" style="display:none" onchange="handleBgFile(event)">
+    <div class="bg-crop-row" id="bg_ratio_row" style="display:none;display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">
+      <button class="bg-crop-btn active" data-action="setBgCropRatio" data-ratio="free" style="padding:4px 12px;border-radius:12px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:11px;cursor:pointer;min-height:30px;">自由</button>
+      <button class="bg-crop-btn" data-action="setBgCropRatio" data-ratio="16:9" style="padding:4px 12px;border-radius:12px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:11px;cursor:pointer;min-height:30px;">16:9</button>
+      <button class="bg-crop-btn" data-action="setBgCropRatio" data-ratio="4:3" style="padding:4px 12px;border-radius:12px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:11px;cursor:pointer;min-height:30px;">4:3</button>
+      <button class="bg-crop-btn" data-action="setBgCropRatio" data-ratio="1:1" style="padding:4px 12px;border-radius:12px;border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);font-size:11px;cursor:pointer;min-height:30px;">1:1</button>
+    </div>
+    <div class="bg-slider-row" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <label style="font-size:11px;color:var(--text-sub);min-width:30px;">模糊</label>
+      <input type="range" id="bg_blur_slider" min="0" max="30" value="0" oninput="updateBgPreview()" aria-label="背景模糊程度" style="flex:1;height:4px;">
+      <span class="val" id="bg_blur_val" style="font-size:11px;color:var(--text-sub);min-width:20px;">0</span>
+    </div>
+    <div class="bg-slider-row" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <label style="font-size:11px;color:var(--text-sub);min-width:30px;">亮度</label>
+      <input type="range" id="bg_brightness_slider" min="30" max="150" value="100" oninput="updateBgPreview()" aria-label="背景亮度" style="flex:1;height:4px;">
+      <span class="val" id="bg_brightness_val" style="font-size:11px;color:var(--text-sub);min-width:20px;">100</span>
+    </div>
+    <div class="bg-crop-stage" id="bg_crop_stage" style="display:none;position:relative;margin-bottom:10px;overflow:hidden;border-radius:var(--radius-sm);touch-action:none;">
+      <img id="bg_crop_img" src="" alt="裁剪预览" style="display:block;width:100%;height:auto;">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-secondary" data-action="resetBg">重置</button>
+      <button class="btn btn-sm btn-secondary" data-action="closeBgModal">取消</button>
+      <button class="btn btn-sm btn-primary" data-action="saveBg">应用背景</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Workflow Manager Modal ==================== -->
+<div class="wf-edit-modal" id="wf_mgr_modal" onclick="if(event.target===this && !document.body.classList.contains('page-wfmgr'))closeWfMgrModal()">
+  <div class="wf-edit-dialog">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3><svg class="icon" aria-hidden="true"><use href="#icon-folder-closed"/></svg> 工作流管理器</h3>
+      <button class="btn btn-xs btn-secondary" onclick="if(document.body.classList.contains('page-wfmgr')){switchPage('wf')}else{closeWfMgrModal()}" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="wf-mgr-tabs" id="wf_mgr_tabs">
+      <button class="wf-mgr-tab active" data-action="switchWfTab" data-tab="edit"><svg class="icon-sm" aria-hidden="true"><use href="#icon-edit"/></svg> 编辑</button>
+      <button class="wf-mgr-tab" data-action="switchWfTab" data-tab="bind">🔗 独立工作流</button>
+    </div>
+    <div class="wf-mgr-panel active" id="wf_mgr_edit_panel">
+      <div class="wf-cat-tags" id="wf_cat_tags" role="group" aria-label="分类筛选">
+        <button class="wf-cat-tag active" data-action="filterWfByCat" data-cat="all">全部</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="文生图">文生图</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="图生图">图生图</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="视频">视频</button>
+        <button class="wf-cat-tag" data-action="filterWfByCat" data-cat="未分类">未分类</button>
+      </div>
+      <div class="wf-edit-count" id="wf_edit_count"></div>
+      <div class="wf-edit-list" id="wf_edit_list"></div>
+    </div>
+    <div class="wf-mgr-panel" id="wf_mgr_bind_panel">
+      <div class="bindmgr-layout">
+        <div class="bindmgr-left">
+          <div class="bindmgr-tabs">
+            <button class="bindmgr-tab active" id="bindmgr_tab_group" data-bmtab="group">💬 群</button>
+            <button class="bindmgr-tab" id="bindmgr_tab_user" data-bmtab="user">👤 用户</button>
+          </div>
+          <div class="bindmgr-add-row">
+            <input type="text" id="bindmgr_newid" class="bindmgr-input" placeholder="输入群号或QQ号..." aria-label="输入群号或QQ号">
+            <button class="btn btn-xs btn-primary" id="bindmgr_add_btn">添加</button>
+          </div>
+          <div class="bindmgr-list" id="bindmgr_grouplist"></div>
+        </div>
+        <div class="bindmgr-right">
+          <div class="bindmgr-empty" id="bindmgr_empty">
+            <span class="bindmgr-empty-icon">🔗</span>
+            <span>选择左侧群或用户<br>查看独立工作流</span>
+          </div>
+          <div class="bindmgr-selected" id="bindmgr_selected" style="display:none">
+            <div class="bindmgr-sel-header">
+              <div class="bindmgr-sel-title">
+                <span id="bindmgr_sel_type"></span>
+                <span id="bindmgr_sel_id"></span>
+              </div>
+              <button class="btn btn-xs btn-danger js-del-group-all">删除全部</button>
+            </div>
+            <div class="bindmgr-add-wf-row">
+              <select id="bindmgr_add_wf" class="bindmgr-select" aria-label="选择要绑定的工作流"></select>
+              <button class="btn btn-xs btn-primary js-add-wf-to-selected">添加工作流</button>
+            </div>
+            <div class="bindmgr-bound-wfs" id="bindmgr_bound_wfs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Toast Container ==================== -->
+<div id="toast_container" role="status" aria-live="polite"></div>
+
+<!-- ==================== JavaScript ==================== -->
+
+<!-- ==================== Lightbox ==================== -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="图片预览" data-action="closeLightbox">
+    <div class="lightbox-content" data-action="stopPropagation">
+    <button class="lightbox-close" data-action="closeLightbox" aria-label="关闭预览"><svg class="icon icon-lg" aria-hidden="true"><use href="#icon-close"/></svg></button>
+    <div class="lightbox-image-wrap">
+      <img id="lightbox_img" src="" alt="预览图片" draggable="false">
+    </div>
+    <div class="lightbox-toolbar">
+      <span id="lightbox_info" class="lightbox-info"></span>
+      <button class="lightbox-btn" id="lightbox_zoom_in" title="放大" aria-label="放大图片"><svg class="icon" aria-hidden="true"><use href="#icon-zoom-in"/></svg></button>
+      <button class="lightbox-btn" id="lightbox_zoom_out" title="缩小" aria-label="缩小图片"><svg class="icon" aria-hidden="true"><use href="#icon-zoom-out"/></svg></button>
+      <button class="lightbox-btn" id="lightbox_zoom_reset" title="重置" aria-label="重置缩放"><svg class="icon" aria-hidden="true"><use href="#icon-reset"/></svg></button>
+      <button class="lightbox-btn" id="lightbox_download" title="下载" aria-label="下载图片"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg></button>
+    </div>
+  </div>
+
+<script src="/webui.js"></script>
+
+</div>
+
+
+<script>
+/* __K2_INJECTED__ */
+/* ================= K2 引擎组句（k2Compose）：K2 模式随机/生成时排成中文成句 ================= */
+/* 当前 K2 组句输出方式（anima=原有 / k2=引擎组句）。
+   注意：这是顶层 let（非 window 属性），靠「所有 script 共享全局词法环境」被主块函数在运行时读到。
+   ⚠️ 勿在主块顶层同步访问 _k2ComposeMode（会触发暂时性死区 ReferenceError）；
+   只能在函数体 / 异步 .then / 事件回调里读写。 */
+let _k2ComposeMode = 'anima';
+var __K2_ENGINE__ = "/* =====================================================================\n * k2gen · K2 人像提示词生成器 v12 —— 随机组合引擎（无 DOM 纯逻辑版）\n *\n * 来源：E:/AIwork/插件/K2/K2人像提示词生成器v12.html\n *   data.js   词库数据块（HTML 行 790–4344 原样复制，零改写）\n *   engine.js 本文件：状态模型 + 可播种 RNG + 随机/补全/锁定/风格预设/\n *             智能匹配/提示词组装(buildPrompt)/自检(S1–S17, F1–F10)\n *\n * 与 HTML 的行为差异：\n *   1. 无界面：字段值存于 engine.val（'' = 未选·随机补全；自定义文本在 engine.custom）\n *   2. Math.random → mulberry32(seed)：同一 seed 的完整调用序列可逐字复现\n *   3. generate({randomize:true}) 等价 HTML「生成提示词」按钮\n *      （先解锁未锁字段整体重掷 → 补全 → 组装 → 自检 → 超 700 字按 TRIM_ORDER 精简）\n *   4. 调用顺序与 HTML 一致（buildPrompt 内部智能匹配、S2 自检的随机抽条\n *      都会消耗 RNG），因此复现粒度 = 整个 generate() 序列\n * ===================================================================== */\n/* ---- 载入原始数据块（data.js 为 HTML 词库区原样文本） ---- */\nfunction loadData(){\n  const src = __K2_SRC__;\n  const factory = new Function(src +\n    '\\n;return {norm,OPT,CLOTH,SHOE_POOL,LINGERIE_ITEMS,POSES,POSE_HAND,HAND_POOLS,EMOTION_EYE,' +\n    'SIM_POSES,SIM_CATS,SIM_COUNT,SFW_POSES,SFW_CATS,SFW_COUNT,SCENE_ENV,SECTIONS,CLOTH_FIELDS,POSE_FIELDS,' +\n    'STYLE_PRESETS,STYLE_POOLS,STYLE_COLOR_POOLS,SFW_CLOTH_IDS,LINGERIE_IDS,PANTY_IDS};');\n  return factory();\n}\nconst D = loadData();\n\n/* ---- 可播种 RNG（mulberry32，确定性） ---- */\nfunction mulberry32(a){\n  return function(){\n    a |= 0; a = a + 0x6D2B79F5 | 0;\n    let t = Math.imul(a ^ a >>> 15, 1 | a);\n    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;\n    return ((t ^ t >>> 14) >>> 0) / 4294967296;\n  };\n}\n\n/* ---- 字段常量（位于 HTML 数据块之外：行 4369/5313/4214/4970/5450/5718/6152） ---- */\nconst CUSTOM_FIELD_IDS = ['personCustom', 'nsfwCustom1', 'nsfwCustom2'];\nconst NEG_EFFECT_IDS = ['smudge', 'styleTag', 'film', 'cine', 'imperf1', 'imperf2', 'tattoo', 'tattooPos'];\nconst SPLIT_FIELDS = ['outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor'];\nconst STYLE_CTRL_IDS = ['clothMat', 'clothPattern', 'clothDeco', 'bottomLength', 'outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor'];\nconst TRIM_ORDER = ['styleTag', 'cine', 'film', 'imperf2', 'imperf1', 'weather', 'prop',\n  'nsfwChain',\n  'hairAccSide', 'hairAccBack', 'hairAccFront', 'poseExtra', 'makeupDetail', 'nails', 'smudge',\n  'clothDeco', 'collarStyle', 'topLength', 'bottomStyle', 'bottomLength', 'outerwear', 'clothPattern', 'ambient', 'device', 'tattoo',\n  'clothLayer', 'clothMat', 'accessory', 'sockType', 'shoes'];\nconst RANGE_FIELDS = {};\nD.SECTIONS.forEach(sec => (sec.fields || []).forEach(f => { if (f.range) RANGE_FIELDS[f.id] = f; }));\n\n/* 半裸态上身裸露部位池（NSFW 强化且非全裸时随机取一组置于最开头） */\nconst UPPER_NUDE_PARTS = [\n  '双乳与乳头大片裸露，胸口肌肤完全袒露',\n  '乳房与乳头完全裸露，胸口肌肤无遮',\n  '双乳与乳头裸露，胸口肌肤完全裸露',\n  '双乳与乳头大片裸露，胸口肌肤一览无遗',\n  '双乳与乳头裸露，胸口肌肤尽露'\n];\n/* 禁令总表（SFW 全扫；NSFW 按授权完全放行） */\nconst BAN_A = ['汗湿', '湿润', '油光', '水雾', '水珠', '湿身', '油亮肌肤', '陶瓷水嫩', '细腻如瓷', '通透光泽', '婴儿肌'];\nconst BAN_B = ['倾泻', '流淌', '如流水般', '如水流般', '如霜雾般', '如雾', '如露珠', '水波般', '涟漪般', '浸润', '泼洒', '飞溅', '水汽', '雾化', '弥漫如雾'];\nconst BAN_D = ['nipple', 'pussy', 'vagina', 'vulva', 'penis', 'cock', 'dick', 'anus', 'asshole', 'clitoris', 'labia', 'scrotum', 'testicles', 'areola'];\n\nclass Engine {\n  constructor(opts = {}){\n    /* ---- 字段注册（等价 HTML collectFieldIds） ---- */\n    this.allFieldIds = [];\n    this.FIELD_LABEL = {};\n    const reg = f => { if (f && f.id) { this.allFieldIds.push(f.id); if (f.label) this.FIELD_LABEL[f.id] = f.label; } };\n    D.SECTIONS.forEach(sec => (sec.fields || []).forEach(reg));\n    D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(reg);\n    D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(reg);\n    this.FIELD_SEC = {};\n    D.SECTIONS.forEach(sec => this.sectionFieldIds(sec).forEach(fid => { this.FIELD_SEC[fid] = sec.id; }));\n\n    /* ---- 状态模型（'' = 未选·随机补全；滑条默认 1） ---- */\n    this.val = {};\n    this.allFieldIds.forEach(id => {\n      this.val[id] = RANGE_FIELDS[id] ? String(RANGE_FIELDS[id].def !== undefined ? RANGE_FIELDS[id].def : '1') : '';\n    });\n    /* 负面效果字段初始默认「不启用」（等价 HTML makeSelect：NEG 字段建表即置不启用） */\n    NEG_EFFECT_IDS.forEach(id => { this.val[id] = '不启用'; });\n    this.custom = { personCustom: '', nsfwCustom1: '', nsfwCustom2: '' };\n    this.customEnabled = { personCustom: true, nsfwCustom1: true, nsfwCustom2: true };\n    this.userPicked = {};\n    this.locked = {};\n    this.secOff = {};\n    this.secOffBackup = {};\n    this.poseMode = 'SFW';\n    this.nsfwClothOn = false;\n    this.lingerieOn = false;\n    this.nudeOn = false;\n    this.sfwExposureOn = false;\n    this.personNsfwOn = false;\n    this.sockUnlock = false;\n    this.lastMode = 'SFW';\n    this.pantyBackup = {};\n    this.autoTrim = opts.autoTrim !== false; /* HTML 复选框默认勾选 */\n\n    /* ---- 可播种 RNG ---- */\n    this.seed = (opts.seed !== undefined && opts.seed !== null) ? (opts.seed >>> 0) : null;\n    if (this.seed === null) this.seed = (Date.now() ^ ((Math.random() * 0x7fffffff) | 0)) >>> 0;\n    this.rng = mulberry32(this.seed);\n  }\n\n  /* ================= 随机基础 ================= */\n  rand(){ return this.rng(); }\n  randOf(arr){ return arr[Math.floor(this.rand() * arr.length)]; }\n  v(id){ return this.val[id] || ''; }\n\n  /* 用户设值（等价 UI 下拉 change，含 onFieldChange 联动） */\n  set(id, val){\n    if (CUSTOM_FIELD_IDS.indexOf(id) >= 0) { this.custom[id] = val == null ? '' : String(val); return; }\n    if (val == null) val = '';\n    if ((this.val[id] || '') === val) return;\n    this.val[id] = val;\n    this.userPicked[id] = true;\n    this.onFieldChange(id);\n  }\n  setCustom(id, text){ this.custom[id] = text == null ? '' : String(text); }\n  customEnable(id, on){ this.customEnabled[id] = !!on; }\n\n  /* ================= 锁定机制 ================= */\n  isLocked(id){ return !!this.locked[id]; }\n  lockField(id, on){ this.locked[id] = !!on; }\n  lockSection(secId, on){\n    const sec = D.SECTIONS.find(s => s.id === secId);\n    if (!sec) return;\n    this.sectionFieldIds(sec).forEach(id => { this.locked[id] = !!on; });\n  }\n  allLockedNow(){\n    return this.allFieldIds.every(id => CUSTOM_FIELD_IDS.indexOf(id) >= 0 || !!this.locked[id]);\n  }\n\n  /* ================= 段落 ================= */\n  secActive(id){ return !this.secOff[id]; }\n  fieldSection(id){ return this.FIELD_SEC[id]; }\n  sectionFieldIds(sec){\n    const ids = [];\n    (sec.fields || []).forEach(f => { ids.push(f.id); });\n    if (sec.id === 'cloth') D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => { ids.push(f.id); });\n    if (sec.id === 'pose') D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => { ids.push(f.id); });\n    return ids.filter(id => CUSTOM_FIELD_IDS.indexOf(id) < 0);\n  }\n  /* 本段不启用：整段排除于生成（服装⑦/姿态⑧ 不允许整段停用，与 HTML 一致） */\n  sectionOff(secId, on){\n    const sec = D.SECTIONS.find(s => s.id === secId);\n    if (!sec || sec.id === 'cloth' || sec.id === 'pose') return;\n    if (on === undefined) on = !this.secOff[secId];\n    this.secOff[secId] = !!on;\n    if (on) {\n      const bak = {};\n      (sec.fields || []).forEach(f => {\n        if (f.custom || CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n        if (f.range) return;\n        bak[f.id] = { v: this.val[f.id] || '', p: !!this.userPicked[f.id] };\n        const list = f.list ? (D.OPT[f.list] || []) : [];\n        const hasNone = list.some(x => (x && x.v) === '不启用');\n        if (hasNone) this.val[f.id] = '不启用';\n        else if (this.val[f.id] !== '') this.val[f.id] = '';\n        this.userPicked[f.id] = false;\n      });\n      this.secOffBackup[secId] = bak;\n    } else {\n      const bak = this.secOffBackup[secId] || {};\n      (sec.fields || []).forEach(f => {\n        if (f.custom || CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n        if (f.range) return;\n        if (f.id in bak) { this.val[f.id] = bak[f.id].v; this.userPicked[f.id] = bak[f.id].p; }\n      });\n      delete this.secOffBackup[secId];\n      if (secId === 'expression') this.syncEye();\n    }\n  }\n\n  /* ================= NSFW 开关体系（等价 HTML 各 toggle） ================= */\n  nsfwClothEnabled(){ return this.nsfwClothOn; }\n  personNsfwEnabled(){ return this.personNsfwOn; }\n  nsfwAnyActive(){ return this.poseMode === 'NSFW' || this.nsfwClothOn || this.personNsfwOn; }\n  setPoseMode(m){\n    this.poseMode = (m === 'NSFW') ? 'NSFW' : 'SFW';\n    this.lastMode = '';\n  }\n  /* 服装 NSFW 强化开关（含安全内裤备份/还原，等价 syncClothModeUI 的取值侧） */\n  setNsfwCloth(on){\n    const was = this.nsfwClothOn;\n    this.nsfwClothOn = !!on;\n    if (!this.nsfwClothOn) { this.lingerieOn = false; this.nudeOn = false; }\n    const PANTY = D.PANTY_IDS;\n    if (this.nsfwClothOn && !was) {\n      PANTY.forEach(id => {\n        if (this.val[id] && this.val[id] !== '不启用') {\n          if (this.pantyBackup[id] === undefined) this.pantyBackup[id] = this.val[id];\n          this.val[id] = '不启用'; this.userPicked[id] = false;\n        }\n      });\n    } else if (!this.nsfwClothOn && was) {\n      PANTY.forEach(id => {\n        if (this.pantyBackup[id] !== undefined) {\n          this.val[id] = this.pantyBackup[id];\n          if (this.val[id]) this.userPicked[id] = true;\n          this.pantyBackup[id] = undefined;\n        }\n      });\n    }\n    this.lastMode = '';\n  }\n  setLingerieMode(on){\n    if (!this.nsfwClothOn) return;\n    this.lingerieOn = !!on;\n    if (this.lingerieOn) this.nudeOn = false;\n    this.lastMode = '';\n  }\n  setNudeMode(on){\n    if (!this.nsfwClothOn) return;\n    this.nudeOn = !!on;\n    if (this.nudeOn) this.lingerieOn = false;\n    this.lastMode = '';\n  }\n  setSfwExposure(on){\n    this.sfwExposureOn = !!on;\n    if (!on) ['sfwExposure', 'clothTransparency'].forEach(id => { this.val[id] = ''; this.userPicked[id] = false; });\n    this.lastMode = '';\n  }\n  setPersonNsfw(on){ this.personNsfwOn = !!on; this.lastMode = ''; }\n  setSockUnlock(on){ this.sockUnlock = !!on; }\n  /* 总开关：一键联动 姿态二选一 + 服装强化 + 人物强化 */\n  toggleNsfwMaster(){\n    if (this.nsfwAnyActive()) {\n      this.setPoseMode('SFW');\n      this.setNsfwCloth(false);\n      this.personNsfwOn = false;\n    } else {\n      this.setNsfwCloth(true);\n      this.setPoseMode('NSFW');\n      this.personNsfwOn = true;\n    }\n  }\n\n  /* ================= 模式判定 ================= */\n  detectMode(){\n    if (this.poseMode === 'NSFW') return 'NSFW';\n    if (this.nsfwClothEnabled()) {\n      if (this.lingerieOn || this.nudeOn) return 'NSFW';\n      const s1 = this.v('nsfwState');\n      if (s1 && s1 !== '不启用') return 'NSFW';\n      const c1 = this.custom.nsfwCustom1, c2 = this.custom.nsfwCustom2;\n      if ((c1 && this.customEnabled.nsfwCustom1 !== false) || (c2 && this.customEnabled.nsfwCustom2 !== false)) return 'NSFW';\n    }\n    return 'SFW';\n  }\n  isNSFW(){ return this.detectMode() === 'NSFW'; }\n  /* 模式切换后重校验 NSFW 标记字段（等价 refreshModeUI 的取值侧） */\n  syncModeDeps(){\n    const m = this.detectMode();\n    if (m !== this.lastMode) {\n      this.lastMode = m;\n      ['mouth', 'prop', 'styleTag', 'imperf1', 'imperf2'].forEach(id => {\n        const list = D.OPT[id.replace(/\\d+$/, '')] || D.OPT[id] || [];\n        const cur = this.val[id] || '';\n        if (cur && !list.some(o => o.v === cur && (m === 'NSFW' || !o.nsfw))) {\n          this.val[id] = ''; this.userPicked[id] = false;\n        }\n      });\n    }\n  }\n\n  /* ================= 字段参与判定 ================= */\n  fieldActive(id){\n    if (id === 'sfwSimMode') return this.poseMode === 'SFW';\n    if (id === 'sfwSimCoreCat') return this.poseMode === 'SFW' && this.v('sfwSimMode') === '智能匹配';\n    if (id === 'sfwSimCat' || id === 'sfwSimPick') return this.poseMode === 'SFW' && this.v('sfwSimMode') === '手动选类';\n    if (id === 'simMode') return this.poseMode === 'NSFW';\n    if (id === 'simCoreCat') return this.poseMode === 'NSFW' && this.v('simMode') === '智能匹配';\n    if (id === 'simCat' || id === 'simPick') return this.poseMode === 'NSFW' && this.v('simMode') === '手动选类';\n    if (id === 'nsfwChain') return this.poseMode === 'NSFW';\n    if (id === 'nsfwState') return this.nsfwClothEnabled() && !this.nudeOn;\n    if (id === 'nsfwLowerBody') return this.personNsfwEnabled();\n    if (id === 'nsfwBreastDetail') return this.personNsfwEnabled();\n    if (id === 'nsfwCustom1' || id === 'nsfwCustom2') return this.nsfwClothEnabled();\n    if (D.LINGERIE_IDS.indexOf(id) >= 0) return this.nsfwClothEnabled() && this.lingerieOn;\n    if (id === 'nsfwExposure') return this.nsfwClothEnabled() && !(this.lingerieOn || this.nudeOn);\n    if (id === 'sfwExposure') return this.sfwExposureOn && !this.nsfwClothEnabled();\n    if (id === 'clothTransparency') return this.sfwExposureOn && !this.nsfwClothEnabled();\n    if (D.SFW_CLOTH_IDS.indexOf(id) >= 0) return !(this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn));\n    return true;\n  }\n\n  /* ================= 词库反查 ================= */\n  optT(list, val){\n    if (!list) return val;\n    for (let i = 0; i < list.length; i++) if (list[i].v === val) return list[i].t || list[i].v;\n    return val;\n  }\n  flatClothItems(cat){ return D.CLOTH[cat].map(x => ({ v: cat + '｜' + x[0], t: x[1] })); }\n  clothItemT(val){\n    if (!val || val.indexOf('｜') < 0) return val;\n    const cut = val.split('｜'); const cat = cut[0]; const name = cut.slice(1).join('｜');\n    const arr = D.CLOTH[cat]; if (!arr) return val;\n    for (let i = 0; i < arr.length; i++) if (arr[i][0] === name) return arr[i][1];\n    return val;\n  }\n  findPose(name){\n    for (const c in D.POSES) {\n      for (let i = 0; i < D.POSES[c].length; i++)\n        if (D.POSES[c][i][0] === name) return { cat: c, t: D.POSES[c][i][1], risk: !!D.POSES[c][i][2] };\n    }\n    return { cat: '', t: name, risk: false };\n  }\n}\n\n/* =====================================================================\n * 联动池 / 过滤器 / 智能匹配 / 随机 / 补全\n * ===================================================================== */\nObject.assign(Engine.prototype, {\n\n  /* ---- 鞋履适配池（随主件类别，恒含「不启用」「赤脚」逃生口） ---- */\n  shoePoolFor(cat){\n    const names = D.SHOE_POOL[cat];\n    if (!names) return D.OPT.shoes.slice();\n    const pool = [{ v: '不启用', t: '' }];\n    names.forEach(n => {\n      const o = D.OPT.shoes.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    if (!names.some(n => n === '赤脚')) {\n      const bf = D.OPT.shoes.filter(x => x.v === '赤脚')[0];\n      if (bf) pool.push({ v: bf.v, t: bf.t });\n    }\n    return pool;\n  },\n  isSplitCat(){ return this.v('clothCat') === '上下装'; },\n\n  /* ---- 手部细节适配池（旧姿态体系残留接口；擦边动作库下恒全池） ---- */\n  handPoolFor(pose){\n    const tag = pose ? D.POSE_HAND[pose] : null;\n    if (!tag || !D.HAND_POOLS[tag]) return D.OPT.poseExtra.slice();\n    const pool = [{ v: '不启用', t: '' }];\n    D.HAND_POOLS[tag].forEach(n => {\n      const o = D.OPT.poseExtra.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    return pool;\n  },\n\n  /* ---- 情绪×眼神 串联池 ---- */\n  eyePoolFor(emotion){\n    const names = emotion ? D.EMOTION_EYE[emotion] : null;\n    if (!names || !names.length) return D.OPT.eye.slice();\n    const pool = [];\n    names.forEach(n => {\n      const o = D.OPT.eye.filter(x => x.v === n)[0];\n      if (o) pool.push({ v: o.v, t: o.t });\n    });\n    return pool;\n  },\n  /* 选情绪后：当前眼神不适配则回落池内第一项（眼神必选不留空） */\n  syncEye(){\n    const pool = this.eyePoolFor(this.v('emotion'));\n    const cur = this.v('eye');\n    if (cur && pool.some(o => o.v === cur)) return;\n    this.val['eye'] = pool.length ? pool[0].v : '';\n    this.userPicked['eye'] = true;\n  },\n\n  /* ---- 风格驱动池过滤（§7.5-F） ---- */\n  currentStyle(){\n    const s = this.v('stylePreset');\n    return (s && s !== '不启用' && D.STYLE_POOLS[s]) ? s : null;\n  },\n  styleActive(){ return this.currentStyle() !== null; },\n  randomClothCatPool(){\n    const st = this.currentStyle();\n    if (st) { const c = D.STYLE_POOLS[st].cat || []; if (c.length) return c; }\n    return D.OPT.clothCat.map(o => o.v);\n  },\n  stylePoolFor(id){\n    const st = this.currentStyle();\n    if (!st) return null;\n    if (id === 'splitColor') return D.STYLE_COLOR_POOLS[st] || null;\n    if (id === 'sockType' || id === 'sockLen' || id === 'sockColor' || id === 'sockOpacity') {\n      if (this.sockUnlock) return null;\n      const k = (id === 'sockType') ? 'sock' : id;\n      return D.STYLE_POOLS[st][k] || null;\n    }\n    const key = D_STYLE_FIELD_KEY[id]; if (!key) return null;\n    return D.STYLE_POOLS[st][key] || null;\n  },\n  filterStylePool(list, id){\n    const allow = this.stylePoolFor(id);\n    if (!allow) return list;\n    return list.filter(o => allow.indexOf(o.v) >= 0);\n  },\n\n  /* ---- 情趣内衣 ---- */\n  lingerieCatKey(val){\n    for (let i = 0; i < D.OPT.lingerieCat.length; i++) if (D.OPT.lingerieCat[i].v === val) return D.OPT.lingerieCat[i].t || val;\n    return val;\n  },\n\n  /* ---- 智能匹配（动作库）：剔除核心同类 → 各类抽 1 → 场景环境关键词打分 → 取最高（平局随机）；全 0 分兜底含「地」 ---- */\n  simModeActive(){ const m = this.v('simMode'); return m && m !== '' && m !== '不启用'; },\n  coreSimCat(){\n    const sc = this.v('simCoreCat'); if (!sc || sc === '不启用') return null;\n    return sc.charAt(0);\n  },\n  simPickText(){\n    const p = this.v('simPick'); if (!p) return '';\n    const item = (D.SIM_POSES[p.charAt(0)] || []).filter(x => x.id === p)[0];\n    return item ? item.t : '';\n  },\n  smartSimPick(){\n    const env = D.SCENE_ENV[this.v('scene')] || D.SCENE_ENV['__default'];\n    const core = this.coreSimCat();\n    const cats = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].filter(c => c !== core);\n    const cands = cats.map(c => {\n      const arr = D.SIM_POSES[c] || [];\n      return arr[Math.floor(this.rand() * arr.length)];\n    }).filter(Boolean);\n    cands.forEach(it => { it._score = env.filter(kw => it.t.indexOf(kw) >= 0).length; });\n    cands.sort((a, b) => b._score - a._score);\n    if (cands[0]._score > 0) {\n      const best = cands.filter(it => it._score === cands[0]._score);\n      return best[Math.floor(this.rand() * best.length)].t;\n    }\n    const ground = cands.filter(it => it.t.indexOf('地') >= 0);\n    if (ground.length) return ground[Math.floor(this.rand() * ground.length)].t;\n    return cands[Math.floor(this.rand() * cands.length)].t;\n  },\n\n  /* ---- SFW 擦边动作库（同构） ---- */\n  sfwSimModeActive(){ const m = this.v('sfwSimMode'); return m && m !== '' && m !== '不启用'; },\n  sfwCoreSimCat(){\n    const sc = this.v('sfwSimCoreCat'); if (!sc || sc === '不启用') return null;\n    return sc.charAt(0);\n  },\n  sfwSimPickText(){\n    const p = this.v('sfwSimPick'); if (!p) return '';\n    const item = (D.SFW_POSES[p.charAt(0)] || []).filter(x => x.id === p)[0];\n    return item ? item.t : '';\n  },\n  smartSfwPick(){\n    const env = D.SCENE_ENV[this.v('scene')] || D.SCENE_ENV['__default'];\n    const core = this.sfwCoreSimCat();\n    const cats = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].filter(c => c !== core);\n    const cands = cats.map(c => {\n      const arr = D.SFW_POSES[c] || [];\n      return arr[Math.floor(this.rand() * arr.length)];\n    }).filter(Boolean);\n    cands.forEach(it => { it._score = env.filter(kw => it.t.indexOf(kw) >= 0).length; });\n    cands.sort((a, b) => b._score - a._score);\n    if (cands[0]._score > 0) {\n      const best = cands.filter(it => it._score === cands[0]._score);\n      return best[Math.floor(this.rand() * best.length)].t;\n    }\n    const ground = cands.filter(it => it.t.indexOf('地') >= 0);\n    if (ground.length) return ground[Math.floor(this.rand() * ground.length)].t;\n    return cands[Math.floor(this.rand() * cands.length)].t;\n  },\n\n  /* ---- S12 服装细节连贯（颜色/材质族归一；随机规避与自检共用） ---- */\n  itemColorFam12(it){ for (const k in D_ITEM_C12) { if (it.indexOf(k) >= 0) return D_ITEM_C12[k]; } return null; },\n  itemMatFam12(it){ for (const k in D_MAT_FAM12) { if (it.indexOf(k) >= 0) return D_MAT_FAM12[k]; } return null; },\n  matFam12(mt){ for (const k in D_MAT_FAM12) { if (mt.indexOf(k) >= 0) return D_MAT_FAM12[k]; } return null; },\n  itemEmbedsMainMat(it){ return !this.itemMatFam12(it) && EMBED_MAIN_MAT_RE.test(this.clothItemT(it) || ''); },\n  splitTopColor12(sc){ const seg = (sc || '').split('·').pop() || sc; return seg.split('下')[0].replace('上', ''); },\n  s12FilterList(fid, arr){\n    if (fid !== 'clothMat' && fid !== 'splitColor') return arr;\n    const it = this.v('clothItem') || '';\n    if (fid === 'clothMat' && this.itemEmbedsMainMat(it)) return [{ v: '不启用', t: '不启用' }];\n    if (!this.isSplitCat()) return arr;\n    let out;\n    if (fid === 'clothMat') {\n      const mFam = this.itemMatFam12(it);\n      if (!mFam) return arr;\n      out = arr.filter(o => { const mf = this.matFam12(o.v); return !mf || mf === mFam; });\n    } else {\n      const cFam = this.itemColorFam12(it);\n      if (!cFam) return arr;\n      out = arr.filter(o => { const tc = this.splitTopColor12(o.v); return !tc || tc.indexOf(cFam) >= 0; });\n    }\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n\n  /* ---- 色调×天气 / 场景×色调 / 妆容×糊妆 / 袜子 / 情绪×口型 兼容过滤 ---- */\n  weatherToneFilter(list){\n    const bad = D_WEATHER_TONE_FILTER[this.v('colorTone')];\n    if (!bad) return list;\n    return list.filter(o => !bad[o.v]);\n  },\n  weatherToneConflict(){\n    const tn = this.v('colorTone'), we = this.v('weather');\n    return (tn && we && we !== '不启用' && D_WEATHER_TONE_FILTER[tn] && D_WEATHER_TONE_FILTER[tn][we]) ? we : null;\n  },\n  sceneToneFilter(list){\n    const bad = D_SCENE_TONE_FILTER[this.v('colorTone')];\n    if (!bad) return list;\n    return list.filter(o => !bad[o.v]);\n  },\n  sceneToneConflict(){\n    const tn = this.v('colorTone'), sc = this.v('scene');\n    return (tn && sc && sc !== '不启用' && D_SCENE_TONE_FILTER[tn] && D_SCENE_TONE_FILTER[tn][sc]) ? sc : null;\n  },\n  smudgeFilter(list){\n    if (this.v('makeup') === '素颜') return [{ v: '不启用', t: '不启用' }];\n    return list;\n  },\n  sockLenFilter(list){\n    if (D_SOCK_LEN_FIX[this.v('sockType')]) return [{ v: '不启用', t: '不启用' }];\n    return list;\n  },\n  sockTypeFilter(list){\n    if (this.v('sockLen') !== '连裤') return list;\n    const out = list.filter(o => !D_SOCK_LONG_FOOT_TYPES[o.v]);\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n  sockLenTypeConflict(){\n    const st = this.v('sockType'), sl = this.v('sockLen');\n    if (!st || st === '不启用' || !sl || sl === '不启用') return null;\n    if (D_SOCK_LEN_FIX[st]) return '类型「' + st + '」已自带长度语义，长度字段应置「不启用」';\n    if (sl === '连裤' && D_SOCK_LONG_FOOT_TYPES[st]) return '长度「连裤」为整腿袜，与分段袜「' + st + '」不同类';\n    return null;\n  },\n  mouthFilter(list){\n    const ban = D_EMOTION_MOUTH_BAN[this.v('emotion')];\n    if (!ban) return list;\n    const out = list.filter(o => !ban[o.v]);\n    return out.length ? out : [{ v: '不启用', t: '不启用' }];\n  },\n  mouthEmotionConflict(){\n    const ban = D_EMOTION_MOUTH_BAN[this.v('emotion')], mt = this.v('mouth');\n    if (!ban || !mt || mt === '不启用') return null;\n    return ban[mt] ? '情绪「' + this.v('emotion') + '」与口型「' + mt + '」矛盾' : null;\n  },\n\n  /* ---- 字段联动（等价 onFieldChange 取值侧） ---- */\n  onFieldChange(id){\n    if (id === 'clothCat') this.userPicked['clothItem'] = false;\n    if (id === 'sfwSimMode') { /* 隐藏侧字段值保留，fieldActive 判定即可 */ }\n    if (id === 'sfwSimCat') this.userPicked['sfwSimPick'] = false;\n    if (id === 'emotion') this.syncEye();\n    if (id === 'lingerieCat') this.userPicked['lingerieItem'] = false;\n    if (id === 'simMode') { /* 同上 */ }\n    if (id === 'simCat') this.userPicked['simPick'] = false;\n    if (id === 'stylePreset') {\n      const p = D.STYLE_PRESETS[this.v('stylePreset')];\n      if (p) {\n        /* 上下连贯：先清空预设未覆盖的服装字段旧值（保留锁定与自定义），再整体填入预设 */\n        D.SFW_CLOTH_IDS.forEach(fid => {\n          if (fid === 'stylePreset' || (fid in p)) return;\n          if (!this.locked[fid]) { this.val[fid] = ''; this.userPicked[fid] = false; }\n        });\n        Object.keys(p).forEach(k => {\n          if (this.allFieldIds.indexOf(k) >= 0) { this.val[k] = p[k]; this.userPicked[k] = true; }\n        });\n      }\n    }\n  },\n\n  /* ---- 单字段随机（等价 randomizeField；''=未选 由 fillBlanks 补全，这里直接掷值） ---- */\n  randomizeField(f){\n    if (CUSTOM_FIELD_IDS.indexOf(f.id) >= 0) return;\n    if (this.locked[f.id]) return;\n    if (this.secOff[this.fieldSection(f.id)]) return;\n    if (!this.fieldActive(f.id)) return;\n    if (SPLIT_FIELDS.indexOf(f.id) >= 0 && !this.isSplitCat()) return;\n    if (f.id === 'bottomLength' && !this.isSplitCat()) return;\n    if (NEG_EFFECT_IDS.indexOf(f.id) >= 0) {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (f.id === 'simCoreCat') {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (this.nsfwClothEnabled() && D.PANTY_IDS.indexOf(f.id) >= 0) {\n      this.val[f.id] = '不启用'; this.userPicked[f.id] = false;\n      return;\n    }\n    if (f.range) {\n      const rmin = parseFloat(f.min || 1), rmax = parseFloat(f.max || 2), rstep = parseFloat(f.step || 0.05);\n      const rk = Math.floor(this.rand() * (Math.round((rmax - rmin) / rstep) + 1));\n      this.val[f.id] = (rmin + rk * rstep).toFixed(2);\n      this.userPicked[f.id] = true;\n      return;\n    }\n    let list = D.OPT[f.list] || [];\n    if (f.list === 'clothItem') { const cat = this.v('clothCat') || '上下装'; list = this.flatClothItems(cat); }\n    if (f.list === 'shoes') { list = this.shoePoolFor(this.v('clothCat') || '上下装'); }\n    if (f.list === 'poseExtra') { list = this.handPoolFor(this.v('pose')); }\n    if (f.list === 'eye') { list = this.eyePoolFor(this.v('emotion')); }\n    if (f.list === 'pose') { const pc = this.v('poseCat') || '静态姿势'; list = D.POSES[pc].map(x => ({ v: x[0], t: x[1] })); }\n    if (f.list === 'lingerieItem') { const lck = this.lingerieCatKey(this.v('lingerieCat')); list = (D.LINGERIE_ITEMS[lck] || []).map(x => ({ v: x[1], t: x[1] })); }\n    if (f.list === 'simPick') { const sc = this.v('simCat') || ''; const key = sc ? sc.charAt(0) : ''; list = (D.SIM_POSES[key] || []).map(x => ({ v: x.id, t: x.t })); }\n    if (f.list === 'sfwSimPick') { const ssc = this.v('sfwSimCat') || ''; const skey = ssc ? ssc.charAt(0) : ''; list = (D.SFW_POSES[skey] || []).map(x => ({ v: x.id, t: x.t })); }\n    if (f.id === 'sfwSimCoreCat') { this.val[f.id] = '不启用'; this.userPicked[f.id] = false; return; }\n    if (f.list === 'clothCat' || f.list === 'poseCat') return; /* 主类别由主项随机带动 */\n    if (f.list === 'weather') list = this.weatherToneFilter(list);\n    if (f.list === 'scene') list = this.sceneToneFilter(list);\n    list = this.filterStylePool(list, f.id);\n    let arr = list.filter(o => (this.isNSFW() || !o.nsfw) && o.v !== '不启用');\n    if (f.id === 'smudge') arr = this.smudgeFilter(arr);\n    arr = this.s12FilterList(f.id, arr);\n    if (f.id === 'sockLen') arr = this.sockLenFilter(arr);\n    if (f.id === 'sockType') arr = this.sockTypeFilter(arr);\n    if (f.id === 'mouth') arr = this.mouthFilter(arr);\n    if (!arr.length) return;\n    this.val[f.id] = arr[Math.floor(this.rand() * arr.length)].v;\n    this.userPicked[f.id] = true;\n  },\n\n  /* ---- 整段随机 / 全部随机 ---- */\n  randomizeSection(sec){\n    if (sec.id === 'cloth') {\n      const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n      if (!clothHidden && !this.locked['clothCat']) {\n        const cats = this.randomClothCatPool();\n        this.val['clothCat'] = cats[Math.floor(this.rand() * cats.length)];\n        this.userPicked['clothCat'] = true;\n      }\n      D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n    } else if (sec.id === 'pose') {\n      if (this.poseMode === 'SFW' && !this.locked['sfwSimMode']) {\n        const pcs = D.OPT.sfwSimMode;\n        this.val['sfwSimMode'] = pcs[Math.floor(this.rand() * pcs.length)].v;\n        this.userPicked['sfwSimMode'] = true;\n      }\n      D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n    } else {\n      sec.fields.forEach(f => this.randomizeField(f));\n    }\n  },\n  randomizeAll(){\n    D.SECTIONS.forEach(sec => {\n      if (sec.id === 'cloth') {\n        const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n        if (!clothHidden && !this.locked['clothCat']) {\n          const cats = this.randomClothCatPool();\n          this.val['clothCat'] = cats[Math.floor(this.rand() * cats.length)];\n          this.userPicked['clothCat'] = true;\n        }\n        D.CLOTH_FIELDS.sfw.concat(D.CLOTH_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n      } else if (sec.id === 'pose') {\n        if (this.poseMode === 'SFW' && !this.locked['sfwSimMode']) {\n          const pcs = D.OPT.sfwSimMode;\n          this.val['sfwSimMode'] = pcs[Math.floor(this.rand() * pcs.length)].v;\n          this.userPicked['sfwSimMode'] = true;\n        }\n        D.POSE_FIELDS.sfw.concat(D.POSE_FIELDS.nsfw).forEach(f => this.randomizeField(f));\n      } else {\n        sec.fields.forEach(f => this.randomizeField(f));\n      }\n    });\n  },\n  /* 解锁并全部随机（页头按钮） */\n  unlockAndRandomizeAll(){\n    this.allFieldIds.forEach(id => { if (CUSTOM_FIELD_IDS.indexOf(id) < 0) this.locked[id] = false; });\n    this.randomizeAll();\n  },\n\n  /* ---- 补全（fillBlanks）：只补空未选项，已选值即事实来源 ---- */\n  randomValueFor(id){\n    if (NEG_EFFECT_IDS.indexOf(id) >= 0) return '不启用';\n    if (id === 'simCoreCat') return '不启用';\n    if (this.nsfwClothEnabled() && D.PANTY_IDS.indexOf(id) >= 0) return '不启用';\n    if (id === 'clothItem') {\n      const cat = this.v('clothCat') || '上下装';\n      return this.randOf(this.flatClothItems(cat)).v;\n    }\n    if (id === 'pose') {\n      const pc = this.v('poseCat') || '静态姿势';\n      return this.randOf(D.POSES[pc].map(x => ({ v: x[0], t: x[1] }))).v;\n    }\n    if (id === 'sfwSimPick') {\n      const ssck = this.v('sfwSimCat') || ''; const sskey = ssck ? ssck.charAt(0) : '';\n      const ssl = (D.SFW_POSES[sskey] || []).map(x => ({ v: x.id, t: x.t }));\n      if (!ssl.length) return '';\n      return this.randOf(ssl).v;\n    }\n    if (id === 'sfwSimCoreCat') return '不启用';\n    if (id === 'shoes') {\n      const sp = this.filterStylePool(this.shoePoolFor(this.v('clothCat') || '上下装'), 'shoes').filter(o => o.v !== '');\n      if (!sp.length) return '';\n      return this.randOf(sp).v;\n    }\n    if (id === 'poseExtra') {\n      const hp = this.handPoolFor(this.v('pose')).filter(o => o.v !== '');\n      if (!hp.length) return '';\n      return this.randOf(hp).v;\n    }\n    if (id === 'eye') {\n      const ep = this.eyePoolFor(this.v('emotion'));\n      if (!ep.length) return '';\n      return this.randOf(ep).v;\n    }\n    if (id === 'lingerieItem') {\n      const llck = this.lingerieCatKey(this.v('lingerieCat'));\n      const ll = (D.LINGERIE_ITEMS[llck] || []).map(x => ({ v: x[1], t: x[1] }));\n      if (!ll.length) return '';\n      return this.randOf(ll).v;\n    }\n    if (id === 'simPick') {\n      const sck = this.v('simCat') || ''; const skey = sck ? sck.charAt(0) : '';\n      const sl = (D.SIM_POSES[skey] || []).map(x => ({ v: x.id, t: x.t }));\n      if (!sl.length) return '';\n      return this.randOf(sl).v;\n    }\n    let list = (D.OPT[id] || []);\n    if (id === 'smudge') list = this.smudgeFilter(list);\n    if (id === 'weather') list = this.weatherToneFilter(list);\n    if (id === 'scene') list = this.sceneToneFilter(list);\n    list = this.filterStylePool(list, id);\n    list = list.filter(o => (this.isNSFW() || !o.nsfw) && o.v !== '' && o.v !== '不启用');\n    list = this.s12FilterList(id, list);\n    if (id === 'sockLen') list = this.sockLenFilter(list);\n    if (id === 'sockType') list = this.sockTypeFilter(list);\n    if (id === 'mouth') list = this.mouthFilter(list);\n    if (!list.length) return '';\n    return this.randOf(list).v;\n  },\n  fillBlanks(){\n    let filled = 0;\n    const inferCat = id => {\n      if ((this.val[id] || '') === '' && !this.locked[id]) {\n        const itemSel = (id === 'clothCat') ? this.v('clothItem') : this.v('pose');\n        if (itemSel && itemSel !== '不启用') {\n          if (id === 'clothCat') this.val[id] = itemSel.split('｜')[0];\n          else { const po = this.findPose(itemSel); if (po.cat) this.val[id] = po.cat; }\n        }\n        if (this.val[id] === '') this.val[id] = this.randOf(D.OPT[id]).v;\n        this.userPicked[id] = true;\n        filled++;\n      }\n    };\n    const clothHidden = this.nsfwClothEnabled() && (this.lingerieOn || this.nudeOn);\n    if (!clothHidden) inferCat('clothCat');\n    this.allFieldIds.forEach(id => {\n      if (id === 'clothCat' || id === 'poseCat') return;\n      if (CUSTOM_FIELD_IDS.indexOf(id) >= 0) return;\n      if (id === 'stylePreset') return;\n      if (this.secOff[this.fieldSection(id)]) return;\n      if (this.locked[id]) return;\n      if (SPLIT_FIELDS.indexOf(id) >= 0 && !this.isSplitCat()) return;\n      if (id === 'bottomLength' && !this.isSplitCat()) return;\n      if (!this.fieldActive(id)) return;\n      if ((this.val[id] || '') !== '') return;\n      const rv = this.randomValueFor(id);\n      if (rv !== '' && rv !== undefined) { this.val[id] = rv; filled++; }\n    });\n    return filled;\n  },\n\n  /* ---- 清空（等价 clearAll 取值侧） ---- */\n  clearAll(){\n    this.allFieldIds.forEach(id => {\n      this.val[id] = RANGE_FIELDS[id] ? String(RANGE_FIELDS[id].def !== undefined ? RANGE_FIELDS[id].def : '1') : '';\n    });\n    Object.keys(this.userPicked).forEach(k => { this.userPicked[k] = false; });\n    this.nsfwClothOn = false; this.lingerieOn = false; this.nudeOn = false;\n    this.pantyBackup = {};\n    this.personNsfwOn = false;\n    this.sfwExposureOn = false;\n    this.poseMode = 'SFW';\n    this.allFieldIds.forEach(id => { if (CUSTOM_FIELD_IDS.indexOf(id) < 0) this.locked[id] = false; });\n    CUSTOM_FIELD_IDS.forEach(id => { this.custom[id] = ''; this.customEnabled[id] = true; });\n    this.secOff = {}; this.secOffBackup = {};\n    this.lastMode = 'SFW';\n    ['mouth', 'prop'].concat(NEG_EFFECT_IDS).forEach(id => { this.val[id] = ''; this.userPicked[id] = false; });\n    NEG_EFFECT_IDS.forEach(id => { this.val[id] = '不启用'; this.userPicked[id] = false; });\n    this.syncEye();\n  },\n\n  /* ---- 设定导入/导出（JSON 序列化，跨会话复用同一份「配方」） ---- */\n  dumpSettingsObj(){\n    return {\n      val: Object.assign({}, this.val),\n      custom: Object.assign({}, this.custom),\n      customEnabled: Object.assign({}, this.customEnabled),\n      locked: Object.assign({}, this.locked),\n      secOff: Object.assign({}, this.secOff),\n      poseMode: this.poseMode,\n      nsfwClothOn: this.nsfwClothOn,\n      lingerieOn: this.lingerieOn,\n      nudeOn: this.nudeOn,\n      sfwExposureOn: this.sfwExposureOn,\n      personNsfwOn: this.personNsfwOn,\n      sockUnlock: this.sockUnlock,\n      autoTrim: this.autoTrim,\n      seed: this.seed\n    };\n  },\n  loadSettingsObj(o){\n    if (!o) return;\n    if (o.val) Object.keys(o.val).forEach(id => { if (id in this.val) this.val[id] = o.val[id]; });\n    if (o.custom) Object.keys(o.custom).forEach(id => { if (id in this.custom) this.custom[id] = o.custom[id]; });\n    if (o.customEnabled) Object.keys(o.customEnabled).forEach(id => { if (id in this.customEnabled) this.customEnabled[id] = o.customEnabled[id]; });\n    if (o.locked) this.locked = Object.assign({}, o.locked);\n    if (o.secOff) this.secOff = Object.assign({}, o.secOff);\n    if (o.poseMode) this.poseMode = o.poseMode;\n    this.nsfwClothOn = !!o.nsfwClothOn;\n    this.lingerieOn = !!o.lingerieOn;\n    this.nudeOn = !!o.nudeOn;\n    this.sfwExposureOn = !!o.sfwExposureOn;\n    this.personNsfwOn = !!o.personNsfwOn;\n    this.sockUnlock = !!o.sockUnlock;\n    if (o.autoTrim !== undefined) this.autoTrim = o.autoTrim;\n    if (o.seed !== undefined && o.seed !== null) this.seed = o.seed >>> 0;\n    this.rng = mulberry32(this.seed);\n    /* lastMode 取当前模式：设定是「求解完的状态」，再跑时不应触发模式切换回落\n       （HTML 里 lastMode 是常驻内存状态，等价于已稳定） */\n    this.lastMode = this.detectMode();\n    /* 联动一致性：换风格/类别后回落不适配值由下次 generate 的 fillBlanks 兜底 */\n  },\n  dumpSettingsLines(){\n    const lines = [];\n    D.SECTIONS.forEach(sec => {\n      if (this.secOff[sec.id]) return;\n      const sub = [];\n      this.sectionFieldIds(sec).concat(\n        sec.id === 'cloth' ? [] : sec.id === 'pose' ? [] : []\n      ).forEach(id => {\n        const val = (this.val[id] || '').trim();\n        if (!val || val === '不启用') return;\n        if (!this.fieldActive(id)) return;\n        if (SPLIT_FIELDS.indexOf(id) >= 0 && !this.isSplitCat()) return;\n        sub.push((this.FIELD_LABEL[id] || id) + '：' + val);\n      });\n      if (sub.length) lines.push('· ' + (sec.title || sec.id) + '：' + sub.join('；'));\n    });\n    CUSTOM_FIELD_IDS.forEach(id => {\n      if (this.customEnabled[id] === false) return;\n      const val = (this.custom[id] || '').trim(); if (!val) return;\n      lines.push('· 自定义补充（' + (this.FIELD_LABEL[id] || id) + '）：' + val);\n    });\n    return lines;\n  }\n});\n\n/* ---- 过滤器常量（HTML 行 5190–5298，与 S12/S13/S15/S16 自检共用同一口径） ---- */\nconst D_ITEM_C12 = { '象牙白': '白', '白色': '白', '奶白': '白', '奶色': '白', '雪白': '白', '黑色': '黑', '墨黑': '黑', '深蓝': '蓝', '驼色': '驼', '淡粉': '粉', '浅卡其': '卡其', '复古波点': '白', '灰色': '灰', '深灰': '灰',\n  '米白': '白', '米色': '白', '奶油白': '白', '素白': '白', '月白': '白', '月白色': '白',\n  '浅粉': '粉', '粉色': '粉',\n  '浅蓝': '蓝', '蓝色': '蓝', '藏青': '蓝', '藏青色': '蓝',\n  '浅绿': '绿', '淡绿': '绿', '墨绿': '绿',\n  '红色': '红', '酒红': '红', '正红': '红', '绯红': '红', '大红': '红',\n  '浅紫': '紫', '紫色': '紫', '绛紫': '紫',\n  '香槟': '香槟', '银灰': '灰', '银色': '银' };\nconst D_MAT_FAM12 = { '棉质': '棉', '罗纹': '针织', '针织': '针织', '丝绒': '丝绒', '缎面': '丝', '丝质': '丝', '真丝': '丝', '雪纺': '雪纺', '羊绒': '羊绒', '蕾丝': '蕾丝', '镂空针织': '针织', '牛仔': '牛仔', '皮革': '皮革', '乳胶': '乳胶', '织锦缎': '织锦', '织锦': '织锦', '提花': '提花', '厚实': '棉', '薄纱': '纱', '欧根纱': '纱', '香云纱': '香云纱' };\nconst EMBED_MAIN_MAT_RE = /棉质|针织|罗纹|牛仔|雪纺|真丝|丝质|缎面|蕾丝|薄纱|丝绒|皮革|羊绒|乳胶|织锦|织金|提花|欧根纱|香云纱|厚实|纱/;\nconst D_WEATHER_TONE_FILTER = { '日光清新': { '夜色深沉': 1, '黄昏暮色': 1 }, '阴天柔灰': { '夜色深沉': 1, '黄昏暮色': 1 }, '中性白': { '夜色深沉': 1 } };\nconst D_NIGHT_SCENES = { '情人旅馆': 1, '酒店套房': 1, '电车': 1, '车内': 1, '便利店': 1, '点歌厅': 1, '夜店': 1, '天台': 1, '夜晚公园': 1, '后巷': 1, '监禁密室': 1 };\nconst D_SCENE_TONE_FILTER = { '日光清新': D_NIGHT_SCENES, '阴天柔灰': D_NIGHT_SCENES, '中性白': D_NIGHT_SCENES };\nconst D_SOCK_LEN_FIX = { '过膝长筒袜': ['过膝', '大腿'], '吊带袜': ['大腿', '过膝'], '毛绒长袜': ['过膝', '大腿', '小腿'], '泡泡袜': ['及踝', '短袜'], '足袋': ['及踝'] };\nconst D_SOCK_LONG_FOOT_TYPES = { '吊带袜': 1, '过膝长筒袜': 1, '毛绒长袜': 1, '泡泡袜': 1, '足袋': 1 };\nconst D_EMOTION_MOUTH_BAN = {\n  '隐忍': { '大笑': 1, '微张': 1, '吐舌': 1, '舔唇': 1, '唾液': 1 },\n  '痛苦': { '大笑': 1, '微张': 1, '吐舌': 1, '舔唇': 1, '唾液': 1 },\n  '愉悦': { '闭合': 1, '大笑': 1 },\n  '惊恐': { '闭合': 1, '大笑': 1 },\n  '害羞': { '大笑': 1 }\n};\nconst D_STYLE_FIELD_KEY = { clothMat: 'mat', clothPattern: 'pattern', clothDeco: 'deco',\n  bottomLength: 'bottomLen', outerwear: 'outerwear', collarStyle: 'collar', topLength: 'topLen',\n  bottomStyle: 'bottom', sockType: 'sock', shoes: 'shoe' };\n\n/* =====================================================================\n * 提示词组装（buildPrompt）—— 与 HTML 行 5458–5715 逐段一致\n * ===================================================================== */\nEngine.prototype.countChars = function(s){\n  const cjk = (s.match(/[\\u4e00-\\u9fff]/g) || []).length;\n  const lat = (s.match(/[a-zA-Z]+/g) || []).length;\n  return cjk + lat;\n};\n\nEngine.prototype.buildPrompt = function(skip){\n  skip = skip || {};\n  const e = this;\n  const parts = [];\n  const v = e.v.bind(e);\n  const optT = e.optT.bind(e);\n  const OPT = D.OPT;\n  const poseNSFW = (e.poseMode === 'NSFW') && e.simModeActive();\n  const clothNSFW = e.nsfwClothEnabled() && (function(){\n    let s = v('nsfwState'); if (e.nudeOn) s = '';\n    if (s && s !== '不启用') return true;\n    return !!((e.custom.nsfwCustom1 && e.customEnabled.nsfwCustom1 !== false) || (e.custom.nsfwCustom2 && e.customEnabled.nsfwCustom2 !== false));\n  })();\n\n  /* 0. 衣着状态前置句（NSFW 强化：全裸=赤裸描述；否则半裸+随机上身部位） */\n  if (e.nsfwClothEnabled()) {\n    parts.push(e.nudeOn ? '全身赤裸，肌肤完全裸露。' : '人物半裸，' + e.randOf(UPPER_NUDE_PARTS) + '。');\n  }\n\n  /* ① 拍摄角度 */\n  if (!e.secOff.camera) {\n    let s1 = optT(OPT.lens, v('lens')) + '，' + optT(OPT.viewpoint, v('viewpoint'));\n    const ss = v('shotSize'); if (ss && ss !== '不启用') s1 += '，取' + ss + '景别';\n    const df = v('dof'); if (df && df !== '不启用') s1 += '，' + optT(OPT.dof, df);\n    const dev = v('device'); if (dev && dev !== '不启用' && !skip.device) s1 += '，画面以' + optT(OPT.device, dev) + '呈现';\n    parts.push(s1 + '。');\n  }\n\n  /* ② 光影 · 色调 · 氛围 */\n  let s2 = '';\n  if (!e.secOff.light) {\n    const ml = v('mainLight'); if (ml && ml !== '不启用' && !skip.mainLight) s2 += optT(OPT.mainLight, ml) + '。';\n    const amb = v('ambient'); if (amb && amb !== '不启用' && !skip.ambient) s2 += optT(OPT.ambient, amb) + '。';\n    s2 += optT(OPT.colorTone, v('colorTone')) + '。';\n  }\n  if (!e.secOff.extra) {\n    const film = v('film'); if (film && film !== '不启用' && !skip.film) s2 += optT(OPT.film, film) + '。';\n    const cine = v('cine'); if (cine && cine !== '不启用' && !skip.cine) s2 += optT(OPT.cine, cine) + '。';\n  }\n  if (s2) parts.push(s2);\n\n  /* ③ 人物维度 */\n  function pval(id){ const x = v(id); return (x && x !== '不启用') ? x : ''; }\n  let s3 = '';\n  if (!e.secOff.person) {\n    const pGroups = [];\n    const ptm = pval('temperament'), pag = pval('age');\n    if (ptm && pag) pGroups.push(ptm + '的' + pag); else if (ptm || pag) pGroups.push(ptm || pag);\n    if (pval('race')) pGroups.push(pval('race'));\n    const psk = pval('skin'), ptx = pval('texture');\n    if (psk && ptx) pGroups.push(psk + ptx); else if (psk || ptx) pGroups.push(psk || ptx);\n    if (pval('face')) pGroups.push(pval('face'));\n    const pbl = [pval('body'), pval('leg') ? optT(OPT.leg, pval('leg')) : ''].filter(Boolean).join('、');\n    if (pbl) pGroups.push(pbl);\n    const lrv = parseFloat(v('legRatio')) || 1;\n    if (lrv > 1) {\n      let lrd;\n      if (lrv >= 1.9) lrd = '双腿极其修长，腿长接近上半身两倍，九头身超模比例，满屏长腿';\n      else if (lrv >= 1.7) lrd = '双腿极为修长，腿长约为上半身的' + lrv.toFixed(1) + '倍，逆天长腿，九头身比例';\n      else if (lrv >= 1.45) lrd = '双腿修长挺拔，腿长约为上半身的' + lrv.toFixed(1) + '倍，高挑显腿长';\n      else if (lrv >= 1.2) lrd = '双腿修长匀称，腿长约为上半身的' + lrv.toFixed(1) + '倍，身形比例极佳';\n      else lrd = '双腿比例自然修长，腿长略长于上半身';\n      pGroups.push(lrd);\n    }\n    const bsxv = pval('breastSize'), bshv = pval('breastShape');\n    const pbx = [bsxv ? optT(OPT.breastSize, bsxv) : '', bshv ? optT(OPT.breastShape, bshv) : ''].filter(Boolean).join('，');\n    if (pbx) pGroups.push(pbx);\n    const bodyPart = [pval('shoulder') ? optT(OPT.shoulder, pval('shoulder')) : '',\n      pval('chestPos') ? optT(OPT.chestPos, pval('chestPos')) : '',\n      pval('waist') ? optT(OPT.waist, pval('waist')) : '',\n      pval('hip') ? optT(OPT.hip, pval('hip')) : '',\n      pval('arm') ? optT(OPT.arm, pval('arm')) : ''].filter(Boolean).join('，');\n    if (bodyPart) pGroups.push(bodyPart);\n    const nlb = pval('nsfwLowerBody');\n    if (nlb && e.personNsfwEnabled() && !skip.nsfwLowerBody) pGroups.push(optT(OPT.nsfwLowerBody, nlb));\n    const nbd = pval('nsfwBreastDetail');\n    if (nbd && e.personNsfwEnabled() && !skip.nsfwBreastDetail) pGroups.push(optT(OPT.nsfwBreastDetail, nbd));\n    if (pval('firstImp')) pGroups.push(pval('firstImp'));\n    let pcx = (e.custom.personCustom || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (pcx && e.customEnabled.personCustom !== false && !skip.personCustom) pGroups.push(pcx);\n    s3 = pGroups.length ? pGroups.join('，') + '。' : '';\n  }\n  if (!e.secOff.extra) {\n    const tatt = v('tattoo'), tpos = v('tattooPos');\n    if (tatt && tatt !== '不启用' && tpos && tpos !== '不启用' && !skip.tattoo) s3 += tpos + '有一枚' + tatt + '纹身，墨色贴合皮肤轮廓自然晕染，边缘微微褪色，如同渗入皮肤下层的真墨。';\n  }\n  if (s3) parts.push(s3);\n\n  /* ④ 发型 */\n  if (!e.secOff.hair) {\n    const hairCore = [v('hairLen'), v('hairColor'), v('hairCurl')].filter(x => x && x !== '不启用').join('');\n    const hairParts = [];\n    if (hairCore) hairParts.push(hairCore);\n    const hte = v('hairTie'); if (hte && hte !== '不启用') hairParts.push(hte);\n    const hbn = v('hairBangs'); if (hbn && hbn !== '不启用') hairParts.push(hbn);\n    const hst = v('hairState'); if (hst && hst !== '不启用') hairParts.push(hst);\n    let s4 = hairParts.join('，');\n    const haf = v('hairAccFront'); if (haf && haf !== '不启用' && !skip.hairAccFront) s4 += (s4 ? '，' : '') + optT(OPT.hairAccFront, haf);\n    const hab = v('hairAccBack'); if (hab && hab !== '不启用' && !skip.hairAccBack) s4 += (s4 ? '，' : '') + optT(OPT.hairAccBack, hab);\n    const has = v('hairAccSide'); if (has && has !== '不启用' && !skip.hairAccSide) s4 += (s4 ? '，' : '') + optT(OPT.hairAccSide, has);\n    if (s4) parts.push(s4 + '。');\n  }\n\n  /* ⑤ 妆容 */\n  let s5 = '';\n  if (!e.secOff.makeup) {\n    s5 = '妆容为' + optT(OPT.makeup, v('makeup'));\n    const md = v('makeupDetail'); if (md && md !== '不启用' && !skip.makeupDetail) s5 += '，' + md;\n    const sm = v('smudge'); if (sm && sm !== '不启用' && !skip.smudge) s5 += '，' + optT(OPT.smudge, sm);\n    const na = v('nails'); if (na && na !== '不启用' && !skip.nails) s5 += '，' + optT(OPT.nails, na);\n  }\n  if (s5) parts.push(s5 + '。');\n\n  /* ⑥ 表情 */\n  let s6 = '';\n  if (!e.secOff.expression) {\n    s6 = optT(OPT.emotion, v('emotion')) + '，' + optT(OPT.eye, v('eye')) + '，' + optT(OPT.mouth, v('mouth')) + '。';\n  }\n  if (!e.secOff.extra) {\n    const ims = [v('imperf1'), v('imperf2')].filter((x, idx) => x && x !== '不启用' && !skip['imperf' + (idx + 1)]);\n    if (ims.length) { s6 += ims.map(x => optT(OPT.imperf, x)).join('，') + '。'; }\n  }\n  if (s6) parts.push(s6);\n\n  /* ⑧ 姿态（先算，供服装段判断安全内裤） */\n  let s8 = '';\n  if (poseNSFW) {\n    const simT = (v('simMode') === '手动选类') ? e.simPickText() : e.smartSimPick();\n    if (simT) s8 = simT;\n    const ch = v('nsfwChain');\n    if (ch && ch !== '不启用' && !skip.nsfwChain) {\n      const chTxt = optT(OPT.nsfwChain, ch).replace(/^,/, '');\n      s8 = s8.replace(/[。，\\s]+$/, '') + '，' + chTxt + '。';\n    }\n  } else {\n    let simT2 = '';\n    if (e.sfwSimModeActive()) simT2 = (v('sfwSimMode') === '手动选类') ? e.sfwSimPickText() : e.smartSfwPick();\n    if (simT2) s8 = simT2;\n  }\n\n  /* ⑦ 服装（SFW 主体；NSFW 强化叠加；全裸/情趣衣柜替换） */\n  let s7 = '';\n  const clothModeHide = e.nsfwClothEnabled() && (e.lingerieOn || e.nudeOn);\n  let nstHead = '';\n  if (clothNSFW) { let nst = v('nsfwState'); if (e.nudeOn) nst = ''; if (nst && nst !== '不启用') nstHead = optT(OPT.nsfwState, nst); }\n  const dims = [];\n  if (!clothModeHide) {\n    const it = v('clothItem'); if (it && it !== '不启用') dims.push((e.isSplitCat() ? '上身穿着' : '') + e.clothItemT(it));\n    if (nstHead) dims.push(nstHead);\n    const mt = v('clothMat'); if (mt && mt !== '不启用' && !skip.clothMat) dims.push(optT(OPT.clothMat, mt));\n    const pa = v('clothPattern'); if (pa && pa !== '不启用' && !skip.clothPattern) dims.push(optT(OPT.clothPattern, pa));\n    const dc = v('clothDeco'); if (dc && dc !== '不启用' && !skip.clothDeco) dims.push(dc + '装饰细节');\n    if (e.isSplitCat()) {\n      const ow = v('outerwear'); if (ow && ow !== '不启用' && !skip.outerwear) dims.push('外面' + optT(OPT.outerwear, ow));\n      const cs = v('collarStyle'); if (cs && cs !== '不启用' && !skip.collarStyle) dims.push(optT(OPT.collarStyle, cs));\n      const tl = v('topLength'); if (tl && tl !== '不启用' && !skip.topLength) dims.push(optT(OPT.topLength, tl));\n      const ly = v('clothLayer'); if (ly && ly !== '不启用' && !skip.clothLayer) dims.push(optT(OPT.clothLayer, ly));\n      const bs = v('bottomStyle'); if (bs && bs !== '不启用' && !skip.bottomStyle) dims.push('下身穿着' + optT(OPT.bottomStyle, bs));\n      const bl = v('bottomLength'); if (bl && bl !== '不启用' && !skip.bottomLength) dims.push(optT(OPT.bottomLength, bl));\n      const sc2 = v('splitColor'); if (sc2 && sc2 !== '不启用' && !skip.splitColor) dims.push(optT(OPT.splitColor, sc2));\n    } else {\n      const ly2 = v('clothLayer'); if (ly2 && ly2 !== '不启用' && !skip.clothLayer) dims.push(optT(OPT.clothLayer, ly2));\n      const bl2 = v('bottomLength'); if (bl2 && bl2 !== '不启用' && !skip.bottomLength) dims.push(optT(OPT.bottomLength, bl2));\n    }\n    const sh = v('shoes'); if (sh && sh !== '不启用' && !skip.shoes) dims.push('脚踩' + optT(OPT.shoes, sh));\n    const st = v('sockType');\n    if (st && st !== '不启用' && !skip.sockType) {\n      const sl = v('sockLen'), sc = v('sockColor'), so = v('sockOpacity');\n      const slTxt = (sl && sl !== '不启用' && !D_SOCK_LEN_FIX[st]) ? sl : '';\n      const sn = (sc && sc !== '不启用' ? sc : '') + slTxt + st;\n      const sd = [optT(OPT.sockType, st)];\n      if (so && so !== '不启用' && !skip.sockOpacity) { const sod = optT(OPT.sockOpacity, so); if (sod) sd.push(sod); }\n      dims.push('双腿穿着' + sn + (sd.length ? ('，' + sd.join('，')) : ''));\n    }\n    const ac = v('accessory'); if (ac && ac !== '不启用' && !skip.accessory) dims.push(optT(OPT.accessory, ac));\n    const pc = v('pantyColor'), ps = v('pantyStyle');\n    if ((pc && pc !== '不启用') || (ps && ps !== '不启用')) {\n      dims.push('下身' + (pc && pc !== '不启用' ? pc : '') + (ps && ps !== '不启用' ? ps : '') + '内裤完整覆盖私处，面料厚实不透明');\n    }\n    const exv = v('sfwExposure'); if (e.sfwExposureOn && !e.nsfwClothEnabled() && exv && exv !== '不启用' && !skip.sfwExposure) dims.push(optT(OPT.exposure, exv));\n    const ctt = v('clothTransparency'); if (e.sfwExposureOn && !e.nsfwClothEnabled() && ctt && ctt !== '不启用' && !skip.clothTransparency) dims.push(optT(OPT.clothTransparency, ctt));\n  }\n  s7 = dims.length ? dims.join('，') + '。' : '';\n  /* 中文接中文不加空格，跨语种以空格分隔 */\n  const cjkJoin = function(base, add){\n    if (!add) return base;\n    if (!base) return add;\n    if (/[\\u4e00-\\u9fff。！？，、；：]/.test(base.charAt(base.length - 1)) && /^[\\u4e00-\\u9fff]/.test(add)) return base + add;\n    return base + ' ' + add;\n  };\n  if (clothNSFW) {\n    let nc1 = (e.custom.nsfwCustom1 || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (e.customEnabled.nsfwCustom1 === false) nc1 = '';\n    let nc2 = (e.custom.nsfwCustom2 || '').replace(/^[，。、\\s]+|[，。、\\s]+$/g, '');\n    if (e.customEnabled.nsfwCustom2 === false) nc2 = '';\n    const nstTail = cjkJoin(cjkJoin('', nc1), nc2);\n    if (nstHead && !dims.length) s7 = nstHead + '，' + s7;\n    s7 = cjkJoin(s7, nstTail);\n  }\n  if (e.nsfwClothEnabled() && e.lingerieOn) {\n    const lgi = [];\n    const lck = e.lingerieCatKey(v('lingerieCat'));\n    if (lck && lck !== '不启用') lgi.push('身着' + lck + '情趣内衣');\n    const li = v('lingerieItem');\n    if (li && li !== '不启用') lgi.push(li);\n    const lc1 = v('lingerieColor1'); if (lc1 && lc1 !== '不启用') lgi.push('主色调为' + lc1);\n    const lc2 = v('lingerieColor2'); if (lc2 && lc2 !== '不启用') lgi.push('辅色调为' + lc2);\n    if (lgi.length) s7 = cjkJoin(s7, lgi.join('，') + '。');\n  }\n  if (e.nsfwClothEnabled() && !(e.lingerieOn || e.nudeOn)) {\n    const nx = v('nsfwExposure');\n    if (nx && nx !== '不启用' && !skip.nsfwExposure) { s7 = cjkJoin(s7, optT(OPT.exposureNsfw, nx) + '。'); }\n  }\n\n  /* 装配姿态 + 服装 */\n  if (s8) parts.push(s8 + (poseNSFW ? '' : '。'));\n  if (s7) parts.push(s7);\n\n  /* ⑨ 背景 · 道具 · 天气 */\n  if (!e.secOff.bg) {\n    let s9 = optT(OPT.scene, v('scene')) + '。';\n    const pr = v('prop'); if (pr && pr !== '不启用' && !skip.prop) s9 += optT(OPT.prop, pr) + '。';\n    const we = v('weather'); if (we && we !== '不启用' && !skip.weather) s9 += optT(OPT.weather, we) + '。';\n    if (s9) parts.push(s9);\n  }\n\n  /* ⑩ 构图 */\n  let s10 = '';\n  if (!e.secOff.comp) {\n    const cpv = v('compPos');\n    s10 = optT(OPT.comp, v('comp')) + (cpv && cpv !== '不启用' ? '，人物' + optT(OPT.compPos, cpv) : '') + '。';\n  }\n  if (!e.secOff.extra) {\n    const stt = v('styleTag'); if (stt && stt !== '不启用' && !skip.styleTag) s10 += '整体呈现' + stt + '风格。';\n  }\n  if (s10) parts.push(s10);\n\n  /* 段间拼接：跨语种补空格 */\n  function joinParts(arr){\n    let out = '';\n    arr.forEach(p => {\n      if (!p) return;\n      if (out) {\n        const a = out.charAt(out.length - 1), b = p.charAt(0);\n        if (!/[\\u4e00-\\u9fff\\u3000。！？，、；：]/.test(a) && /[\\u4e00-\\u9fff]/.test(b)) out += ' ';\n      }\n      out += p;\n    });\n    return out;\n  }\n  return { text: joinParts(parts), risk: { risky: false, poseName: '', poseCat: '' } };\n};\n\n/* =====================================================================\n * 自检（S1–S17 / F1–F10）+ 生成入口（generate）\n * —— 与 HTML 行 5724–5939 / 6158–6174 一致\n * ===================================================================== */\nEngine.prototype.sceneObj = function(){\n  const s = this.v('scene');\n  return D.OPT.scene.filter(o => o.v === s)[0] || {};\n};\n\nEngine.prototype.runSelfCheck = function(prompt, risk, skip){\n  skip = skip || {};\n  const e = this;\n  const v = e.v.bind(e);\n  const isNSFW = (v('nsfwState') !== '') || e.simModeActive();\n  const n = e.countChars(prompt);\n  const scene = e.sceneObj();\n  const water = !!scene.water;\n  const F = [], S = [];\n  const fn = isNSFW ? 'NSFW' : 'SFW';\n\n  /* F1 物理自洽 */\n  let f1ok = true, f1note = '光源方向与场景时间匹配';\n  if (e.secOff.bg || e.secOff.light) { f1note = '涉及段落已「本段不启用」，跳过自检'; }\n  else {\n    const NIGHT = { '情人旅馆': 1, '夜店': 1, '天台': 1, '夜晚公园': 1, '后巷': 1, '监禁密室': 1, '酒店套房': 1 };\n    if (NIGHT[scene.v] && (v('colorTone') === '日光清新')) { f1ok = false; f1note = '夜晚场景搭配了日光色调，光源矛盾'; }\n  }\n  F.push({ id: 'F1', name: '物理自洽', ok: f1ok, note: f1note });\n\n  /* F2 语言模式 */\n  let f2ok, f2note;\n  if (isNSFW) {\n    f2ok = true;\n    f2note = 'NSFW 姿态为中文模拟动作库描述（+可选英文反应链）';\n  } else {\n    f2ok = !/[a-zA-Z]{2,}/.test(prompt.replace(/JK|KC|Lolita|Blazer|JSK|OP|POLO|Polo|polo|babydoll|BabyDoll/g, ''));\n    f2note = f2ok ? '全文为中文叙事（V领/A字/JK 等形状与缩写字母不计）' : '发现成段英文，SFW 要求中文叙事';\n  }\n  F.push({ id: 'F2', name: '语言模式', ok: f2ok, note: f2note });\n\n  /* F3 禁令总表：SFW 全扫；NSFW 完全放行 */\n  const hit = [];\n  if (!isNSFW) {\n    BAN_A.concat(BAN_B).forEach(w => { if (prompt.indexOf(w) >= 0) hit.push(w); });\n    BAN_D.forEach(w => { if (prompt.toLowerCase().indexOf(w) >= 0) hit.push(w); });\n  }\n  const f3ok = hit.length === 0 || water;\n  const f3note = hit.length === 0 ? (isNSFW ? 'NSFW 模式完全放行（无限制，唯一底线：不涉未成年/真实人物·词库自律）' : '禁令词扫描通过')\n    : (water ? '命中词出现在含水场景，按豁免条款放行：' + hit.join('、')\n             : '命中禁令词：' + hit.join('、'));\n  F.push({ id: 'F3', name: '禁令总表', ok: f3ok, note: f3note });\n\n  /* F4 内裤锚定（手动可选） */\n  F.push({ id: 'F4', name: '内裤锚定', ok: true, note: '内裤颜色/款式为手动可选，不再自动锚定' });\n\n  /* F5 字数 */\n  const f5ok = n >= 300 && n <= 700;\n  F.push({ id: 'F5', name: '字数 300–700', ok: f5ok, note: '当前约 ' + n + ' 字' + (n < 300 ? '（略少，可补充细节）' : n > 700 ? '（超出上限，建议精简）' : '') });\n\n  /* F6 无违禁格式 */\n  const f6ok = !/\\([^)]*:\\s*[\\d.]+\\)/.test(prompt) && !/masterpiece|best quality/i.test(prompt);\n  F.push({ id: 'F6', name: '无违禁格式', ok: f6ok, note: '无权重语法/质量标签/标签串' });\n\n  /* F7 视角冲击力 */\n  F.push({ id: 'F7', name: '视角冲击力', ok: true, note: '已选明确视角 + 明确镜头类型' });\n\n  /* F8 服装维度 */\n  if (!isNSFW) {\n    let dimCount = 0;\n    ['clothLayer', 'clothItem', 'outerwear', 'collarStyle', 'topLength', 'bottomStyle', 'splitColor', 'bottomLength', 'clothMat', 'clothPattern', 'clothDeco', 'shoes', 'sockType', 'accessory'].forEach(id => {\n      const val = v(id); if (val && val !== '不启用' && !skip[id]) dimCount++;\n    });\n    const f8Split = e.isSplitCat();\n    const f8ok = f8Split ? (dimCount >= 7 && dimCount <= 14) : (dimCount >= 6 && dimCount <= 10);\n    F.push({ id: 'F8', name: '服装维度', ok: f8ok, note: '当前 ' + dimCount + ' 维' + (f8Split ? '（上下装全字段 7–14）' : '（常规类别 6–10）') });\n  } else {\n    F.push({ id: 'F8', name: '服装维度', ok: true, note: 'NSFW 免检' });\n  }\n\n  /* F9 服装来源 */\n  const item = v('clothItem') || '';\n  const demoHit = item.indexOf('深蓝灰缎面吊带裙') >= 0 || (item.indexOf('白色丝质衬衫') >= 0 && /紧身短裙|包臀/.test(item));\n  F.push({ id: 'F9', name: '服装来源', ok: true, note: demoHit ? '主件与文档示范主件接近（用户指定除外）' : '主件来自款式子表' });\n\n  /* F10 NSFW 模拟动作库 */\n  if (isNSFW) {\n    F.push({ id: 'F10', name: 'NSFW 模拟动作库', ok: true, note: '姿态为交合模拟动作库描述' });\n  }\n\n  /* S1 情绪→光影 */\n  const emo = v('emotion'), light = v('mainLight');\n  if (/慵懒|温柔/.test(emo) && light === '硬光') S.push({ id: 'S1', ok: false, note: '慵懒温柔的情绪配硬光直射，建议换柔光' });\n  else S.push({ id: 'S1', ok: true, note: '情绪与光影协调' });\n\n  /* S2 身份→姿态（手动选类取所选；智能匹配现抽一条判定——与 HTML 一致消耗 RNG） */\n  if (v('firstImp') === '楚楚可怜' && !isNSFW) {\n    const s2pose = (v('sfwSimMode') === '手动选类') ? e.sfwSimPickText() : (v('sfwSimMode') === '智能匹配' ? e.smartSfwPick() : '');\n    if (/直立|叉腰|背手/.test(s2pose))\n      S.push({ id: 'S2', ok: false, note: '楚楚可怜配霸气站姿，气质撕裂（反差设定除外）' });\n    else S.push({ id: 'S2', ok: true, note: '身份与姿态协调' });\n  } else S.push({ id: 'S2', ok: true, note: '身份与姿态协调' });\n\n  /* S3 色调→情绪 */\n  if (e.secOff.light || e.secOff.expression) { S.push({ id: 'S3', ok: true, note: '色调/情绪段落已「本段不启用」，跳过' }); }\n  else {\n    const tone = v('colorTone');\n    if (/霓虹混合|冷白荧光/.test(tone) && /冷淡|恍惚失神|宁静/.test(emo))\n      S.push({ id: 'S3', ok: false, note: '霓虹/冷荧光撞情绪主调，注意色彩情绪一致' });\n    else S.push({ id: 'S3', ok: true, note: '色调与情绪一致' });\n  }\n\n  /* S4 配饰→世界观 */\n  S.push({ id: 'S4', ok: true, note: '无跨世界观配饰冲突' });\n\n  /* S5 设备→画质 */\n  if (e.secOff.camera) { S.push({ id: 'S5', ok: true, note: '拍摄角度段已「本段不启用」，跳过' }); }\n  else {\n    const dev = v('device'), lens = v('lens'), dof = v('dof');\n    if ((dev === '手机自拍' && /长焦|中焦/.test(lens)) || (dev === '监控摄像头' && dof === '浅景深'))\n      S.push({ id: 'S5', ok: false, note: '设备与画质自洽性存疑（手机不加焦段、监控不配浅景深）' });\n    else S.push({ id: 'S5', ok: true, note: '设备与画质自洽' });\n  }\n\n  /* S6 裸露→场景 */\n  if (e.secOff.bg) { S.push({ id: 'S6', ok: true, note: '背景段已「本段不启用」，跳过' }); }\n  else if (isNSFW) { S.push({ id: 'S6', ok: true, note: 'NSFW 场景×裸露禁忌已按授权无限制放行' }); }\n  else S.push({ id: 'S6', ok: true, note: 'SFW 免检' });\n\n  /* S7 纹身融合 */\n  if (e.secOff.extra) S.push({ id: 'S7', ok: true, note: '附加段已「本段不启用」，跳过' });\n  else if (v('tattoo') !== '不启用') S.push({ id: 'S7', ok: true, note: '纹身已带皮肤融合描述，避免贴纸感' });\n  else S.push({ id: 'S7', ok: true, note: '未使用纹身' });\n\n  /* S8 道具位置 */\n  if (e.secOff.bg) S.push({ id: 'S8', ok: true, note: '背景段已「本段不启用」，跳过' });\n  else if (v('prop') !== '不启用') S.push({ id: 'S8', ok: true, note: '道具已交代位置关系' });\n  else S.push({ id: 'S8', ok: true, note: '未使用道具' });\n\n  /* S9 眼神→角度 */\n  if (e.secOff.camera || e.secOff.expression) { S.push({ id: 'S9', ok: true, note: '机位/表情段已「本段不启用」，跳过' }); }\n  else {\n    const vp = v('viewpoint'), eye = v('eye');\n    if (/俯拍|鸟瞰/.test(vp) && eye === '挑逗')\n      S.push({ id: 'S9', ok: false, note: '俯拍机位配「挑逗注视」存在视线方向矛盾' });\n    else if (/仰拍|虫视/.test(vp) && eye === '乞求哀怨')\n      S.push({ id: 'S9', ok: false, note: '仰拍机位配「向上望的哀求」存在视线方向矛盾' });\n    else S.push({ id: 'S9', ok: true, note: '眼神方向与机位匹配' });\n  }\n\n  /* S10 鞋履 × 主件类别适配 */\n  const shv = v('shoes'), cc = v('clothCat');\n  if (shv && shv !== '不启用' && shv !== '赤脚' && D.SHOE_POOL[cc] && D.SHOE_POOL[cc].indexOf(shv) < 0)\n    S.push({ id: 'S10', ok: false, note: '「' + shv + '」与主件类别「' + cc + '」适配度低，建议换适配鞋款或赤脚' });\n  else S.push({ id: 'S10', ok: true, note: '鞋履与主件类别适配（含赤脚/不启用）' });\n\n  /* S11 姿态 × 手部（擦边动作库后恒通过） */\n  S.push({ id: 'S11', ok: true, note: '动作描述已内含手部姿态（手部细节体系废弃）' });\n\n  /* S12 服装细节连贯 */\n  let S12ok = true, S12note = '服装细节连贯（颜色/材质与主件一致）';\n  const clothHideS12 = e.nsfwClothEnabled() && (e.lingerieOn || e.nudeOn);\n  if (e.secOff.cloth || clothHideS12) { S12note = '服装段已隐藏/停用，跳过'; }\n  else if (e.isSplitCat()) {\n    const it12 = v('clothItem') || '';\n    const c12 = e.itemColorFam12(it12), m12 = e.itemMatFam12(it12);\n    const sc12 = v('splitColor'), mt12 = v('clothMat');\n    if (c12 && sc12 && sc12 !== '不启用') {\n      const topC = e.splitTopColor12(sc12);\n      if (topC && topC.indexOf(c12) < 0) { S12ok = false; S12note = '主件为' + c12 + '色系，但上下装配色「' + sc12 + '」上衣为' + topC + '色系，颜色冲突，建议换色或「不启用」'; }\n    }\n    if (mt12 && mt12 !== '不启用') {\n      if (e.itemEmbedsMainMat(it12)) { S12ok = false; S12note = '主件描述已自带材质（厚实/纱/缎面等），但「材质·光效」仍选了' + mt12 + '，材质重复或冲突，建议「不启用」'; }\n      else if (m12) {\n        const mf12 = e.matFam12(mt12);\n        if (mf12 && mf12 !== m12) { S12ok = false; S12note = '主件材质为' + m12 + '，但「材质·光效」选了' + mt12 + '，材质冲突，建议一致或「不启用」'; }\n      }\n    }\n  } else {\n    const mt12b = v('clothMat');\n    S12note = '非上下装类别：主件词条自带颜色/材质，免检';\n    if (mt12b && mt12b !== '不启用' && e.itemEmbedsMainMat(v('clothItem') || '')) { S12ok = false; S12note = '主件描述已自带材质（厚实/纱/缎面等），但「材质·光效」仍选了' + mt12b + '，材质重复或冲突，建议「不启用」'; }\n  }\n  S.push({ id: 'S12', ok: S12ok, note: S12note });\n\n  /* S13 色调×天气 */\n  const S13conf = e.weatherToneConflict();\n  S.push({ id: 'S13', ok: !S13conf, note: S13conf ? '色调「' + v('colorTone') + '」与天气「' + S13conf + '」冲突（白昼/夜景矛盾），建议换其一' : '色调与天气一致' });\n\n  /* S14 妆容×糊妆 */\n  const S14bad = (v('makeup') === '素颜') && v('smudge') !== '' && v('smudge') !== '不启用';\n  S.push({ id: 'S14', ok: !S14bad, note: S14bad ? '妆容「素颜·裸妆感无妆」与糊妆「' + v('smudge') + '」矛盾（无妆可糊），建议糊妆置「不启用」' : '妆容与糊妆状态一致' });\n\n  /* S15 袜子长度×类型 */\n  const S15conf = e.sockLenTypeConflict();\n  S.push({ id: 'S15', ok: !S15conf, note: S15conf ? S15conf + '，建议长度与类型取其一' : '袜子长度与类型一致' });\n\n  /* S16 情绪×口型 */\n  const S16conf = e.mouthEmotionConflict();\n  S.push({ id: 'S16', ok: !S16conf, note: S16conf ? S16conf + '，建议换其一' : '情绪与口型一致' });\n\n  /* S17 模拟动作×环境适配 */\n  let S17ok = true, S17note = '模拟动作与环境适配';\n  if (e.simModeActive() && v('simMode') === '手动选类' && v('scene')) {\n    const env17 = D.SCENE_ENV[v('scene')] || D.SCENE_ENV['__default'];\n    const txt17 = e.simPickText();\n    if (txt17) {\n      const hits17 = env17.filter(kw => txt17.indexOf(kw) >= 0).length;\n      if (hits17 === 0) { S17ok = false; S17note = '模拟动作所需支撑物与场景「' + v('scene') + '」不匹配（该场景可用：' + env17.join('/') + '）'; }\n    }\n  } else if (e.simModeActive() && v('simMode') === '手动选类') {\n    S17note = '未选场景，跳过环境匹配';\n  } else if (e.simModeActive() && v('simMode') === '智能匹配') {\n    S17note = '智能匹配：已按场景环境自动适配';\n  }\n  S.push({ id: 'S17', ok: S17ok, note: S17note });\n\n  return { F, S, n, fn };\n};\n\n/* ---- 生成入口：等价 HTML「生成提示词」按钮 ----\n * randomize=true（默认）→ 先整体重掷（尊重🔒锁定）再补全\n * randomize=false       → 只补全未选项（幂等，重复调用输出稳定）\n * autoTrim=true（默认）  → 超 700 字按 TRIM_ORDER 顺序精简次要选项（HTML 复选框默认勾选） */\nEngine.prototype.generate = function(opts){\n  opts = opts || {};\n  const randomize = opts.randomize !== false;\n  if (randomize) this.randomizeAll();\n  this.syncModeDeps();\n  /* 注：不做「物化随机」——HTML 的 buildPrompt 在每次 trim 迭代都会重新抽\n     （nudePart/smartSim），runSelfCheck 的 S2 也会重掷；引擎保持同序调用，\n     同 seed 下 RNG 序列完全确定 → 输出逐字可复现且与 HTML 原版逐字一致 */\n  const filled = this.fillBlanks();\n  let skip = {};\n  let result = this.buildPrompt(skip);\n  let checks = this.runSelfCheck(result.text, result.risk, skip);\n  if (this.autoTrim !== false && opts.autoTrim !== false && checks.n > 700) {\n    for (let i = 0; i < TRIM_ORDER.length && checks.n > 700; i++) {\n      skip[TRIM_ORDER[i]] = true;\n      result = this.buildPrompt(skip);\n      checks = this.runSelfCheck(result.text, result.risk, skip);\n    }\n  }\n  result.trimmed = Object.keys(skip).length;\n  result.filled = filled;\n  result.mode = this.detectMode();\n  result.checks = checks;\n  result.seed = this.seed;\n  return result;\n};\n\nreturn { Engine, D, mulberry32, CUSTOM_FIELD_IDS, NEG_EFFECT_IDS, SPLIT_FIELDS, STYLE_CTRL_IDS, TRIM_ORDER, RANGE_FIELDS, UPPER_NUDE_PARTS, BAN_A, BAN_B, BAN_D };\n";
+function buildK2Engine(src){
+  return new Function(
+    'var __K2_SRC__ = ' + JSON.stringify(src) + ';\n' +
+    '__K2_SRC__ = __K2_SRC__.replace(/^\\uFEFF/, "");' +
+    'return new Function("__K2_SRC__", ' + JSON.stringify(__K2_ENGINE__) + ')(__K2_SRC__);'
+  )();
+}
+/* 用 K2 引擎随机组句，生成完整中文提示词；K2 随机模式下由 webuiGenerate 直接提交，不回填输入框 */
+/** 【K2】生成随机并复制：用 K2 引擎组一句中文提示词 → 直接写入剪贴板。
+ *  不生成图片、不回填输入框（保持 k2Compose 的临时通道语义）。
+ *  遵守当前：字段锁定（固定/排除）、NSFW 开关、已选预设。
+ *  仅 K2 模式可见（按钮在 grimoire_k2_panel 工具栏，该面板只在 _k2ComposeMode==='k2' 时显示）。 */
+async function k2ComposeAndCopy() {
+  // 防御：非 K2 模式不给用（面板理论上不可见，这里兜底）
+  if (_k2ComposeMode !== 'k2') { toast('❌ 仅 K2 模式可用', 'error'); return; }
+  const btn = document.getElementById('grm_k2_rand_copy_btn');
+  const orig = btn ? btn.innerHTML : '';
+  try {
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.textContent = '⏳ 组词中…'; }
+    const text = await k2Compose();          // 内部已应用锁定/NSFW，返回最终成句，失败时返回 ''
+    if (!text) { return; }                    // k2Compose 已 toast 报错
+    // 复制到剪贴板（优先 navigator.clipboard，失败走 fallbackCopy 兜底）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+      } catch (e) {
+        fallbackCopy(text);
+        toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+      }
+    } else {
+      fallbackCopy(text);
+      toast('✅ 已复制 K2 随机提示词（' + text.length + ' 字）');
+    }
+  } catch (e) {
+    toast('❌ 复制失败: ' + (e && e.message ? e.message : e), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = orig; }
+  }
+}
+
+async function k2Compose(){
+  try {
+    if (typeof buildK2Engine !== 'function') { toast('❌ K2 引擎未加载', 'error'); return ''; }
+    var res = await fetch('/api/k2gen/data').then(function(r){ return r.json(); }).catch(function(){ return null; });
+    if (!res || !res.ok) { toast('❌ K2 词库加载失败', 'error'); return ''; }
+    var mod = buildK2Engine(res.source);
+    window.__k2Mod = mod; // 供 K2 字段锁定面板复用，避免重复拉词库
+    var eng = new mod.Engine({ autoTrim: true });
+    /* K2 NSFW 开关：开启时切到交合/裸露强化模式（默认 SFW 人像细节描述） */
+    if (window._k2NsfwOn) { eng.toggleNsfwMaster(); }
+    /* 应用字段锁定：固定值锁定 / 不选排除，其余字段仍随机重掷 */
+    if (typeof applyK2LocksToEngine === 'function') applyK2LocksToEngine(eng);
+    var r = eng.generate({ randomize: true, autoTrim: true });
+    /* 不回填输入框：K2 随机词是临时通道，直接返回给调用方提交，不污染用户手动输入 */
+    toast('✅ K2 已组句（字数 ' + r.checks.n + '）');
+    return r.text;
+  } catch (e) {
+    toast('❌ K2 组句失败: ' + e.message, 'error');
+    return '';
+  }
+}
+</script>
+</body>
+</html>

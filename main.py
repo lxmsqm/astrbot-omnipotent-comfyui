@@ -19,13 +19,13 @@ from astrbot.api.provider import ProviderRequest
 from astrbot.api.message_components import Image as AstrImage, At, Plain
 from aiohttp import web
 from dataclasses import dataclass, field
-from .anima_data import AnimaDataManager, load_anima_tools_source, _is_anima_source, _ANIMA_SOURCE_NAMES
+from .core.anima_data import AnimaDataManager, load_anima_tools_source, _is_anima_source, _ANIMA_SOURCE_NAMES
 # v4.3.0 数据分离：大文件（缓存/JS回退源/用户配置）外移到 AstrBot/data/comfyui_allinone_data/
-from . import data_paths
-from .data_paths import (data_dir_resolver, user_data_dir_resolver,
-                         migrate_out as _data_migrate_out, migration_status as _data_migration_status)
-from .grimoire import GrimoireMixin
-from .llm_tools import (
+from .core import data_paths
+from .core.data_paths import (data_dir_resolver, user_data_dir_resolver,
+                              migrate_out as _data_migrate_out, migration_status as _data_migration_status)
+from .core.grimoire import GrimoireMixin
+from .core.llm_tools import (
     ComfyUITaskError, LarkLooseCommandFilter, LLMToolsMixin,
     ComfyUIDrawTool, ComfyUIListWorkflowsTool, ComfyUISwitchWorkflowTool,
     ComfyUIGetCurrentWorkflowTool, ComfyUIImg2ImgTool, ComfyUIVideoTool,
@@ -33,9 +33,9 @@ from .llm_tools import (
     ComfyUIDeletePresetTool, ComfyUIQueueTool, ComfyUIStopTool,
     ComfyUIExecuteTool, ComfyUIRandomImageTool,
 )
-from .workflow import WorkflowMixin
-from .generate import GenerateMixin
-from .webui_server import WebUIMixin
+from .core.workflow import WorkflowMixin
+from .core.generate import GenerateMixin
+from .core.webui_server import WebUIMixin
 
 
 @register("astrbot_plugin_comfyui_local", "BLack_Rin_ROBOT", "连接本地ComfyUI生成图片", "1.0.0")

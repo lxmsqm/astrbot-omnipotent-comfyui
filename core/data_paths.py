@@ -40,7 +40,8 @@ _PLUGIN_MARKER = ("data", "plugins")
 
 
 def _plugin_root() -> Path:
-    return Path(__file__).resolve().parent
+    # 本模块在 core/ 子包内，插件根是上两级
+    return Path(__file__).resolve().parent.parent
 
 
 def get_astrbot_data_dir() -> Path:

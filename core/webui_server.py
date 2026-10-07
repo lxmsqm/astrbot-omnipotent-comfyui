@@ -22,6 +22,9 @@ from aiohttp import web
 from .anima_data import load_anima_tools_source, _ANIMA_SOURCE_NAMES
 from .data_paths import data_dir_resolver, migration_status as _data_migration_status
 
+# 插件根目录（本文件在 core/ 子包内）——所有静态资源/前端文件的基准路径
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+
 
 class WebUIMixin:
     """WebUI 服务与 API:启动 aiohttp 服务、页面与全部 /api/* 处理器。"""
@@ -31,7 +34,7 @@ class WebUIMixin:
     WEBUI_CACHE_TAG = "v4.0.0"
 
     async def _serve_webui(self, r):
-        resp = web.FileResponse(Path(__file__).parent / 'webui.html')
+        resp = web.FileResponse(PLUGIN_ROOT / 'web' / 'webui.html')
         resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         resp.headers['Pragma'] = 'no-cache'
         resp.headers['Expires'] = '0'
@@ -40,14 +43,24 @@ class WebUIMixin:
         resp.headers['Clear-Site-Data'] = '"cache"'
         return resp
 
+    async def _serve_webui_css(self, r):
+        resp = web.FileResponse(PLUGIN_ROOT / 'web' / 'webui.css')
+        resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return resp
+
+    async def _serve_webui_js(self, r):
+        resp = web.FileResponse(PLUGIN_ROOT / 'web' / 'webui.js')
+        resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return resp
+
     async def _serve_favicon(self, r):
         # v4.3.8: 优先回 AI 生成的多尺寸 PNG ico；无则回 SVG 兜底
         # v4.9.2: 静态图片统一收进 assets/ 子目录（插件根目录结构整理）
-        ico = Path(__file__).parent / 'assets' / 'favicon.ico'
+        ico = PLUGIN_ROOT / 'assets' / 'favicon.ico'
         if ico.exists():
             resp = web.FileResponse(ico, headers={'Cache-Control': 'public, max-age=86400'})
             return resp
-        resp = web.FileResponse(Path(__file__).parent / 'assets' / 'favicon.svg', content_type='image/svg+xml')
+        resp = web.FileResponse(PLUGIN_ROOT / 'assets' / 'favicon.svg', content_type='image/svg+xml')
         resp.headers['Cache-Control'] = 'public, max-age=86400'
         return resp
 
@@ -56,7 +69,7 @@ class WebUIMixin:
         size = r.match_info.get('size', '')
         if size not in ('16x16', '32x32', '192', '512'):
             raise web.HTTPNotFound()
-        f = Path(__file__).parent / 'assets' / f'favicon-{size}.png'
+        f = PLUGIN_ROOT / 'assets' / f'favicon-{size}.png'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
@@ -66,14 +79,14 @@ class WebUIMixin:
         mode = r.match_info.get('mode', '')
         if mode not in ('day', 'night') and not mode.startswith('icon-'):
             raise web.HTTPNotFound()
-        f = Path(__file__).parent / 'assets' / f'theme-xin-{mode}.webp'
+        f = PLUGIN_ROOT / 'assets' / f'theme-xin-{mode}.webp'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=604800', 'Content-Type': 'image/webp'})
 
     async def _serve_apple_icon(self, r):
         """v4.3.8: iOS 添加到主屏用 180x180 图标"""
-        f = Path(__file__).parent / 'assets' / 'apple-touch-icon.png'
+        f = PLUGIN_ROOT / 'assets' / 'apple-touch-icon.png'
         if not f.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(f, headers={'Cache-Control': 'public, max-age=86400'})
@@ -82,8 +95,8 @@ class WebUIMixin:
         """返回 K2 完整词库数据块（k2gen/data.js 的 UTF-8 源码），供前端 new Function 构造后自动组句"""
         # 优先读插件目录下 k2gen/data.js；不存在则退回 data/k2/ 数据（保证接口可用）
         candidates = [
-            Path(__file__).resolve().parent / "k2gen" / "data.js",
-            Path(__file__).resolve().parent / "data" / "k2",
+            PLUGIN_ROOT / "k2gen" / "data.js",
+            PLUGIN_ROOT / "data" / "k2",
         ]
         for cand in candidates:
             if cand.is_file():
@@ -149,7 +162,7 @@ class WebUIMixin:
         返回 {ok, text, mode, seed}；失败返回 {ok: False, error}。
         """
         import subprocess
-        base = Path(__file__).resolve().parent
+        base = PLUGIN_ROOT
         k2_dir = base / "k2gen"
         if not (k2_dir / "cli.js").is_file():
             k2_dir = base / "data" / "k2"
@@ -196,6 +209,8 @@ class WebUIMixin:
     def _start_webui(self):
         app = web.Application(client_max_size=64 * 1024 * 1024)  # 64MB：工作流预览图 base64 大图（v4.4.0，20MB 曾导致大图保存失败）
         app.router.add_get('/', self._serve_webui)
+        app.router.add_get('/webui.css', self._serve_webui_css)
+        app.router.add_get('/webui.js', self._serve_webui_js)
         app.router.add_get('/api/k2gen/data', self._webui_k2gen_data)
         # K2 字段锁定设定（前端面板保存，QQ /随机图 后端组句时遵守）
         app.router.add_get('/api/k2-locks', self._webui_get_k2_locks)
