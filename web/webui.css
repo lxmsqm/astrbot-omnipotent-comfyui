@@ -784,6 +784,20 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
    17. Node Grid
    ======================================================================== */
 .nodes-header{display:flex;align-items:center;gap:8px;}
+/* 节点列表折叠：标题栏右侧的箭头按钮，点击收起搜索栏+图例+节点网格 */
+.node-collapse-btn{
+  margin-left:auto;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:4px 8px;
+}
+.node-collapse-btn .collapse-chevron{transition:transform 0.25s ease;}
+#node_list_card.collapsed .node-collapse-btn .collapse-chevron{transform:rotate(-90deg);}
+.node-list-body{
+  overflow:hidden;
+  transition:max-height 0.3s ease,opacity 0.25s ease;
+  max-height:10000px;opacity:1;
+}
+.node-list-body.collapsed{max-height:0;opacity:0;}
 .node-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
@@ -1593,6 +1607,57 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
   .sidebar-cat-body .wf-item{padding:8px;margin-bottom:6px;gap:6px;}
   .sidebar-cat-body .wf-item-name{font-size:11px;line-height:1.35;padding:2px 2px 0;}
 }
+
+/* ========================================================================
+   移动端工作流侧栏：一行固定 3 张 + 横向滑动
+   ------------------------------------------------------------------------
+   原为 3 列网格往下换行堆叠，卡片被压到 79px 宽 → 名字容器仅 61px，
+   长文件名从词中间被劈开（动漫画图.json → 「动漫画图.js / on」）。
+   现改为单行横向轨道：一屏整 3 张，超出部分横向滑动，卡片等高、名字完整。
+   仅作用于侧栏抽屉（.sidebar 内），PC 工作流页有自己的 3D 轮牌规则。
+   ======================================================================== */
+@media(max-width:768px){
+  .sidebar .sidebar-cat-body{
+    display:flex;
+    grid-template-columns:none;
+    overflow-x:auto;overflow-y:hidden;
+    gap:8px;padding:2px 2px 8px;
+    max-height:none;opacity:1;
+    align-items:stretch;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+  }
+  .sidebar .sidebar-cat-body::-webkit-scrollbar{display:none;}
+  .sidebar .sidebar-cat-body.collapsed{max-height:0;opacity:0;overflow:hidden;padding:0!important;margin:0!important;}
+  /* 一屏固定 3 张：减去两个 8px 间距后三等分 */
+  .sidebar .sidebar-cat-body > .wf-item{
+    flex:0 0 calc((100% - 16px) / 3);
+    min-width:0;
+    margin-bottom:0;
+    scroll-snap-align:start;
+    display:flex;flex-direction:column;
+  }
+  /* 缩略图统一 4:5，横图竖图都填满，整行卡片等高 */
+  .sidebar .sidebar-cat-body .wf-thumb{
+    height:auto;max-height:none;
+    aspect-ratio:4/5;overflow:hidden;
+  }
+  .sidebar .sidebar-cat-body .wf-thumb img{
+    width:100%;height:100%;
+    max-height:none;object-fit:cover;
+  }
+  /* 名称：放大到 12px + 不限行数 + 允许词内换行，长文件名完整可读 */
+  .sidebar .sidebar-cat-body .wf-item-name{
+    font-size:12px;line-height:1.45;
+    padding:4px 2px 2px;
+    display:block;overflow:visible;
+    -webkit-line-clamp:none;line-clamp:none;
+    -webkit-box-orient:initial;
+    word-break:break-word;overflow-wrap:anywhere;
+  }
+}
 .section-title{
   font-size:13px;font-weight:600;color:var(--text);
   display:flex;align-items:center;gap:7px;margin-bottom:10px;
@@ -1832,6 +1897,93 @@ input::placeholder, textarea::placeholder{color:color-mix(in oklch, var(--text-s
 /* 图片按实际比例显示：宽固定、高度随图片比例自适应，预览图完整显示不被裁剪 */
 .upload-media-card.ua-ratio-auto{width:150px;max-width:170px;aspect-ratio:auto;min-height:90px;}
 .upload-media-card.ua-ratio-auto .ua169-preview{object-fit:contain;background:rgba(0,0,0,0.15);}
+
+/* ---- 素材格上传区（照 ComfyUI-BlackRin 的 ghh3-grid 重做） ----
+   BlackRin 的做法：统一等分网格 repeat(5,minmax(0,1fr))、格子方形、
+   已上传项把文件名压在底部半透明条上、空位是虚线「＋」格、音频是整行细条。
+   原实现是 140–210px 固定宽大卡片并排堆叠，H3 9图3音频3视频时高达 1400px+。 */
+#upload_image_rows{
+  display:grid;
+  /* 用固定轨道宽而非 minmax(_,上限)：minmax 带固定上限时列数按上限计算，
+     手机上会只排出 2 列。固定 112px 轨道 = 列数直接由可用宽度决定，
+     行为可预测（PC 右栏 ~1100px 约 9 列，手机 ~344px 约 3 列）。 */
+  grid-template-columns:repeat(auto-fill,112px);
+  gap:6px;
+  align-items:start;
+  justify-content:start;
+}
+/* 手机端格子缩小，一行能多放几个 */
+@media(max-width:768px){
+  #upload_image_rows{grid-template-columns:repeat(auto-fill,88px);gap:5px;}
+}
+#upload_image_rows .upload-group-title{
+  grid-column:1/-1;
+  margin:2px 0 0;
+  font-size:11px;
+  padding-bottom:4px;
+  margin-bottom:2px;
+}
+/* 统一覆盖：格子宽度交给网格，不再用固定 width */
+#upload_image_rows .upload-media-card{
+  width:auto!important;
+  max-width:none!important;
+  min-height:0;
+  margin:0;
+  border-radius:6px;
+  aspect-ratio:1/1;
+}
+/* 音频：整行细条（BlackRin 的 .ghh3-audio-card 做法） */
+#upload_image_rows .upload-media-card.ua-ratio-11{
+  grid-column:1/-1;
+  aspect-ratio:auto;
+  height:40px;
+  min-height:40px;
+  width:100%!important;
+}
+#upload_image_rows .upload-media-card.ua-ratio-11 .ua169-empty{
+  flex-direction:row;gap:6px;padding:0 10px;
+}
+#upload_image_rows .upload-media-card.ua-ratio-11 .ua169-plus{font-size:14px;}
+#upload_image_rows .upload-media-card.ua-ratio-11 .ua169-note{display:none;}
+/* 视频：16:9 横向但宽度仍由网格单元决定 */
+#upload_image_rows .upload-media-card.ua-ratio-169{aspect-ratio:16/9;}
+/* 已上传：图片铺满格子（BlackRin 的 object-fit:cover） */
+#upload_image_rows .upload-media-card .ua169-preview{object-fit:cover;}
+/* 空位格子：虚框 + 居中「＋」+ 一行名称 */
+#upload_image_rows .upload-media-card .ua169-empty{
+  gap:1px;padding:4px;overflow:hidden;
+  justify-content:center;
+}
+#upload_image_rows .upload-media-card .ua169-plus{
+  font-size:16px;line-height:1;
+}
+#upload_image_rows .upload-media-card .ua169-label{
+  font-size:9px;line-height:1.15;font-weight:500;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text-sub2);
+}
+/* 小格里隐藏冗长的说明与节点号，只留「＋」和名称 */
+#upload_image_rows .upload-media-card .ua169-note{display:none;}
+#upload_image_rows .upload-media-card .ua169-node{display:none;}
+#upload_image_rows .upload-media-card .ua169-fname{display:none;}
+/* 序号：挪成左上角小徽标，不再横贯卡片中部（BlackRin 用底部文件名条，这里保留序号便于排序） */
+#upload_image_rows .upload-media-card .ua169-meta{
+  left:3px;top:3px;right:auto;bottom:auto;
+  background:transparent;backdrop-filter:none;padding:0;
+}
+#upload_image_rows .upload-media-card .ua169-meta .order-input{
+  width:30px;min-height:20px;font-size:10px;padding:0 1px;
+  text-align:center;
+  background:color-mix(in oklch, var(--input-bg) 88%, transparent);
+  border-color:color-mix(in oklch, var(--card-border) 80%, transparent);
+  opacity:.85;
+}
+#upload_image_rows .upload-media-card:hover .ua169-meta .order-input{opacity:1;}
+/* 清空按钮：右上角小圆点 */
+#upload_image_rows .upload-media-card .ua169-clear{
+  top:3px;right:3px;left:auto;bottom:auto;
+  width:18px;height:18px;font-size:11px;line-height:1;
+}
 .upload-media-card:hover{
   border-color:var(--primary);
   box-shadow:0 0 0 3px color-mix(in oklch, var(--primary) 12%, transparent);
@@ -2296,7 +2448,7 @@ select:not([class*="color"]):not([class*="date"]){
 #grimoire_sheet .grimoire-header .toggle-switch{width:32px;height:18px;}
 #grimoire_sheet .grimoire-header .toggle-knob{width:14px;height:14px;}
 #grimoire_sheet .grimoire-header .btn{font-size:10px;padding:2px 8px;min-height:26px;border-radius:6px;}
-#grimoire_sheet .grimoire-sources{width:140px;background:transparent;border-right:1px solid var(--card-border);}
+#grimoire_sheet .grimoire-sources{width:180px;background:transparent;border-right:1px solid var(--card-border);}
 #grimoire_sheet .grimoire-source-list{padding:2px 0;}
 #grimoire_sheet .source-item{
   padding:5px 10px;font-size:11px;border-left:2px solid transparent;
@@ -2676,8 +2828,57 @@ select:not([class*="color"]):not([class*="date"]){
   border-radius:var(--radius-sm);font-size:11px;
 }
 .grm-pinned-title{font-weight:600;color:var(--accent);margin-right:4px;flex-shrink:0;}
-.grm-preset-item{padding:6px 12px;font-size:12px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+/* ---- 魔导书左侧工具栏（展开全部 / 全选随机 / 预设）----
+   原来这三个按钮各自带一堆内联样式，字号 10~14px、高度 18~30px 不一，
+   在 140px 窄栏里左缩进还阶梯状错位，观感很差。统一成同一套尺寸。 */
+.grm-toolbar{
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+  padding:8px 10px;margin:0 0 4px;
+  border-bottom:1px solid var(--card-border);flex-shrink:0;
+}
+.grm-toolbar .btn{
+  /* 两两一行，各占一半（180px 栏里放得下「展开全部」「全选随机」全称） */
+  flex:1 1 calc(50% - 3px);min-width:0;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  height:32px;padding:0 8px;
+  font-size:11px;line-height:1;
+  border-radius:8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.grm-toolbar .btn .icon-xs,.grm-toolbar .btn svg{flex-shrink:0;}
+/* 预设：占一整行，带下拉菜单锚点 */
+.grm-preset-wrap{
+  flex:1 1 100%;position:relative;
+  display:flex;align-items:center;
+}
+.grm-preset-wrap #grm_preset_btn{width:100%;}
+.grm-preset-menu{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  min-width:150px;
+  background:var(--card);border:1px solid var(--card-border);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.28);
+  z-index:999;padding:4px;overflow:hidden;
+}
+.grm-preset-empty{padding:8px 10px;font-size:11px;color:var(--text-sub2);}
+.grm-preset-action{
+  padding:7px 10px;font-size:11px;color:var(--text-sub);
+  cursor:pointer;border-radius:7px;white-space:nowrap;
+}
+.grm-preset-action:hover{background:var(--card-hover);color:var(--primary);}
+.grm-preset-sep{height:1px;background:var(--card-border);margin:4px 2px;}
+.grm-preset-del{
+  flex:0 0 auto;width:20px;height:20px;padding:0;margin-left:auto;
+  border:none;background:transparent;color:var(--text-sub2);
+  border-radius:6px;cursor:pointer;font-size:10px;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.grm-preset-del:hover{background:color-mix(in oklch, var(--danger) 20%, transparent);color:var(--danger);}
+.grm-preset-item{padding:0;font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:7px;}
 .grm-preset-item:hover{background:var(--hover-bg,rgba(128,128,128,0.1));}
+.grm-preset-name{
+  flex:1;min-width:0;padding:6px 4px 6px 10px;
+  overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
 .grm-preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis;}
 .grm-pinned-tag{
   display:inline-flex;align-items:center;gap:3px;
@@ -3157,14 +3358,34 @@ select:not([class*="color"]):not([class*="date"]){
 
   /* 工作流管理器手机端适配：避免横向溢出、控件被挤出屏幕 */
   .wf-edit-dialog{padding:14px;width:96%;}
+  /* flex-shrink:0 必须显式写：列表容器是 max-height:50vh 的 flex 纵列，
+     而 .wf-edit-item 的 min-height:44px 会覆盖 flex 默认的 min-height:auto，
+     导致卡片被压成 44px、内部 60px 缩略图+36px 输入框溢出，压住下一个分类头
+     （手机端「图生图 (3)」「视频 (1)」标题被上一张卡遮住即此）。 */
+  .wf-edit-list > .wf-edit-item{flex-shrink:0;}
   .wf-edit-item{
     flex-direction:column;align-items:stretch;gap:8px;
     padding:12px;border-radius:var(--radius-sm);
     background:var(--card);border:1px solid var(--card-border);
     margin-bottom:10px;box-shadow:var(--shadow-sm);
   }
-  /* 竖屏：名称独占一行完整显示（允许换行，不再被 ellipsis 截断隐藏） */
+  /* 名称：竖排时独占一行完整显示（允许换行，不再被 ellipsis 截断隐藏） */
   .wf-edit-name{flex:1 1 100%;white-space:normal;word-break:break-all;overflow:visible;text-overflow:clip;font-size:13px;font-weight:600;}
+  /* 紧凑网格：缩略图与名称同行、别名独占一行、分类+按钮同行，
+     把卡片从 253px（5 行纵排）压到 ~168px，一屏可见卡片数 1.7 → 2.5 张。
+     注意仍需上方的 flex-shrink:0，否则 max-height:50vh 的列表会把卡片压塌。 */
+  .wf-edit-list > .wf-edit-item{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-areas:"thumb name" "alias alias" "cat actions";
+    align-items:center;gap:8px 10px;
+    padding:10px 12px;flex-direction:row;
+  }
+  .wf-edit-item > .wf-edit-thumb{grid-area:thumb;width:38px;height:52px;}
+  .wf-edit-item > .wf-edit-name{grid-area:name;}
+  .wf-edit-item > .wf-edit-alias-input{grid-area:alias;width:100%;}
+  .wf-edit-item > .wf-edit-cat-select{grid-area:cat;width:100%;}
+  .wf-edit-item > .wf-edit-item-actions{grid-area:actions;margin-left:0;justify-content:flex-end;}
   .wf-edit-current{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;}
   .wf-edit-item-actions{gap:8px;margin-top:2px;}
   .wf-edit-controls{margin-left:0;justify-content:space-between;}
@@ -3614,8 +3835,9 @@ body.page-gallery{overflow:hidden;}
 @media(max-width:768px){
   .page-tabs{display:none;}
 }
-/* PC：导航参考 ComfyUI 官方侧栏——贴左全高常驻竖栏（紧贴顶端，不隐藏），图标在上文字在下，选中浅底高亮 */
-@media(min-width:769px){
+/* PC：导航参考 ComfyUI 官方侧栏——贴左全高常驻竖栏（紧贴顶端，不隐藏），图标在上文字在下，选中浅底高亮
+   加 (pointer:fine)：手机浏览器可能把视口报成 ≥769px，此时不该给 body 加 78px 让位边距 */
+@media(min-width:769px) and (pointer:fine){
   body{padding-left:78px;} /* 给全高竖栏让位（栏宽≈78px） */
   .page-tabs{
     position:fixed;left:0;top:0;bottom:0;transform:none;z-index:95;
@@ -3818,7 +4040,7 @@ body.page-gallery{overflow:hidden;}
 /* ---- 分类头：卡片化 + 渐变左边条 ---- */
 .wf-page-grid .sidebar-cat-header{
   background:var(--card);border:1px solid var(--card-border);
-  border-radius:var(--radius-sm);padding:14px 18px;
+  border-radius:var(--radius-sm);padding:9px 16px;
   border-left:3px solid var(--primary);
   box-shadow:var(--shadow-sm);
   transition:border-color var(--transition-fast),transform var(--transition-fast);
@@ -3834,47 +4056,55 @@ body.page-gallery{overflow:hidden;}
 }
 .wf-page-grid .collapse-icon{transition:transform var(--transition-normal);color:var(--text-sub);}
 .wf-page-grid .sidebar-cat-header.collapsed .collapse-icon{transform:rotate(-90deg);}
-/* ---- 卡片瀑布流：按图片原比例 + columns 瀑布流排版 ---- */
+/* ---- 3D 轮牌（coverflow）：每个分类一条横向轨道，卡片绕中心旋转 ----
+   历史：原为 columns 瀑布流 + 9:16 原图直出，1280 宽下只排 3 列、卡片高 646px。
+   现为固定参数的 3D 轮牌（角度/景深/缩放等为常量，不做可调面板以免维护负担；
+   若要改观感，直接调下方 --cv-* 变量与本文件末尾 JS 里的 WFCOVER 常量）。 */
 .wf-page-grid .sidebar-cat-body{
-  /* 瀑布流：CSS columns（参考画廊 columns 做法，图片原比例自动错落） */
-  column-count:4;column-gap:18px;
-  padding:6px 2px 14px;max-height:5000px;
+  display:flex;
+  overflow-x:auto;overflow-y:hidden;
+  perspective:1600px;perspective-origin:50% 44%;
+  gap:26px;
+  /* 两侧留白 = 半个卡片宽，使首/尾卡也能滚到正中 */
+  padding:26px calc(50% - 112px) 30px;
+  scroll-snap-type:x proximity;scroll-behavior:smooth;
+  scrollbar-width:none;overscroll-behavior-x:contain;
+  transform-style:preserve-3d;
+  max-height:5000px;
 }
-.wf-page-grid .sidebar-cat-body.collapsed{max-height:0;opacity:0;padding:0!important;margin:0!important;}
+.wf-page-grid .sidebar-cat-body::-webkit-scrollbar{display:none;}
+.wf-page-grid .sidebar-cat-body.collapsed{max-height:0;opacity:0;overflow:hidden;padding:0!important;margin:0!important;}
 .wf-page-grid .wf-item{
-  /* 瀑布流卡片：break-inside 避免跨列断裂 */
-  break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;
-  margin-bottom:18px;
-  border-radius:var(--radius);
-  background:var(--card);
-  border:1px solid var(--card-border);
-  box-shadow:var(--shadow-sm);
-  transition:transform var(--transition-normal),box-shadow var(--transition-normal),border-color var(--transition-fast);
+  flex:0 0 224px;
+  margin:0;
+  scroll-snap-align:center;
+  transform-style:preserve-3d;backface-visibility:hidden;
+  will-change:transform,opacity;
+  transition:transform .42s cubic-bezier(.22,1,.36,1),opacity .42s ease,box-shadow .3s,border-color .3s;
 }
-.wf-page-grid .wf-item:hover{
-  transform:translateY(-4px);
+/* 中心卡：描边 + 暖色发光 */
+.wf-page-grid .wf-item.is-center{
   border-color:var(--primary);
-  box-shadow:var(--shadow-md),0 10px 24px oklch(65% 0.22 50 / 0.16);
+  box-shadow:0 20px 50px oklch(65% 0.22 50 / .30),
+             0 0 0 1px color-mix(in oklch, var(--primary) 50%, transparent),
+             0 0 34px color-mix(in oklch, var(--primary) 22%, transparent);
 }
-.wf-page-grid .wf-item-name{font-size:16px;line-height:1.4;padding:8px 8px 6px;font-weight:600;}
-.wf-page-grid .wf-thumb{border-radius:var(--radius-sm);}
-.wf-page-grid .wf-badge{font-size:12px;padding:5px 14px;}
-/* 瀑布流列数响应式 */
-@media(max-width:1400px){
-  .wf-page-grid .sidebar-cat-body{column-count:3;}
+.wf-page-grid .wf-item-name{font-size:13px;line-height:1.4;padding:6px 8px 6px;font-weight:600;}
+.wf-page-grid .wf-thumb{
+  height:268px;border-radius:var(--radius-sm);overflow:hidden;
 }
-@media(max-width:1024px){
-  .wf-page-grid .sidebar-cat-body{column-count:2;}
-}
-@media(max-width:769px){
-  .wf-page-grid .sidebar-cat-body{column-count:2;column-gap:10px;}
-  .wf-page-grid .wf-item{margin-bottom:10px;}
+.wf-page-grid .wf-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.wf-page-grid .wf-badge{font-size:10px;padding:3px 10px;}
+@media(prefers-reduced-motion:reduce){
+  .wf-page-grid .wf-item{transition:none;}
+  .wf-page-grid .sidebar-cat-body{scroll-behavior:auto;}
 }
 @media(max-width:768px){
   .wf-page{display:none!important;}
 }
-/* PC：工作流页显示、生成台隐藏；生成台页隐藏侧栏占满宽屏 */
-@media(min-width:769px){
+/* PC：工作流页显示、生成台隐藏；生成台页隐藏侧栏占满宽屏
+   （用 (pointer:fine) 限定精确指针设备，避免手机/触摸屏误套桌面布局） */
+@media(min-width:769px) and (pointer:fine){
   body.page-wf .wf-page{display:flex;}
   body.page-wf .main-content{display:none;}
   body.page-gen .sidebar{display:none;}
@@ -4437,3 +4667,130 @@ body.page-wfmgr .wf-del-btn{width:34px;height:34px;font-size:15px;}
 /* 45. 左侧导航常驻全高竖栏（ComfyUI 官方风格，v4.13.5 后期调整：不再隐藏/唤回） — 旧的 media-panel-open 隐藏与左缘 mousemove 唤回逻辑已整体移除 */
 /* 分组标题吸顶增强 */
 body.page-wfmgr .wf-cat-group-header{padding:14px 4px 8px;}
+
+/* ========================================================================
+   46. 生成台布局（PC 两栏 / 手机单列）
+   ------------------------------------------------------------------------
+   HTML 结构：.main-content > [ .sidebar | main.canvas | aside#gen_side ]
+   多工作流差异：KREA 风格预设很高、H3 上传图片高达 1400px+、动漫画图最简单，
+   所以把「上传图片 / Lora / 组控制 / 节点列表」统一收进 #gen_side，左栏只留
+   提示词/负面/分辨率/UNet/风格这类参数。
+
+   ⚠️ 布局策略是「手机优先」：
+   - 默认（无媒体查询命中）= 手机单列，#gen_side 是普通块级容器，纵向排列，
+     .main-content 纵向。这是最安全的落点 —— 即使浏览器不支持某个媒体查询
+     或某个 CSS 特性，最坏结果也只是「和手机一样单列」，不会炸成横排细柱。
+   - @media(min-width:769px) 才升级成左右两栏。
+   历史上这里用过 #gen_side{display:contents} 把子元素"溶解"给 .main-content，
+   在部分手机内核（Via 等）上半失效 → 4 个子块被抛进横排的 .main-content，
+   挤成 4 条竖柱（真机实测事故）。此写法已废弃，改用普通块级容器。
+   ======================================================================== */
+
+/* ---- 默认（手机）：单列，各块纵向排列 ----
+   ⚠️ 这里**不能**依赖 body.page-gen 类：
+   page-gen 只由 switchPage() 添加，而 webui.js 的 _initInitialPage() 在
+   innerWidth<=768 时直接 return（手机端从不调用 switchPage），
+   所以手机 <body> 上根本没有 page-gen → 带 body.page-gen 的规则全部失效，
+   .main-content 退回基础规则 display:flex（默认 row），左栏被挤成细柱。
+   （真机事故根因，2026-10-09）
+   因此这里用"无条件默认纵向"的写法，让手机在没有任何类的情况下也安全。 */
+.main-content{
+  flex-direction:column;
+  gap:12px;
+}
+/* 桌面两栏：宽视口 + 精确指针（鼠标/触控板）才开启。
+   ⚠️ 为什么不用 maxTouchPoints/ontouchstart 判定「是不是手机」：
+   Windows 版 Chrome/Edge 在没有触摸屏的机器上也会把 ontouchstart 报成真
+   （已知行为），用它判会误伤 PC → PC 被当成手机强制单列（真机事故 2026-10-09）。
+   (pointer:fine) 反映的是"有没有精确指针"，鼠标机器必命中、触摸屏不命中，
+   且不受国产浏览器谎报视口宽影响，是这里最可靠的判据。 */
+@media(min-width:769px) and (pointer:fine){
+  body.page-gen .main-content{
+    flex-direction:row;
+    max-width:1600px;
+    margin:0 auto;
+    padding:0 16px;
+    gap:16px;
+    align-items:flex-start;
+  }
+}
+/* #gen_side 是纵向容器；用 flex-basis 而非 width:100%，避免横向排布时
+   把同排的 .canvas 挤成 0 宽（flex 项 basis 100% 会吃掉整行）。 */
+#gen_side{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  flex:1 1 auto;
+  min-width:0;
+  max-width:100%;
+}
+/* 手机端：各块不被压缩（flex 塌缩会裁内容，陷阱见 v4.13.5 记录） */
+#gen_side > *{flex-shrink:0;}
+/* 手机端右栏各块的卡片样式与左栏保持一致 */
+#gen_side .prep-section{overflow:visible;}
+#gen_side .prep-section > .section-title{cursor:pointer;}
+#gen_side .prep-section.collapsed > *:not(.section-title){display:none!important;}
+
+/* 两栏升级闸门：宽视口 + 精确指针（鼠标/触控板）。
+   用 (pointer:fine) 而不是触摸点数判定：Windows Chrome 在无触摸屏机器上
+   也会把 ontouchstart 报成真，用它判会把 PC 误当手机强制单列（真机事故）。 */
+@media(min-width:769px) and (pointer:fine){
+  body.page-gen .main-content{
+    flex-direction:row;
+    max-width:1600px;
+    margin:0 auto;
+    padding:0 16px;
+    gap:16px;
+    align-items:flex-start;
+  }
+  /* 左栏：参数区，固定宽度、独立滚动 */
+  body.page-gen .canvas{
+    flex:0 0 440px;
+    max-width:440px;
+    min-width:0;
+    max-height:calc(100vh - 130px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* 右栏：组控制 + 上传图 + Lora + 节点列表，吃掉剩余宽度、独立滚动 */
+  #gen_side{
+    flex:1 1 auto;
+    min-width:0;
+    max-height:calc(100vh - 130px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* ★ 根因修复：右栏是 flex 纵向容器，子项默认 flex-shrink:1，
+     而 .prep-section 又是 overflow:hidden → 子块被压塌、内容被裁掉
+     （LoRA 展开只显示 34px、H3 上传区挤成一团都是这个原因）。
+     必须显式 flex-shrink:0 + 放开 overflow。 */
+  #gen_side > *{flex-shrink:0;}
+  #gen_side .prep-section{overflow:visible;}
+  /* 组控制：不再单独占一整块大头，压成紧凑一行。
+     用 !important 是因为 refreshGroupsUI() 会给 #groups_bar 写内联 display，
+     内联样式优先级高于普通规则。 */
+  #gen_side .tool-row{display:block;margin:0;}
+  #gen_side .tool-card{
+    width:100%;
+    padding:10px 12px;
+    display:flex!important;
+    align-items:center!important;gap:10px;
+    flex-wrap:wrap;
+  }
+  #gen_side .tool-card .card-title{margin:0;flex-shrink:0;}
+  #gen_side .tool-card .groups-tags{margin:0;flex:1;min-width:0;}
+  #gen_side .tool-card .groups-actions{margin:0;flex-shrink:0;gap:6px;}
+  /* 节点网格：列数自适应，但单卡限宽 300px，
+     否则宽屏下会出现 9 列、每卡 185px 的细长条 */
+  #gen_side .node-grid{
+    max-height:none;
+    grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  }
+  #gen_side .node-card{max-width:300px;}
+}
+
+/* 窄 PC（769–1100）：左栏收窄，避免右栏被挤没 */
+@media(min-width:769px) and (max-width:1100px) and (pointer:fine){
+  body.page-gen .canvas{flex-basis:360px;max-width:360px;}
+  #gen_side .node-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+}

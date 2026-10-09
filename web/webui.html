@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="/webui.css">
+<link rel="stylesheet" href="/webui.css?v=20261009b">
 </head>
 <body>
 <div id="bg_particles" aria-hidden="true">
@@ -584,19 +584,9 @@
           </div>
         </div>
 
-        <div class="prep-section" id="prep_upload_image" style="display:none">
-          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <span class="section-badge" id="prep_img_node_badge">节点: 自动</span></div>
-          <div id="upload_image_rows"></div>
-        </div>
-
         <div class="prep-section" id="prep_unet_models" style="display:none">
           <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-model"/></svg> UNet 模型 <span class="section-badge" id="prep_unet_badge">节点: 自动</span></div>
           <div id="unet_model_list"></div>
-        </div>
-
-        <div class="prep-section" id="prep_loras" style="display:none">
-          <div class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 管理 <span class="section-badge" id="prep_lora_node_badge">节点: 自动</span></div>
-          <div id="lora_panel_content"></div>
         </div>
 
         <div class="prep-section" id="prep_styles" style="display:none">
@@ -619,7 +609,10 @@
 
         <!-- 🚀 生成 / 🎲 随机图 / 数量 三控件并排（配置了"生成发送QQ"则结果私聊发送） -->
               </div>
+    </main>
 
+    <!-- ==================== 右栏：组控制 / 上传图 / Lora / 节点列表（仅 PC） ==================== -->
+    <aside class="gen-side" id="gen_side" aria-label="参数与节点">
       <!-- Tool Row -->
       <div class="tool-row">
         <div class="card tool-card" id="groups_bar">
@@ -632,19 +625,33 @@
         </div>
       </div>
 
+      <!-- 上传图片（图生图/图生视频工作流显示） -->
+      <div class="prep-section" id="prep_upload_image" style="display:none">
+        <div class="section-title" onclick="togglePrepSection(this)" title="点击折叠/展开"><svg class="icon-sm" aria-hidden="true"><use href="#icon-image"/></svg> 上传图片 <span class="section-badge" id="prep_img_node_badge">节点: 自动</span><span class="collapse-arrow">▼</span></div>
+        <div id="upload_image_rows"></div>
+      </div>
+
+      <div class="prep-section" id="prep_loras" style="display:none">
+        <div class="section-title" onclick="togglePrepSection(this)" title="点击折叠/展开"><svg class="icon-sm" aria-hidden="true"><use href="#icon-lora"/></svg> Lora 管理 <span class="section-badge" id="prep_lora_node_badge">节点: 自动</span><span class="collapse-arrow">▼</span></div>
+        <div id="lora_panel_content"></div>
+      </div>
+
       <!-- Node List -->
-      <div class="card">
+      <div class="card" id="node_list_card">
         <div class="card-header nodes-header">
           <span class="card-title"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg> 节点列表</span>
           <button class="btn btn-xs btn-danger" id="clear_all_roles_btn" data-action="clearAllNodeRoles" aria-label="清除所有指定" style="display:none"><svg class="icon-sm" aria-hidden="true"><use href="#icon-trash"/></svg> 清除所有指定</button>
+          <button class="btn btn-xs btn-secondary node-collapse-btn" id="node_collapse_btn" onclick="toggleNodeList(this)" aria-label="折叠节点列表" title="折叠/展开节点列表"><svg class="icon-sm collapse-chevron" aria-hidden="true"><use href="#icon-chevron-down"/></svg></button>
         </div>
+        <div class="node-list-body" id="node_list_body">
         <input type="text" id="search_nodes" placeholder="搜索节点名称或ID..." oninput="filterNodes()" aria-label="搜索节点" class="settings-input" style="margin-bottom:6px" autocomplete="off">
         <div class="node-help-bar"><span class="node-help-dot pos"></span><img class="xin-ic" src="/theme-xin-icon-role-prompt.webp" alt="">正面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot neg"></span><img class="xin-ic" src="/theme-xin-icon-role-negative.webp" alt="">负面 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot img"></span><img class="xin-ic" src="/theme-xin-icon-role-load.webp" alt="">图片 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot res"></span><img class="xin-ic" src="/theme-xin-icon-role-res.webp" alt="">尺寸 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot exp"></span><img class="xin-ic" src="/theme-xin-icon-role-exp.webp" alt="">文本 <span style="color:var(--text-muted)">·</span> <span class="node-help-dot lora"></span><img class="xin-ic" src="/theme-xin-icon-role-lora.webp" alt="">Lora <span style="color:var(--text-muted)">·</span> <span class="node-help-dot dis"></span><img class="xin-ic" src="/theme-xin-icon-role-disabled.webp" alt="">禁用</div>
         <div class="node-grid" id="node_grid">
           <div class="empty-state" style="grid-column:1/-1">请先选择工作流</div>
         </div>
+        </div>
       </div>
-    </main>
+    </aside>
   </div>
 
   <!-- ==================== ⚡ 工作流独立页（PC） ==================== -->
@@ -1104,7 +1111,7 @@
     </div>
   </div>
 
-<script src="/webui.js"></script>
+<script src="/webui.js?v=20261009b"></script>
 
 </div>
 

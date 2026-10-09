@@ -1644,6 +1644,8 @@ async function loadWorkflows() {
   if (wfCnt) wfCnt.textContent = (d ? d.length : 0);
   // 绑定拖拽事件
   initCategoryDrag();
+  // 工作流页 3D 轮牌重排（innerHTML 已整体替换，每次渲染后重算姿态）
+  if (typeof _wfCoverRefresh === 'function') _wfCoverRefresh();
   const cwf = getCurrentWF();
   if (cwf) {
     const cur = d.find((x) => { return x.name === cwf; });
@@ -1836,6 +1838,141 @@ function filterWorkflows() {
   });
 }
 
+// ========================================================================
+// 工作流库页 3D 轮牌（coverflow）
+// 每个分类的 .sidebar-cat-body 是一条横向轨道：卡片按"离轨道中心距离"绕 Y 轴旋转、
+// 缩放、下沉、变暗，居中那张最亮最大。
+// 参数为固定常量（不做调试面板）；改观感请调 WFCOVER。
+// ========================================================================
+const WFCOVER = {
+  rot: 52,      // 最大旋转角（度）
+  scale: 0.18,  // 最远缩放衰减
+  depth: 140,   // 最远 Z 位移（px）
+  dim: 0.5,     // 最远变暗比例
+  dragThreshold: 6, // 拖拽判定阈值（px），低于此值视为点击
+};
+
+function _wfCoverRailsList() {
+  const grid = document.getElementById('wf_page_grid');
+  if (!grid) return [];
+  // 每次重新查询（renderWorkflows 会整体替换 innerHTML，缓存的节点会失效）
+  return Array.from(grid.querySelectorAll('.sidebar-cat-body'));
+}
+
+// 依据每张卡与轨道中心的水平距离铺 3D 姿态
+function _wfCoverLayout(rail) {
+  if (!rail) return;
+  const items = Array.from(rail.querySelectorAll('.wf-item'));
+  if (!items.length) return;
+  const rr = rail.getBoundingClientRect();
+  const centerX = rr.left + rr.width / 2;
+  const span = Math.max(rr.width, 1);
+  let best = null, bestD = Infinity;
+  items.forEach((it) => {
+    const r = it.getBoundingClientRect();
+    const d = ((r.left + r.width / 2) - centerX) / span;
+    const ad = Math.min(Math.abs(d), 1);
+    const rotY = -d * WFCOVER.rot;
+    const scale = 1 - ad * WFCOVER.scale;
+    const z = -ad * WFCOVER.depth;
+    it.style.transform = 'translateZ(' + z.toFixed(1) + 'px) rotateY(' + rotY.toFixed(2) + 'deg) scale(' + scale.toFixed(4) + ')';
+    it.style.opacity = String(Math.max(1 - ad * WFCOVER.dim, 0.22));
+    it.style.zIndex = String(1000 - Math.round(ad * 1000));
+    if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = it; }
+  });
+  items.forEach((it) => it.classList.toggle('is-center', it === best));
+}
+
+// 合并到下一帧，避免滚动时每像素都重排
+const _wfCoverRaf = new WeakMap();
+function _wfCoverSchedule(rail) {
+  if (!rail || _wfCoverRaf.get(rail)) return;
+  const id = requestAnimationFrame(() => { _wfCoverRaf.delete(rail); _wfCoverLayout(rail); });
+  _wfCoverRaf.set(rail, id);
+}
+
+function _wfCoverBind() {
+  _wfCoverRailsList().forEach((rail) => {
+    if (rail.__wfCoverBound) return;
+    rail.__wfCoverBound = true;
+
+    rail.addEventListener('scroll', () => _wfCoverSchedule(rail), { passive: true });
+
+    // 竖向滚轮转横向
+    rail.addEventListener('wheel', (ev) => {
+      if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) {
+        ev.preventDefault();
+        rail.scrollLeft += ev.deltaY;
+      }
+    }, { passive: false });
+
+    // 拖拽：超过阈值才算拖动（避免误触时轻微滚动），拖动期间关掉吸附
+    let down = false, moved = false, sx = 0, sy = 0, sl = 0, prevSnap = '';
+    rail.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      down = true; moved = false; sx = ev.clientX; sy = ev.clientY; sl = rail.scrollLeft;
+    });
+    const onMove = (ev) => {
+      if (!down) return;
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!moved && Math.hypot(dx, dy) < WFCOVER.dragThreshold) return;
+      if (!moved) {
+        moved = true;
+        prevSnap = rail.style.scrollSnapType;
+        rail.style.scrollSnapType = 'none';
+        rail.style.scrollBehavior = 'auto';
+        rail.style.cursor = 'grabbing';
+      }
+      if (Math.abs(dx) > Math.abs(dy)) {
+        ev.preventDefault();
+        rail.scrollLeft = sl - dx;
+      }
+    };
+    const onUp = (ev) => {
+      if (!down) return;
+      down = false;
+      if (!moved) return;
+      if (ev && ev.type === 'pointerup') ev.preventDefault();
+      rail.style.scrollSnapType = prevSnap;
+      rail.style.scrollBehavior = 'smooth';
+      rail.style.cursor = '';
+      // 吸附到最近一张
+      const rr = rail.getBoundingClientRect();
+      const c = rr.left + rr.width / 2;
+      let near = null, nd = Infinity;
+      rail.querySelectorAll('.wf-item').forEach((it) => {
+        const r = it.getBoundingClientRect();
+        const d = Math.abs(r.left + r.width / 2 - c);
+        if (d < nd) { nd = d; near = it; }
+      });
+      if (near) near.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      setTimeout(() => { moved = false; }, 400);
+    };
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp);
+    // 拖完拦截一次 click，避免误切工作流
+    rail.addEventListener('click', (ev) => {
+      if (moved) { ev.stopPropagation(); ev.preventDefault(); }
+    }, true);
+
+    rail.setAttribute('tabindex', '0');
+    rail.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+      const items = Array.from(rail.querySelectorAll('.wf-item'));
+      const i = items.findIndex((x) => x.classList.contains('is-center'));
+      const n = items[Math.max(0, Math.min(items.length - 1, i + (ev.key === 'ArrowRight' ? 1 : -1)))];
+      if (n) { ev.preventDefault(); n.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }
+    });
+  });
+  _wfCoverRailsList().forEach(_wfCoverLayout);
+}
+
+function _wfCoverRefresh() {
+  _wfCoverBind();
+  // innerHTML 刚替换完，等布局稳定再算位置
+  requestAnimationFrame(() => _wfCoverRailsList().forEach(_wfCoverLayout));
+}
+
 /** 工作流独立页搜索：过滤分类头 + 卡片 */
 function filterWorkflowsPage() {
   const q = (document.getElementById('wf_page_search')?.value || '').toLowerCase();
@@ -1852,6 +1989,7 @@ function filterWorkflowsPage() {
     h.style.display = visible ? '' : 'none';
     body.style.display = visible ? '' : 'none';
   });
+  _wfCoverRefresh();
 }
 
 // ========================================================================
@@ -2159,7 +2297,7 @@ function updateNodeDisplay() {
         const previewSrc = (!isPlaceholder && g.prefix === 'image')
           ? `/api/view-input?filename=${encodeURIComponent(curVal)}&type=input`
           : '';
-        uploadHtml += `<div class="upload-media-card${ratioCls}" id="${g.prefix}_box_${idx}" data-nodeid="${n.id}" draggable="true"
+        uploadHtml += `<div class="upload-media-card${ratioCls}" id="${g.prefix}_box_${idx}" data-nodeid="${n.id}" data-kind="${g.prefix}" draggable="true"
           ondragstart="onUploadCardDragStart(event,'${n.id}')" ondragover="onUploadCardDragOver(event)" ondrop="onUploadCardDrop(event,'${n.id}')" ondragend="onUploadCardDragEnd(event)"
           ontouchstart="onUploadCardTouchStart(event,'${n.id}')" ontouchmove="onUploadCardTouchMove(event,'${n.id}')" ontouchend="onUploadCardTouchEnd(event,'${n.id}')"
           onclick="document.getElementById('${g.prefix}_upload_${idx}').click()" title="${noteText}（长按/拖动可排序）">
@@ -2167,10 +2305,9 @@ function updateNodeDisplay() {
           <img class="ua169-preview" id="${g.prefix}_preview_${idx}" alt="" style="${previewSrc ? '' : 'display:none'}" src="${previewSrc}" onerror="this.style.display='none'" onload="adjustUploadRatio(this)">
           ${!isPlaceholder ? `<button class="ua169-clear" data-nodeid="${n.id}" data-key="${g.inputKey}" onclick="event.stopPropagation();clearNodeMedia('${n.id}','${g.inputKey}')" title="清空此图片">✕</button>` : ''}
           <div class="ua169-empty" id="${g.prefix}_empty_${idx}" style="${previewSrc ? 'display:none' : ''}">
-            <svg class="ua169-icon" aria-hidden="true"><use href="#${iconUse}"/></svg>
-            <span class="ua169-node">节点 #${n.id}</span>
             <span class="ua169-plus">＋</span>
             <span class="ua169-label">${nodeLabel}</span>
+            <span class="ua169-node">节点 #${n.id}</span>
             <span class="ua169-note">${noteText}</span>
             <span class="ua169-fname" id="${g.prefix}_fname_${idx}" style="${isPlaceholder ? 'display:none' : ''}">${curFname}</span>
           </div>
@@ -2533,6 +2670,30 @@ function togglePrepSection(header) {
   if (!sec) return;
   sec.classList.toggle('collapsed');
 }
+
+/** 折叠/展开节点列表（PC 生成台右栏；手机端同样可用）。
+    状态存 localStorage，刷新后保持。 */
+function toggleNodeList(btn) {
+  const card = document.getElementById('node_list_card');
+  const body = document.getElementById('node_list_body');
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if (card) card.classList.toggle('collapsed', collapsed);
+  if (btn) btn.setAttribute('aria-label', collapsed ? '展开节点列表' : '折叠节点列表');
+  try { localStorage.setItem('node_list_collapsed', collapsed ? '1' : '0'); } catch (_) { /* noop */ }
+}
+
+// 恢复节点列表折叠状态（默认展开）
+try {
+  if (localStorage.getItem('node_list_collapsed') === '1') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const body = document.getElementById('node_list_body');
+      const card = document.getElementById('node_list_card');
+      if (body) body.classList.add('collapsed');
+      if (card) card.classList.add('collapsed');
+    });
+  }
+} catch (_) { /* noop */ }
 
 /** 根据预览文件扩展名生成 img（图片）或 video（mp4 视频）标签 */
 function loraPreviewTag(previewUrl, previewSrc, className) {
@@ -4342,6 +4503,8 @@ async function refreshGroupsUI() {
     const extractBtn = document.getElementById('btn_extract');
     const clearBtn = document.getElementById('btn_clear_extract');
     if (!groups.length) {
+      // 显式给值（基础 CSS 里 #groups_bar 是 display:none，空串会回落成隐藏）
+      // PC 端由 #gen_side .tool-card 的 !important 规则接管为 flex 行
       bar.style.display = 'block';
       document.getElementById('groups_source').textContent = '';
       if (extractBtn) extractBtn.style.display = 'inline-flex';
@@ -4349,7 +4512,7 @@ async function refreshGroupsUI() {
       $id('groups_list').innerHTML = '<span style="font-size:11px;color:var(--text-sub)">点击「📦 提取」获取工作流组件（自动应用到同结构工作流）</span>';
       return;
     }
-    bar.style.display = 'block';
+    bar.style.display = 'block'; // 基础 CSS 是 display:none，必须显式打开（PC 端由 !important 规则接管）
     document.getElementById('groups_source').textContent = `${groups.length} 组`;
     if (extractBtn) extractBtn.style.display = 'none';
     if (clearBtn) clearBtn.style.display = 'inline-flex';
@@ -5505,6 +5668,9 @@ function handleVideoUpload(input, nodeId, idx) {
   sections.forEach((section) => {
     // 分辨率区块不参与折叠：避免被 Storage 折叠状态隐藏导致"分辨率不显示"（手机端常见）
     if (section.id === 'prep_resolution') return;
+    // 已用 collapse-arrow + togglePrepSection 机制的分块（上传图/Lora）跳过，
+    // 否则两套折叠逻辑会在同一次点击里互相抵消。
+    if (section.querySelector(':scope > .section-title .collapse-arrow')) return;
     const title = section.querySelector('.section-title');
     const body = section.querySelector('textarea, .res-presets, .upload-area');
     if (!title || !body) return;
@@ -6344,6 +6510,24 @@ setTimeout(() => {
 }, 2200);
 schedulePoll(2000);
 
+// 工作流页 3D 轮牌：切到工作流页或窗口尺寸变化时重算姿态
+(function initWfCover(){
+  if (typeof switchPage === 'function') {
+    const _origSwitchPage = switchPage;
+    switchPage = function(page) {
+      const r = _origSwitchPage.apply(this, arguments);
+      if (page === 'wf') setTimeout(_wfCoverRefresh, 60);
+      return r;
+    };
+  }
+  let _wfCoverRz;
+  window.addEventListener('resize', () => {
+    clearTimeout(_wfCoverRz);
+    _wfCoverRz = setTimeout(() => { _wfCoverRailsList().forEach(_wfCoverLayout); }, 120);
+  });
+  setTimeout(_wfCoverRefresh, 900);
+})();
+
 // ========================================================================
 // 魔导书功能 (Grimoire)
 // ========================================================================
@@ -6981,11 +7165,10 @@ function renderGrimoireSources() {
   
   let html = '<div class="grm-toolbar">' +
     `<button class="btn btn-xs btn-secondary" id="grm_toggle_all_btn" onclick="toggleAllGrimoireGroups()" title="展开/收起全部"><svg class="icon-xs" aria-hidden="true"><use href="#icon-folder-open"/></svg> <span id="grm_toggle_all_text">展开全部</span></button>` +
-    `<button class="btn btn-xs btn-secondary" id="grm_toggle_rand_btn" onclick="toggleAllRandom()" title="全选/取消随机池" style="margin-left:4px"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_toggle_rand_text">全选随机</span></button>` +
-    `<span style="margin-left:8px;display:inline-flex;gap:4px;align-items:center;position:relative">` +
-      `<button id="grm_preset_btn" onclick="showPresetDropdown()" style="font-size:10px;padding:3px 8px;border-radius:var(--radius-xs);border:1px solid var(--card-border);background:var(--input-bg);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:inherit"><svg class="icon-xs" aria-hidden="true"><use href="#icon-bookmark"/></svg> <span id="grm_preset_label">预设</span></button>` +
-      `<button class="btn btn-xs btn-secondary" onclick="deleteGrimoirePreset()" title="删除当前选中的预设" style="font-size:9px;padding:0 4px;min-height:18px;border-radius:var(--radius-xs);background:transparent;border:1px solid var(--card-border);color:var(--text-sub);cursor:pointer">✕</button>` +
-      `<div id="grm_preset_menu" style="display:none;position:absolute;top:100%;left:0;min-width:140px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--radius-xs);box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999;padding:4px 0;margin-top:4px"></div>` +
+    `<button class="btn btn-xs btn-secondary" id="grm_toggle_rand_btn" onclick="toggleAllRandom()" title="全选/取消随机池"><svg class="icon-xs" aria-hidden="true"><use href="#icon-shuffle"/></svg> <span id="grm_toggle_rand_text">全选随机</span></button>` +
+    `<span class="grm-preset-wrap">` +
+      `<button class="btn btn-xs btn-secondary" id="grm_preset_btn" onclick="showPresetDropdown()" title="预设：保存/应用/删除固定标签与随机池"><svg class="icon-xs" aria-hidden="true"><use href="#icon-bookmark"/></svg> <span id="grm_preset_label">预设</span></button>` +
+      `<div id="grm_preset_menu" class="grm-preset-menu" style="display:none"></div>` +
     `</span>` +
     '</div>';
   html += '<div class="source-group-list" ondragover="event.preventDefault()">';
@@ -8357,11 +8540,21 @@ async function loadGrimoirePresets(setValue) {
   const label = document.getElementById('grm_preset_label');
   if (!menu) return;
   const r = await apiFetch('/api/grimoire/presets', {}, true);
-  if (!r || !r.ok || !r.presets) { menu.innerHTML = ''; return; }
+  const presets = (r && r.ok && r.presets) ? r.presets : [];
   let h = '';
-  for (const name of (r.presets || [])) {
-    h += `<div class="grm-preset-item" onclick="applyGrimoirePreset('${esc(name)}')"><span>${esc(name)}</span></div>`;
+  if (!presets.length) {
+    h += '<div class="grm-preset-empty">暂无预设</div>';
+  } else {
+    for (const name of presets) {
+      // 每项：名称（点击应用）+ 删除按钮（不再需要一个突兀的裸 ✕）
+      h += `<div class="grm-preset-item">` +
+        `<span class="grm-preset-name" onclick="applyGrimoirePreset('${esc(name)}')" title="应用此预设">${esc(name)}</span>` +
+        `<button class="grm-preset-del" onclick="event.stopPropagation();deleteGrimoirePresetByName('${esc(name)}')" title="删除此预设" aria-label="删除预设">✕</button>` +
+        `</div>`;
+    }
   }
+  h += `<div class="grm-preset-sep"></div>`;
+  h += `<div class="grm-preset-action" onclick="saveGrimoirePreset()">＋ 保存当前为预设</div>`;
   menu.innerHTML = h;
   if (setValue && label) label.textContent = setValue;
 }
@@ -8403,6 +8596,24 @@ async function applyGrimoirePreset(name) {
     toast(`✅ 已加载预设「${name}」`);
   } else {
     toast('❌ 加载失败: ' + (r?.error || ''), 'error');
+  }
+}
+
+/** 删除指定名称的预设（预设菜单里每项自带的删除按钮） */
+async function deleteGrimoirePresetByName(name) {
+  if (!name || name === '预设') { toast('请先选择一个预设', 'error'); return; }
+  if (!confirm(`确定删除预设「${name}」？`)) return;
+  const r = await apiFetch('/api/grimoire/presets/delete', {
+    method: 'POST', body: JSON.stringify({ name })
+  }, true);
+  if (r && r.ok) {
+    toast(`已删除预设「${name}」`);
+    // 若删的正是当前显示的预设，标签回落到默认
+    const label = document.getElementById('grm_preset_label');
+    if (label && label.textContent === name) label.textContent = '预设';
+    loadGrimoirePresets();
+  } else {
+    toast('❌ 删除失败: ' + (r?.error || ''), 'error');
   }
 }
 
