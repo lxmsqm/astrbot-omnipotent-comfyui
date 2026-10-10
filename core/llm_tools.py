@@ -622,7 +622,6 @@ class ComfyUIRandomImageTool(FunctionTool):
 class LLMToolsMixin:
     """LLM 工具:魔导书搜索/管理/固定/随机池等 llm_* 工具方法。"""
 
-    @filter.llm_tool(name="comfyui_search_tags")
     async def llm_search_tags(self, event: AstrMessageEvent, keyword: str, source: str = ""):
         """搜索魔导书中的所有绘画标签。根据关键词在所有数据源或指定数据源中搜索匹配的提示词标签，返回可用于生图的标签。
 
@@ -729,7 +728,6 @@ class LLMToolsMixin:
         lines.append(f"\n共 {len(results)} 条结果")
         return "\n".join(lines)
 
-    @filter.llm_tool(name="comfyui_list_grimoire")
     async def llm_list_grimoire(self, event: AstrMessageEvent):
         """列出魔导书的随机池子来源和已固定的标签。返回所有可用的随机池子名称和已固定的标签信息。"""
         wc = self.workflow_config
@@ -761,7 +759,6 @@ class LLMToolsMixin:
                 lines.append(f"  {src_name} → {pi.get('name','')}: {pi.get('tags','')}")
         return "\n".join(lines)
 
-    @filter.llm_tool(name="comfyui_manage_pool")
     async def llm_manage_pool(self, event: AstrMessageEvent, action: str, source: str):
         """管理魔导书随机池。添加或移除数据源到随机池中，随机池中的数据源会参与随机抽取。
 
@@ -826,7 +823,6 @@ class LLMToolsMixin:
         await self._save_workflow_config()
         return f"✅ 已将「{source}」从随机池移除"
 
-    @filter.llm_tool(name="comfyui_manage_pin")
     async def llm_manage_pin(self, event: AstrMessageEvent, action: str, source: str, name: str = "", tags: str = ""):
         """管理魔导书的固定标签。固定某个数据源中的一条标签后，该标签会固定出现在每次随机/生图中。
 
@@ -962,7 +958,6 @@ class LLMToolsMixin:
             lines.append(f"  {display}: {tag[:80]}{'...' if len(tag)>80 else ''}")
         return "\n".join(lines)
 
-    @filter.llm_tool(name="comfyui_get_prompt")
     async def llm_get_prompt(self, event: AstrMessageEvent, message_id: str = ""):
         """查询某条图片消息对应的生图提示词。用于从已生成的图片中提取完整描述。
 
@@ -988,3 +983,96 @@ class LLMToolsMixin:
         if not results:
             return f"未找到 message_id 为「{message_id}」的提示词记录（可能已过期，默认保留 {self.prompt_log_days} 天）"
         return "\n".join(results)
+
+
+# ========================================================================
+# LLM 工具（FunctionTool 类式）——v4.13.11
+# ------------------------------------------------------------------------
+# ⚠️ 不用 @filter.llm_tool 的原因：框架 star_manager 绑定实例时判断
+#   `ft.handler.__module__ == metadata.module_path`（严格相等），子模块
+#   （…core.llm_tools / …core.grimoire）≠ 插件根 → 不绑定 → 运行时
+#   "missing 1 required positional argument: 'event'"。
+#   类式工具走 _register_tools 的 `t._plugin = self` 通道，与 comfyui_draw 同范式。
+# 方法体仍留在 LLMToolsMixin / GrimoireMixin 上（只去掉装饰器），这里薄委托。
+# ========================================================================
+
+@dataclass
+class ComfyUISearchTagsTool(FunctionTool):
+    name: str = "comfyui_search_tags"
+    description: str = ("搜索魔导书中的所有绘画标签。根据关键词在所有数据源或指定数据源中"
+                        "搜索匹配的提示词标签，返回可用于生图的标签。")
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "keyword": {"type": "string", "description": "搜索关键词，如 初音未来、海滩、赛博朋克、回眸、黄金时刻"},
+            "source": {"type": "string", "description": "可选，数据源名称：artists, characters, clothing, lighting, environment, framing 等。不传则搜索全部"}
+        },
+        "required": ["keyword"]
+    })
+
+    async def run(self, event: AstrMessageEvent, keyword: str, source: str = ""):
+        return await self._plugin.llm_search_tags(event, keyword, source)
+
+
+@dataclass
+class ComfyUIListGrimoireTool(FunctionTool):
+    name: str = "comfyui_list_grimoire"
+    description: str = "列出魔导书的随机池子来源和已固定的标签。返回所有可用的随机池子名称和已固定的标签信息。"
+    parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
+
+    async def run(self, event: AstrMessageEvent):
+        return await self._plugin.llm_list_grimoire(event)
+
+
+@dataclass
+class ComfyUIManagePoolTool(FunctionTool):
+    name: str = "comfyui_manage_pool"
+    description: str = ("管理魔导书随机池。添加或移除数据源到随机池中，"
+                        "随机池中的数据源会参与随机抽取。")
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "action": {"type": "string", "description": "操作类型：add 添加到随机池，remove 从随机池移除", "enum": ["add", "remove"]},
+            "source": {"type": "string", "description": "数据源名称：artists, characters, clothing, lighting, environment, framing 等"}
+        },
+        "required": ["action", "source"]
+    })
+
+    async def run(self, event: AstrMessageEvent, action: str, source: str):
+        return await self._plugin.llm_manage_pool(event, action, source)
+
+
+@dataclass
+class ComfyUIManagePinTool(FunctionTool):
+    name: str = "comfyui_manage_pin"
+    description: str = ("管理魔导书的固定标签。固定某个数据源中的一条标签后，"
+                        "该标签会固定出现在每次随机/生图中。")
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "action": {"type": "string", "description": "操作类型：pin 固定标签，unpin 取消固定", "enum": ["pin", "unpin"]},
+            "source": {"type": "string", "description": "数据源名称，如 artists, characters, clothing"},
+            "name": {"type": "string", "description": "要固定的条目名称，取消固定时不需传"},
+            "tags": {"type": "string", "description": "要固定条目对应的英文提示词标签，取消固定时不需传"}
+        },
+        "required": ["action", "source"]
+    })
+
+    async def run(self, event: AstrMessageEvent, action: str, source: str, name: str = "", tags: str = ""):
+        return await self._plugin.llm_manage_pin(event, action, source, name, tags)
+
+
+@dataclass
+class ComfyUIGetPromptTool(FunctionTool):
+    name: str = "comfyui_get_prompt"
+    description: str = "查询某条图片消息对应的生图提示词。用于从已生成的图片中提取完整描述。"
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "message_id": {"type": "string", "description": "图片消息的 ID。不传则自动从回复的图片消息中提取"}
+        },
+        "required": []
+    })
+
+    async def run(self, event: AstrMessageEvent, message_id: str = ""):
+        return await self._plugin.llm_get_prompt(event, message_id)

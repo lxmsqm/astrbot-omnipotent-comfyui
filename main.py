@@ -24,7 +24,11 @@ from .core.anima_data import AnimaDataManager, load_anima_tools_source, _is_anim
 from .core import data_paths
 from .core.data_paths import (data_dir_resolver, user_data_dir_resolver,
                               migrate_out as _data_migrate_out, migration_status as _data_migration_status)
-from .core.grimoire import GrimoireMixin
+from .core.grimoire import (
+    GrimoireMixin,
+    ComfyUIGrimoireAddTool, ComfyUIGrimoireDeleteTool, ComfyUIGrimoireEditTool,
+    ComfyUISetPromptModelTool,
+)
 from .core.llm_tools import (
     ComfyUITaskError, LarkLooseCommandFilter, LLMToolsMixin,
     ComfyUIDrawTool, ComfyUIListWorkflowsTool, ComfyUISwitchWorkflowTool,
@@ -32,6 +36,8 @@ from .core.llm_tools import (
     ComfyUIRandomTool, ComfyUIListStarsTool, ComfyUIListPresetsTool,
     ComfyUIDeletePresetTool, ComfyUIQueueTool, ComfyUIStopTool,
     ComfyUIExecuteTool, ComfyUIRandomImageTool,
+    ComfyUISearchTagsTool, ComfyUIListGrimoireTool, ComfyUIManagePoolTool,
+    ComfyUIManagePinTool, ComfyUIGetPromptTool,
 )
 from .core.workflow import WorkflowMixin
 from .core.generate import GenerateMixin
@@ -308,7 +314,12 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             tools = [ComfyUIDrawTool(), ComfyUIListWorkflowsTool(), ComfyUISwitchWorkflowTool(), ComfyUIGetCurrentWorkflowTool(),
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIRandomTool(),
                      ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool(),
-                     ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool()]
+                     ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool(),
+                     # v4.13.11: 原 @filter.llm_tool 的 9 个工具改为类式（子模块 __module__ ≠
+                     # 插件根导致框架不绑定实例 → "missing event"，见 grimoire.py 末尾说明）
+                     ComfyUIGrimoireAddTool(), ComfyUIGrimoireDeleteTool(), ComfyUIGrimoireEditTool(),
+                     ComfyUISetPromptModelTool(), ComfyUISearchTagsTool(), ComfyUIListGrimoireTool(),
+                     ComfyUIManagePoolTool(), ComfyUIManagePinTool(), ComfyUIGetPromptTool()]
             self._tool_objs = tools
             for t in tools:
                 t._plugin = self

@@ -7,9 +7,10 @@ import hashlib
 import json
 import os
 import shutil
+from dataclasses import dataclass, field
 
 from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api import logger
+from astrbot.api import logger, FunctionTool
 from aiohttp import web
 from pathlib import Path
 
@@ -1837,7 +1838,6 @@ class GrimoireMixin:
         except ImportError:
             return []
 
-    @filter.llm_tool(name="comfyui_grimoire_add")
     async def llm_grimoire_add(self, event: AstrMessageEvent, source: str, name: str, tags: str, style: str = "general"):
         """向魔导书指定子分类添加一条新标签。支持动态检测子分类列表。
 
@@ -1875,7 +1875,6 @@ class GrimoireMixin:
         else:
             return f"❌ 写入失败，请检查文件权限"
 
-    @filter.llm_tool(name="comfyui_grimoire_delete")
     async def llm_grimoire_delete(self, event: AstrMessageEvent, source: str, name: str):
         """从魔导书指定子分类中删除一条标签。
 
@@ -1902,7 +1901,6 @@ class GrimoireMixin:
         else:
             return f"❌ 删除失败"
 
-    @filter.llm_tool(name="comfyui_grimoire_edit")
     async def llm_grimoire_edit(self, event: AstrMessageEvent, source: str, name: str, new_name: str = "", new_tags: str = "", new_style: str = ""):
         """编辑魔导书中已有的标签。支持修改名称、标签和样式。
 
@@ -1942,7 +1940,6 @@ class GrimoireMixin:
         else:
             return f"❌ 更新失败"
 
-    @filter.llm_tool(name="comfyui_set_prompt_model")
     async def llm_set_prompt_model(self, event: AstrMessageEvent, model: str):
         """切换随机图/魔导书的提示词生成引擎（anima 或 k2）。
         切换后 WebUI 设置面板、魔导书模型下拉、QQ /随机图 命令三方均同步生效。
@@ -2086,3 +2083,91 @@ class GrimoireMixin:
             "failed": prog.get("failed", 0),
             "message": prog.get("message", "")
         })
+
+
+# ========================================================================
+# LLM 工具（FunctionTool 类式）——v4.13.11
+# ------------------------------------------------------------------------
+# ⚠️ 为什么不用 @filter.llm_tool：框架 star_manager 绑定实例时的判断是
+#   `getattr(ft.handler, "__module__", None) == metadata.module_path`（**严格相等**）。
+#   插件把工具定义在子模块（…astrbot_plugin_comfyui_local.core.grimoire），
+#   而 metadata.module_path 是插件根（…astrbot_plugin_comfyui_local）→ 判断不成立
+#   → 跳过 functools.partial(raw_handler, star_cls) 绑定 → 运行时 handler(event, ...)
+#   会把 event 顶到 self 的位置，报 "missing 1 required positional argument: 'event'"。
+#   改为 FunctionTool 子类后走 _register_tools 的 `t._plugin = self` 通道，与
+#   comfyui_draw 等工具同一范式，不受该模块路径判断影响。
+# 逻辑仍复用 Mixin 上的同名方法（方法体未改，只去掉装饰器），降低回归风险。
+# ========================================================================
+
+@dataclass
+class ComfyUIGrimoireAddTool(FunctionTool):
+    name: str = "comfyui_grimoire_add"
+    description: str = ("向魔导书指定子分类添加一条新标签。支持动态检测子分类列表。"
+                        "source 支持中文名/文件名/路径片段，如 lighting、光影、场景、environment、shot、framing。")
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "source": {"type": "string", "description": "数据源关键词，如 lighting/光影/场景/environment/shot/framing"},
+            "name": {"type": "string", "description": "条目名称，如 金色黄昏、回眸一笑"},
+            "tags": {"type": "string", "description": "逗号分隔的英文提示词，如 golden hour, warm glow, rim light"},
+            "style": {"type": "string", "description": "样式", "enum": ["general", "portrait", "landscape"]}
+        },
+        "required": ["source", "name", "tags"]
+    })
+
+    async def run(self, event: AstrMessageEvent, source: str, name: str, tags: str, style: str = "general"):
+        return await self._plugin.llm_grimoire_add(event, source, name, tags, style)
+
+
+@dataclass
+class ComfyUIGrimoireDeleteTool(FunctionTool):
+    name: str = "comfyui_grimoire_delete"
+    description: str = "从魔导书指定子分类中删除一条标签。"
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "source": {"type": "string", "description": "数据源关键词，如 lighting、场景、shot、normal_posture"},
+            "name": {"type": "string", "description": "要删除的条目名称，如 黄金时刻"}
+        },
+        "required": ["source", "name"]
+    })
+
+    async def run(self, event: AstrMessageEvent, source: str, name: str):
+        return await self._plugin.llm_grimoire_delete(event, source, name)
+
+
+@dataclass
+class ComfyUIGrimoireEditTool(FunctionTool):
+    name: str = "comfyui_grimoire_edit"
+    description: str = "编辑魔导书中已有的标签。支持修改名称、标签和样式。"
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "source": {"type": "string", "description": "数据源关键词，如 lighting、场景、shot"},
+            "name": {"type": "string", "description": "要编辑的条目当前名称"},
+            "new_name": {"type": "string", "description": "新名称（不需修改可不传）"},
+            "new_tags": {"type": "string", "description": "新的逗号分隔英文提示词（不需修改可不传）"},
+            "new_style": {"type": "string", "description": "新样式（不需修改可不传）"}
+        },
+        "required": ["source", "name"]
+    })
+
+    async def run(self, event: AstrMessageEvent, source: str, name: str, new_name: str = "", new_tags: str = "", new_style: str = ""):
+        return await self._plugin.llm_grimoire_edit(event, source, name, new_name, new_tags, new_style)
+
+
+@dataclass
+class ComfyUISetPromptModelTool(FunctionTool):
+    name: str = "comfyui_set_prompt_model"
+    description: str = ("切换随机图/魔导书的提示词生成引擎（anima 或 k2）。"
+                        "切换后 WebUI 设置面板、魔导书模型下拉、QQ /随机图 命令三方均同步生效。")
+    parameters: dict = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {
+            "model": {"type": "string", "description": "引擎名称：anima（原随机池抽标签）或 k2（K2 引擎组中文成句）"}
+        },
+        "required": ["model"]
+    })
+
+    async def run(self, event: AstrMessageEvent, model: str):
+        return await self._plugin.llm_set_prompt_model(event, model)
