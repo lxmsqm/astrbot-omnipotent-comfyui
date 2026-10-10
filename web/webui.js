@@ -2163,6 +2163,10 @@ async function loadParams() {
   }
   // 异步加载 Lora 列表（供弹窗下拉列表使用）
   loadLoras();
+  // v4.13.10: PC 上搬动过 models/loras 目录时，配置里存的旧路径会失效（提交被 ComfyUI
+  // 以 value_not_in_list 拒绝）。这里按**文件名**把失效路径纠正为 PC ComfyUI 的实际路径，
+  // 与后端 _apply_loras 的纠正逻辑一致；纠正后落盘，避免每次都纠。
+  setTimeout(_remapStaleLoraPaths, 1200);
 
   renderNodes();
   updateNodeDisplay();
@@ -2966,6 +2970,49 @@ function _saveLoraConfig() {
   const imgIds = (loadImageNodeIds || []).filter(id => id);
   if (imgIds.length) saveData.__load_image_nodes__ = imgIds.join(',');
   apiFetch('/api/workflow-params', { method: 'POST', body: JSON.stringify(saveData) }, true).catch(() => {});
+}
+
+/** v4.13.10: 把配置里失效的 LoRA 旧路径按**文件名**纠正为 PC ComfyUI 的实际路径。
+ *  场景：用户在 PC 上搬动了 models/loras 子目录，工作流/配置里存的旧路径会被 ComfyUI
+ *  以 value_not_in_list 拒绝。这里与后端 _apply_loras 的 _lora_name_remap 同一套规则：
+ *  只在"唯一同名文件"时才纠正，否则保持原值不动（宁可不改也不猜错）。纠正后落盘。 */
+function _remapStaleLoraPaths() {
+  if (!availableLoras || !availableLoras.length) return;
+  const availSet = new Set(availableLoras);
+  const byBase = new Map();
+  availableLoras.forEach(a => {
+    const b = String(a).split(/[\\/]/).pop().trim().toLowerCase();
+    if (!byBase.has(b)) byBase.set(b, []);
+    byBase.get(b).push(a);
+  });
+  let changed = 0, dropped = 0;
+  Object.keys(loraNodesConfig || {}).forEach(nid => {
+    (loraNodesConfig[nid] || []).forEach(l => {
+      const nm = l && l.lora_name;
+      if (!nm || availSet.has(nm)) return;
+      const base = String(nm).split(/[\\/]/).pop().trim().toLowerCase();
+      const hits = byBase.get(base);
+      if (hits && hits.length === 1) {
+        console.log('[LoRA] 旧路径自动纠正:', nm, '→', hits[0]);
+        l.lora_name = hits[0];
+        changed++;
+      } else if (!hits) {
+        // 文件确实不存在了（已删除/改名）→ 停用该条，避免提交被拒
+        if (l.on !== false) {
+          console.warn('[LoRA] 失效（PC 上已无此文件），已置为停用:', nm);
+          l.on = false;
+          dropped++;
+        }
+      }
+      // hits.length > 1：同名多个，无法确定 → 保持原值不猜
+    });
+  });
+  if (changed || dropped) {
+    try { renderLoraPanel(); } catch (e) { /* 面板可能未渲染 */ }
+    _saveLoraConfig();
+    if (changed) toast(`✅ 已按 PC 目录纠正 ${changed} 个 LoRA 路径` + (dropped ? `（${dropped} 个已失效停用）` : ''));
+    else if (dropped) toast(`⚠️ ${dropped} 个 LoRA 在 PC 上不存在，已停用`, 'error', 4000);
+  }
 }
 
 function setPromptNode(n) {

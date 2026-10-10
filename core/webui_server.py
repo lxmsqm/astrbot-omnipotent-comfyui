@@ -1777,7 +1777,20 @@ class WebUIMixin:
                     for k, v in (jzl.get('inputs', {}) or {}).items():
                         if 'ref_images' in k:
                             refs[k.replace('ref_images.', '')] = ('link[' + str(v[0]) + ']') if isinstance(v, list) else repr(v)[:16]
-                return {'step': tag, 'load': lis, 'refs': refs}
+                # v4.13.10: 附上权重Lora加载器的实际 lora 输入（用于排查旧路径是否被纠正）
+                lor = {}
+                for nid, n in wf.items():
+                    if not isinstance(n, dict):
+                        continue
+                    ct = str(n.get('class_type', ''))
+                    if ct == 'LoraLoader':
+                        continue
+                    ins = n.get('inputs', {}) or {}
+                    got = {k: (v.get('lora') if isinstance(v, dict) else v)
+                           for k, v in ins.items() if k.startswith('lora_')}
+                    if got:
+                        lor[nid] = got
+                return {'step': tag, 'load': lis, 'refs': refs, 'loras': lor}
 
             snaps = [snap('0-文件原始')]
             # 阶段1：配置应用（含未上传加载节点清理）——与真实流程一致：有图时保护全部 LoadImage
@@ -1794,9 +1807,13 @@ class WebUIMixin:
             if image_path:
                 await self._set_load_image(wf, image_path)
                 snaps.append(snap('3-图片注入'))
-            # 阶段4：引用重建
+            # 阶段4：LoRA 应用（v4.13.10：与真实流程一致，预热列表 + 纠正旧路径）
+            await self._refresh_lora_list()
+            self._apply_loras(wf)
+            snaps.append(snap('4-LoRA应用'))
+            # 阶段5：引用重建
             self._rebuild_jzl_refs(wf)
-            snaps.append(snap('4-引用重建'))
+            snaps.append(snap('5-引用重建'))
             return web.json_response({"ok": True, "wf": wf_name, "snaps": snaps})
         except Exception as e:
             import traceback

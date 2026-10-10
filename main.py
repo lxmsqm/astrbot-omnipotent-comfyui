@@ -89,6 +89,8 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         self._lora_metadata_fetched = False
         self._object_info_cache = {}        # class_type -> {key: {options/min/max/step/default}}（ComfyUI /object_info，TTL 300s）
         self._object_info_ts = 0
+        self._lora_list_cache = []          # PC ComfyUI 可用 LoRA 路径（用于旧路径自动纠正，TTL 60s）
+        self._lora_list_ts = 0
         # Lora 预览图内存缓存：避免每次请求都穿透到 ComfyUI
         self._lora_preview_cache = {}        # key: lora_name, value: {body, content_type}
         self._style_preview_cache = {}       # key: easy-use 预览图 URL, value: {body, content_type}
@@ -2323,6 +2325,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 注：占位文件方案已废弃（改用「未上传加载节点移除+断连」），
             # 不再需要 _ensure_placeholder_files 预上传，避免每次生成浪费 ffmpeg + 上传
             try:
+                # v4.13.10: 提交前预热 PC ComfyUI 的 LoRA 列表，使 _apply_loras 能把
+                # 搬动过目录的旧路径按文件名自动纠正到新路径（强制对齐 PC 目录）
+                await self._refresh_lora_list()
                 self._apply_loras(wf)
             except Exception as e:
                 logger.warning(f"[ComfyUI] Lora 应用失败（已跳过）: {e}")

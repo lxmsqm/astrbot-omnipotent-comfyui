@@ -273,6 +273,33 @@ class GenerateMixin:
                         continue
                     workflow[nid]['inputs'][key] = val
 
+        # v4.13.10: 标准 LoraLoader / LoraLoaderModelOnly 等**固定写在工作流文件里**的
+        # lora_name，若用户搬动过 PC 的 models/loras 子目录也会失效（ComfyUI 提交时
+        # value_not_in_list 拒绝）。这里同样按**文件名**纠正为 PC 实际路径；
+        # 与 _apply_loras 对权重Lora加载器的纠正同一套规则（唯一同名才改，否则不动）。
+        try:
+            avail = self._lora_available_list()
+            if avail:
+                for nid, node in workflow.items():
+                    if not isinstance(node, dict):
+                        continue
+                    if 'lora' not in str(node.get('class_type', '')).lower():
+                        continue
+                    inputs = node.get('inputs')
+                    if not isinstance(inputs, dict):
+                        continue
+                    for k in ('lora_name', 'lora'):
+                        cur = inputs.get(k)
+                        if isinstance(cur, str) and cur and cur not in avail:
+                            fixed = self._lora_name_remap(cur, avail)
+                            if fixed:
+                                logger.info(f"[ComfyUI] 节点 #{nid} 的 {k} 旧路径自动纠正: {cur} → {fixed}")
+                                inputs[k] = fixed
+                            else:
+                                logger.warning(f"[ComfyUI] 节点 #{nid} 的 {k} 在 PC ComfyUI 上不存在: {cur}")
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 工作流内 LoRA 路径纠正跳过: {e}")
+
         # 未上传的加载节点处理：MiniMax H3 主节点 ref 输入全部 optional 且有空值跳过，
         # 因此不再塞占位文件——文件不存在（未上传/引用 PC 本地文件）的加载节点
         # 直接从工作流移除，并断开所有指向它的连接，主节点自动跳过该参考输入。
@@ -366,6 +393,81 @@ class GenerateMixin:
         except Exception as e:
             logger.warning(f"[ComfyUI] 移除未上传加载节点失败: {e}")
 
+    async def _refresh_lora_list(self):
+        """拉取 PC ComfyUI 当前可用的 LoRA 列表并缓存到 `_lora_list_cache`。
+
+        `_apply_loras` 是同步函数，无法 await；生成链在提交前调用本方法预热，
+        使同步的路径纠正有数据可用（用户没打开过面板时 `_object_info_cache` 可能为空）。
+        TTL 60s，避免每次生成都打 ComfyUI。
+        """
+        import time as _t
+        import aiohttp
+        now = _t.time()
+        if getattr(self, '_lora_list_ts', 0) and now - self._lora_list_ts < 60:
+            return
+        if not self.comfyui_url:
+            return
+        try:
+            async with aiohttp.ClientSession() as s:
+                async with s.get(f"http://{self.comfyui_url}/object_info/LoraLoader",
+                                 timeout=aiohttp.ClientTimeout(total=8)) as r:
+                    if r.status != 200:
+                        return
+                    data = await r.json()
+            lst = (((data or {}).get('LoraLoader') or {}).get('input') or {}).get('required', {}) \
+                .get('lora_name', [None])[0]
+            if isinstance(lst, list):
+                self._lora_list_cache = lst
+                self._lora_list_ts = now
+                logger.info(f"[ComfyUI] LoRA 列表缓存 {len(lst)} 个（用于旧路径自动纠正）")
+        except Exception as e:
+            logger.debug(f"[ComfyUI] 拉取 LoRA 列表失败（跳过路径纠正）: {e}")
+
+    def _lora_available_list(self) -> list:
+        """当前 PC ComfyUI 可用的 LoRA 路径列表（供同步的 _apply_loras 使用）。
+
+        优先用 `_object_info_cache`（TTL 300s，由 _ensure_object_info 维护）；没有再退回
+        专用缓存 `_lora_list_cache`（由生成链在提交前用 _refresh_lora_list 预热）。
+        两者都空时返回 []，此时不做路径纠正（宁可不改也不猜）。
+        """
+        avail = []
+        try:
+            oi = getattr(self, '_object_info_cache', None) or {}
+            avail = (oi.get('LoraLoader') or {}).get('lora_name', {}).get('options') or []
+            if not avail:
+                seen = set()
+                for _ct, m in oi.items():
+                    opts = (m or {}).get('lora_name', {}).get('options')
+                    if isinstance(opts, list):
+                        for o in opts:
+                            if o not in seen:
+                                seen.add(o)
+                                avail.append(o)
+        except Exception:
+            avail = []
+        if not avail:
+            avail = list(getattr(self, '_lora_list_cache', None) or [])
+        return avail
+
+    def _lora_name_remap(self, name: str, avail: list) -> str | None:
+        """把失效的 LoRA 名按**文件名**匹配到 ComfyUI 当前可用列表里的新路径。
+
+        场景：用户在 PC 上搬动了 models/loras 的子目录（如 Anima/风格功能 → Anima/画风），
+        工作流/配置里存的仍是旧路径字符串，ComfyUI 提交时会校验 lora_name →
+        "value_not_in_list" 直接拒绝。插件以 PC ComfyUI 的实际列表为准，
+        这里按 basename（忽略大小写）找到唯一同名文件即视为"搬到了新位置"，返回新路径。
+        找不到 或 同名有多个（无法确定）时返回 None，保持原值不动（宁可不改也不猜错）。
+        """
+        if not name or not avail:
+            return None
+        base = name.split('\\')[-1].split('/')[-1].strip().lower()
+        if not base:
+            return None
+        hits = [a for a in avail if a.split('\\')[-1].split('/')[-1].strip().lower() == base]
+        if len(hits) == 1:
+            return hits[0]
+        return None
+
     def _apply_loras(self, workflow):
         """将每个节点保存的 Lora 配置直接写入节点输入参数。
 
@@ -377,6 +479,9 @@ class GenerateMixin:
         lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
         if not lora_nodes:
             return
+
+        # PC ComfyUI 当前可用的 LoRA 列表（用于纠正失效旧路径，强制对齐 PC 目录）
+        avail = self._lora_available_list()
 
         for node_id, loras in list(lora_nodes.items()):
             if not isinstance(loras, list) or not loras:
@@ -391,7 +496,23 @@ class GenerateMixin:
             if ct == 'LoraLoader':
                 continue
 
-            enabled = [l for l in loras if l.get('on', True) and l.get('lora_name')]
+            enabled = []
+            for l in loras:
+                if not l.get('on', True) or not l.get('lora_name'):
+                    continue
+                nm = l.get('lora_name', '')
+                # 失效路径自动纠正：按文件名匹配 PC ComfyUI 的实际路径（强制对齐 PC 目录）
+                if avail and nm not in avail:
+                    fixed = self._lora_name_remap(nm, avail)
+                    if fixed:
+                        logger.info(f"[ComfyUI] LoRA 路径自动纠正: {nm} → {fixed}")
+                        nm = fixed
+                    else:
+                        logger.warning(
+                            f"[ComfyUI] LoRA 在 PC ComfyUI 上不存在（已跳过该条）: {nm}"
+                            f"（可能已删除或改名；共 {len(avail)} 个可用）")
+                        continue
+                enabled.append({**l, 'lora_name': nm})
             if not enabled:
                 continue
 
