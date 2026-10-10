@@ -589,7 +589,7 @@ class GrimoireMixin:
         return web.json_response({"ok": True})
 
     async def _webui_grimoire_get_presets(self, request):
-        """获取所有预设列表（含每个预设的 LoRA 条数，供菜单标注）"""
+        """获取所有预设列表（含 LoRA 条数与来源工作流，供菜单标注）"""
         presets = self.workflow_config.get('__grimoire_presets__', {})
         out = []
         for name, p in presets.items():
@@ -599,15 +599,24 @@ class GrimoireMixin:
             for grp in (p.get('loras') or []):
                 if isinstance(grp, dict):
                     lora_count += len(grp.get('loras') or [])
-            out.append({"name": name, "lora_count": lora_count})
+            out.append({
+                "name": name,
+                "lora_count": lora_count,
+                # LoRA 部分属于保存它的那个工作流（标签/随机池仍是全局的）
+                "lora_source_wf": p.get('lora_source_wf', '') or '',
+            })
         return web.json_response({"ok": True, "presets": out, "names": [x["name"] for x in out]})
 
     async def _webui_grimoire_save_preset(self, request):
         """保存当前固定标签+随机池（+ 可选 LoRA 配置）为预设。
 
-        LoRA 语义：预设是**全局**的，而 LoRA 配置按 `{工作流: {节点ID: [...]}}` 存，
-        节点 ID 跨工作流不通用 —— 所以预设里只存**纯 LoRA 列表**（按节点分组），
-        应用时再写回当前工作流的 LoRA 节点（见 apply）。
+        **作用域语义（v4.13.8）**：
+        - `pins`（固定标签）/ `pool`（随机池）是**全局**的 —— 魔导书词库与工作流无关，
+          换工作流后固定标签照样生效，所以不绑工作流。
+        - `loras` 是**工作流派生**的（LoRA 配置按 `{工作流:{节点ID:[...]}}` 存、节点 ID
+          跨工作流不通用），因此额外记录 `lora_source_wf`（来源工作流名）。
+          应用时若当前工作流 != 来源，则**跳过 LoRA 部分**并提示，避免把不相干的
+          LoRA 名写进语义不符的工作流。
         请求体 loras 形如 [{"nodeId": "159", "loras": [{on,lora_name,strength_model,strength_clip}]}]。
         """
         try: body = await request.json()
@@ -639,19 +648,23 @@ class GrimoireMixin:
             "pins": self.workflow_config.get('__grimoire_pins__', {}),
             "pool": self.workflow_config.get('__grimoire_rand_pool__', []),
             "loras": loras_clean,
+            # 只有真存了 LoRA 才记来源工作流，空列表时不记（避免误导）
+            "lora_source_wf": (self.current_workflow_name or '') if loras_clean else '',
         }
         self.workflow_config['__grimoire_presets__'] = presets
         await self._save_workflow_config()
         return web.json_response({"ok": True, "presets": list(presets.keys())})
 
     async def _webui_grimoire_apply_preset(self, request):
-        """应用预设（替换当前固定标签和随机池，并把预设里的 LoRA 写回当前工作流）。
+        """应用预设（替换当前固定标签和随机池，并在**来源工作流一致时**写回 LoRA）。
 
-        LoRA 写回规则：
-        - 预设里有 LoRA、当前工作流也有 LoRA 节点 → 按顺序替换这些节点的 `__lora_nodes__`
+        LoRA 写回规则（v4.13.8 起带来源校验）：
+        - 预设里有 LoRA，但**来源工作流 != 当前工作流** → 跳过 LoRA（返回
+          loras_skipped_reason），避免把别的工作流的 LoRA 写进语义不符的工作流。
+        - 来源一致、当前工作流有 LoRA 节点 → 按顺序替换这些节点的 `__lora_nodes__`
           （整体替换语义，与 pins/pool 一致；不做"空=删除"推断，见文档陷阱 31）。
-        - 预设里有 LoRA、但当前工作流没有任何 LoRA 节点 → 不硬造节点（造节点需要
-          object_info 校验 class_type，超出预设职责），返回 loras_applied=false 让前端提示。
+        - 来源一致但当前工作流无 LoRA 节点 → 不硬造节点（造节点需要 object_info
+          校验 class_type，超出预设职责），返回提示。
         """
         try: body = await request.json()
         except Exception: return web.json_response({"ok": False, "error": "请求体格式错误"})
@@ -663,33 +676,39 @@ class GrimoireMixin:
         self.workflow_config['__grimoire_pins__'] = preset.get("pins", {})
         self.workflow_config['__grimoire_rand_pool__'] = preset.get("pool", [])
 
-        # ---- LoRA 写回 ----
+        # ---- LoRA 写回（带来源工作流校验）----
         preset_loras = preset.get("loras", []) or []
+        src_wf = preset.get("lora_source_wf", "") or ""
+        cur_wf = self.current_workflow_name or ""
         loras_applied = False
         loras_note = ""
         applied_count = 0
         if preset_loras:
-            wf = self.current_workflow_name
-            wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
-            wf_cfg = wf_configs.get(wf, {})
-            lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
-            if not lora_nodes:
-                loras_note = "当前工作流没有 LoRA 节点，已跳过 LoRA 部分"
+            if src_wf and cur_wf and src_wf != cur_wf:
+                # 跨工作流：直接跳过，不污染当前工作流
+                loras_note = f"此预设的 LoRA 来自工作流「{src_wf}」，与当前工作流不同，已跳过 LoRA 部分"
             else:
-                # 按当前工作流里已有的 LoRA 节点 ID 顺序依次填充
-                node_ids = list(lora_nodes.keys())
-                for i, grp in enumerate(preset_loras):
-                    if i >= len(node_ids):
-                        break
-                    nid = node_ids[i]
-                    lora_nodes[nid] = grp.get('loras', [])
-                    applied_count += 1
-                wf_cfg['__lora_nodes__'] = lora_nodes
-                wf_configs[wf] = wf_cfg
-                self.workflow_config['__workflow_node_configs__'] = wf_configs
-                loras_applied = True
-                if len(preset_loras) > len(node_ids):
-                    loras_note = f"预设含 {len(preset_loras)} 组 LoRA，当前工作流只有 {len(node_ids)} 个节点，超出部分已忽略"
+                wf = cur_wf
+                wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
+                wf_cfg = wf_configs.get(wf, {})
+                lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+                if not lora_nodes:
+                    loras_note = "当前工作流没有权重Lora加载器节点，已跳过 LoRA 部分"
+                else:
+                    # 按当前工作流里已有的 LoRA 节点 ID 顺序依次填充
+                    node_ids = list(lora_nodes.keys())
+                    for i, grp in enumerate(preset_loras):
+                        if i >= len(node_ids):
+                            break
+                        nid = node_ids[i]
+                        lora_nodes[nid] = grp.get('loras', [])
+                        applied_count += 1
+                    wf_cfg['__lora_nodes__'] = lora_nodes
+                    wf_configs[wf] = wf_cfg
+                    self.workflow_config['__workflow_node_configs__'] = wf_configs
+                    loras_applied = True
+                    if len(preset_loras) > len(node_ids):
+                        loras_note = f"预设含 {len(preset_loras)} 组 LoRA，当前工作流只有 {len(node_ids)} 个节点，超出部分已忽略"
 
         await self._save_workflow_config()
         return web.json_response({
@@ -697,6 +716,7 @@ class GrimoireMixin:
             "pins": preset.get("pins", {}),
             "pool": preset.get("pool", []),
             "loras": preset_loras,
+            "lora_source_wf": src_wf,
             "loras_applied": loras_applied,
             "loras_applied_count": applied_count,
             "loras_note": loras_note,

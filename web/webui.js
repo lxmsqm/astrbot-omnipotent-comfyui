@@ -8549,10 +8549,17 @@ async function loadGrimoirePresets(setValue) {
   } else {
     for (const p of presets) {
       const name = p.name;
-      // 含 LoRA 的预设加一个小标记，便于区分纯标签预设
-      const loraTag = p.lora_count
-        ? `<span class="grm-preset-lora" title="含 ${p.lora_count} 个 LoRA">${p.lora_count} LoRA</span>`
-        : '';
+      // 含 LoRA 的预设加标记：数量 + 来源工作流（LoRA 只对该工作流有意义）
+      let loraTag = '';
+      if (p.lora_count) {
+        // 来源工作流名去掉 .json 后缀，太长则截断，避免撑破菜单
+        let src = (p.lora_source_wf || '').replace(/\.json$/i, '');
+        if (src.length > 10) src = src.slice(0, 10) + '…';
+        const tip = p.lora_source_wf
+          ? `含 ${p.lora_count} 个 LoRA（来自工作流「${p.lora_source_wf}」，仅在同名工作流应用时恢复）`
+          : `含 ${p.lora_count} 个 LoRA`;
+        loraTag = `<span class="grm-preset-lora" title="${tip}">${p.lora_count} LoRA${src ? '·' + src : ''}</span>`;
+      }
       // 每项：名称（点击应用）+ 删除按钮（不再需要一个突兀的裸 ✕）
       h += `<div class="grm-preset-item">` +
         `<span class="grm-preset-name" onclick="applyGrimoirePreset('${esc(name)}')" title="应用此预设">${esc(name)}${loraTag}</span>` +
@@ -8623,36 +8630,41 @@ async function applyGrimoirePreset(name) {
   let loraMsg = '';
   const presetLoras = r.loras || [];
   if (presetLoras.length) {
-    const nodes = (allParamsData && allParamsData.nodes)
-      ? allParamsData.nodes.filter(n => /power\s*lora/i.test(n.class_type || '') || /power\s*lora/i.test(n.title || ''))
-      : [];
-    if (!nodes.length) {
-      loraMsg = '（当前工作流无 LoRA 节点，已跳过 LoRA）';
+    // 后端已判来源工作流：跨工作流时直接跳过（loras_applied=false + note）
+    if (!r.loras_applied && r.loras_note) {
+      loraMsg = `（${r.loras_note}）`;
     } else {
-      let applied = 0;
-      presetLoras.forEach((grp, i) => {
-        if (i >= nodes.length) return;
-        const nid = nodes[i].id;
-        // 校验 lora_name 是否仍存在（缺失则保留条目但置 off，避免静默写进生成链）
-        const missing = [];
-        const list = (grp.loras || []).map(l => {
-          const exists = !availableLoras || !availableLoras.length || availableLoras.includes(l.lora_name);
-          if (!exists) missing.push(l.lora_name);
-          return {
-            on: exists ? !!l.on : false,
-            lora_name: l.lora_name,
-            strength_model: l.strength_model != null ? l.strength_model : 1.0,
-            strength_clip: l.strength_clip != null ? l.strength_clip : null,
-          };
+      const nodes = (allParamsData && allParamsData.nodes)
+        ? allParamsData.nodes.filter(n => /power\s*lora/i.test(n.class_type || '') || /power\s*lora/i.test(n.title || ''))
+        : [];
+      if (!nodes.length) {
+        loraMsg = '（当前工作流无权重Lora加载器，已跳过 LoRA）';
+      } else {
+        let applied = 0;
+        presetLoras.forEach((grp, i) => {
+          if (i >= nodes.length) return;
+          const nid = nodes[i].id;
+          // 校验 lora_name 是否仍存在（缺失则保留条目但置 off，避免静默写进生成链）
+          const missing = [];
+          const list = (grp.loras || []).map(l => {
+            const exists = !availableLoras || !availableLoras.length || availableLoras.includes(l.lora_name);
+            if (!exists) missing.push(l.lora_name);
+            return {
+              on: exists ? !!l.on : false,
+              lora_name: l.lora_name,
+              strength_model: l.strength_model != null ? l.strength_model : 1.0,
+              strength_clip: l.strength_clip != null ? l.strength_clip : null,
+            };
+          });
+          loraNodesConfig[nid] = list;
+          applied++;
+          if (missing.length) {
+            loraMsg += `（${missing.length} 个 LoRA 已不存在，已置为停用：${missing.join('、')}）`;
+          }
         });
-        loraNodesConfig[nid] = list;
-        applied++;
-        if (missing.length) {
-          loraMsg += `（${missing.length} 个 LoRA 已不存在，已置为停用：${missing.join('、')}）`;
-        }
-      });
-      if (loraNodesConfig) { renderLoraPanel(); _saveLoraConfig(); }
-      if (applied && !loraMsg) loraMsg = `（已恢复 ${applied} 组 LoRA）`;
+        if (loraNodesConfig) { renderLoraPanel(); _saveLoraConfig(); }
+        if (applied && !loraMsg) loraMsg = `（已恢复 ${applied} 组 LoRA）`;
+      }
     }
   }
 

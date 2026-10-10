@@ -2880,13 +2880,15 @@ select:not([class*="color"]):not([class*="date"]){
   overflow:hidden;text-overflow:ellipsis;cursor:pointer;
   display:flex;align-items:center;gap:6px;
 }
-/* 预设名后的 LoRA 数量标记（区分纯标签预设与含 LoRA 的预设） */
+/* 预设名后的标记：LoRA 数量 + 来源工作流（区分纯标签预设与含 LoRA 的预设） */
 .grm-preset-lora{
   flex-shrink:0;font-size:9px;font-weight:600;
   color:var(--primary);
   background:color-mix(in oklch, var(--primary) 14%, transparent);
   border:1px solid color-mix(in oklch, var(--primary) 28%, transparent);
   border-radius:8px;padding:0 5px;line-height:14px;
+  white-space:nowrap;max-width:60%;
+  overflow:hidden;text-overflow:ellipsis;
 }
 .grm-preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis;}
 .grm-pinned-tag{
