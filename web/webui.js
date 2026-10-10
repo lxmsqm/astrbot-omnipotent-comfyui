@@ -1660,6 +1660,10 @@ async function switchWF(n) {
   await apiFetch('/api/workflows/switch', { method:'POST', body:JSON.stringify({name:n}) });
   await loadWorkflows();
   setTimeout(loadParams, 300);
+  // v4.13.9: 魔导书按工作流隔离 —— 切工作流后必须重载固定标签/随机池/预设，
+  // 否则面板会残留上一个工作流的数据（界面有标签但抽词抽不到）。
+  if (typeof loadPromptPinsStandalone === 'function') setTimeout(loadPromptPinsStandalone, 400);
+  if (typeof loadGrimoirePresets === 'function') setTimeout(loadGrimoirePresets, 400);
   if (window.innerWidth <= 768) closeSidebar();
   else if (typeof switchPage === 'function') switchPage('gen'); // PC：切完工作流跳转生成台
 }

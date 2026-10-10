@@ -2427,8 +2427,11 @@ class WebUIMixin:
                 "__workflow_categories__": {},
                 "__category_order__": [],
                 "__grimoire_enabled__": False,
-                "__grimoire_pins__": {},
-                "__grimoire_rand_pool__": [],
+                # v4.13.9: 魔导书按工作流隔离（顶层映射）；重置时清空
+                "__grimoire_pins_by_wf__": {},
+                "__grimoire_rand_pool_by_wf__": {},
+                "__grimoire_presets_by_wf__": {},
+                "__grimoire_scoped__": False,
                 "__grimoire_stars__": {},
                 "quality_presets": {
                     "480p": {"name": "SD", "pixels": 399360},

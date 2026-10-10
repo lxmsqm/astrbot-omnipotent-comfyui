@@ -3718,8 +3718,11 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
     # ========================================================================
 
     def _get_pinned_tags(self) -> str:
-        """获取固定的标签（已做冲突去重），返回逗号分隔的标签字符串"""
-        pins = self.workflow_config.get('__grimoire_pins__', {})
+        """获取固定的标签（已做冲突去重），返回逗号分隔的标签字符串
+
+        v4.13.9: 固定标签按工作流隔离，这里取**当前工作流**的桶。
+        """
+        pins = self._grimoire_get_pins()
         if not pins:
             return ""
         tags = []

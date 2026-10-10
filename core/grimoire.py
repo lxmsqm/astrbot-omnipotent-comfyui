@@ -20,6 +20,100 @@ from .data_paths import data_dir_resolver
 class GrimoireMixin:
     """魔导书:数据源/条目/分类/固定/随机池/预设/收藏的 WebUI 与 LLM 接口。"""
 
+    # ========================================================================
+    # 魔导书作用域：**按工作流隔离**（v4.13.9）
+    # ------------------------------------------------------------------------
+    # 固定标签 / 随机池 / 预设 三者都按工作流分桶存，互不干扰：
+    #   __grimoire_pins_by_wf__[wf]      = {源: [标签...]}
+    #   __grimoire_rand_pool_by_wf__[wf] = [源路径...]
+    #   __grimoire_presets_by_wf__[wf]   = {预设名: {pins, pool, loras}}
+    #
+    # ⚠️ 为什么放**顶层映射**而不是塞进 __workflow_node_configs__[wf]：
+    #    后者在换工作流文件时会被 _compute_fingerprint 判为"文件变了"而整段清理，
+    #    会把用户的固定标签/随机池一起清掉。
+    #
+    # ⚠️ 兼容与迁移：老版本用全局单例 __grimoire_pins__ / __grimoire_rand_pool__ /
+    #    __grimoire_presets__。首次读取时若当前工作流的桶不存在、而老全局键有数据，
+    #    则把老数据**迁移**进当前工作流桶（只做一次，迁移后老键保留不删，便于回退）。
+    # ========================================================================
+
+    def _grimoire_wf_key(self) -> str:
+        """当前工作流名（作为分桶键）。工作流未选定/为空时用占位键，避免写坏其它桶。"""
+        try:
+            wf = getattr(self, 'current_workflow_name', '') or ''
+        except Exception:
+            wf = ''
+        return wf.strip() or '__default__'
+
+    def _grimoire_migrate_if_needed(self) -> None:
+        """把老版本全局数据迁移进"当前工作流"桶（幂等，只跑一次）。
+
+        只在"桶不存在 且 老全局键有数据"时迁移；迁移后写一个标记键避免重复搬运。
+        """
+        try:
+            if self.workflow_config.get('__grimoire_scoped__'):
+                return
+            wf = self._grimoire_wf_key()
+            changed = False
+
+            old_pins = self.workflow_config.get('__grimoire_pins__')
+            if old_pins and not self.workflow_config.get('__grimoire_pins_by_wf__'):
+                self.workflow_config['__grimoire_pins_by_wf__'] = {wf: old_pins}
+                changed = True
+
+            old_pool = self.workflow_config.get('__grimoire_rand_pool__')
+            if old_pool and not self.workflow_config.get('__grimoire_rand_pool_by_wf__'):
+                self.workflow_config['__grimoire_rand_pool_by_wf__'] = {wf: old_pool}
+                changed = True
+
+            old_presets = self.workflow_config.get('__grimoire_presets__')
+            if old_presets and not self.workflow_config.get('__grimoire_presets_by_wf__'):
+                self.workflow_config['__grimoire_presets_by_wf__'] = {wf: old_presets}
+                changed = True
+
+            # 即便没有可迁移数据，也标记为已作用域化（避免每次读取重复判断）
+            self.workflow_config['__grimoire_scoped__'] = True
+            if changed:
+                logger.info(f"[魔导书] 作用域迁移: 老全局 pins/pool/presets → 工作流「{wf}」桶")
+        except Exception as e:
+            logger.warning(f"[魔导书] 作用域迁移失败: {e}")
+
+    def _grimoire_get_pins(self) -> dict:
+        """取当前工作流的固定标签（自动迁移老全局数据）"""
+        self._grimoire_migrate_if_needed()
+        m = self.workflow_config.get('__grimoire_pins_by_wf__') or {}
+        return m.get(self._grimoire_wf_key(), {}) or {}
+
+    def _grimoire_set_pins(self, pins: dict) -> None:
+        """写当前工作流的固定标签"""
+        m = dict(self.workflow_config.get('__grimoire_pins_by_wf__') or {})
+        m[self._grimoire_wf_key()] = pins
+        self.workflow_config['__grimoire_pins_by_wf__'] = m
+
+    def _grimoire_get_pool(self) -> list:
+        """取当前工作流的随机池（自动迁移老全局数据）"""
+        self._grimoire_migrate_if_needed()
+        m = self.workflow_config.get('__grimoire_rand_pool_by_wf__') or {}
+        return list(m.get(self._grimoire_wf_key(), []) or [])
+
+    def _grimoire_set_pool(self, pool: list) -> None:
+        """写当前工作流的随机池"""
+        m = dict(self.workflow_config.get('__grimoire_rand_pool_by_wf__') or {})
+        m[self._grimoire_wf_key()] = list(pool)
+        self.workflow_config['__grimoire_rand_pool_by_wf__'] = m
+
+    def _grimoire_get_presets(self) -> dict:
+        """取当前工作流的预设表（自动迁移老全局数据）"""
+        self._grimoire_migrate_if_needed()
+        m = self.workflow_config.get('__grimoire_presets_by_wf__') or {}
+        return m.get(self._grimoire_wf_key(), {}) or {}
+
+    def _grimoire_set_presets(self, presets: dict) -> None:
+        """写当前工作流的预设表"""
+        m = dict(self.workflow_config.get('__grimoire_presets_by_wf__') or {})
+        m[self._grimoire_wf_key()] = presets
+        self.workflow_config['__grimoire_presets_by_wf__'] = m
+
     async def _webui_grimoire_sources(self, request):
         """列出所有数据源（按目录分组），缺失的 anima 数据从 Anima-Tools JS 补充"""
         data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
@@ -440,8 +534,8 @@ class GrimoireMixin:
         return web.json_response({"ok": True, "deleted": deleted})
 
     async def _webui_grimoire_get_pins(self, request):
-        """获取所有固定的标签"""
-        pins = self.workflow_config.get('__grimoire_pins__', {})
+        """获取当前工作流的固定标签"""
+        pins = self._grimoire_get_pins()
         # 兼容：旧格式 {源: {name,tags}} → 统一为 {源: [{name,tags}]}
         normalized = {}
         for k, v in pins.items():
@@ -467,7 +561,7 @@ class GrimoireMixin:
         if not source or not action:
             return web.json_response({"ok": False, "error": "缺少参数"})
         pins = {}
-        for k, v in (self.workflow_config.get('__grimoire_pins__', {})).items():
+        for k, v in (self._grimoire_get_pins()).items():
             pins[k.replace('\\', '/')] = v  # 统一已有键的格式
         if action == 'unpin':
             if source in pins:
@@ -500,10 +594,10 @@ class GrimoireMixin:
                 pins[source].append(entry)
         else:
             return web.json_response({"ok": False, "error": "未知操作"})
-        self.workflow_config['__grimoire_pins__'] = pins
+        self._grimoire_set_pins(pins)
         await self._save_workflow_config()
         # 保存后验证（对旧格式单条做兼容检查）
-        saved = self.workflow_config.get('__grimoire_pins__', {})
+        saved = self._grimoire_get_pins()
         if action == 'unpin' and isinstance(saved.get(source), dict) and source in saved:
             # 旧格式单条：取消后源不应还在
             logger.warning(f"[魔导书] 取消固定失败: {source} 仍然存在")
@@ -528,12 +622,12 @@ class GrimoireMixin:
         return valid
 
     async def _webui_grimoire_get_rand_pool(self, request):
-        """获取随机池数据源列表（v4.9.3: 剔除失效/垃圾条目并自愈落盘）"""
-        old = list(self.workflow_config.get('__grimoire_rand_pool__', []) or [])
+        """获取当前工作流的随机池数据源列表（v4.9.3: 剔除失效/垃圾条目并自愈落盘）"""
+        old = list(self._grimoire_get_pool() or [])
         valid = self._grimoire_valid_source_paths()
         pool = [s for s in old if str(s).replace('\\', '/') in valid]
         if len(pool) != len(old):
-            self.workflow_config['__grimoire_rand_pool__'] = pool
+            self._grimoire_set_pool(pool)
             await self._save_workflow_config()
             logger.info(f"[魔导书] 随机池自愈: 剔除 {len(old) - len(pool)} 条失效源，剩 {len(pool)} 条")
         return web.json_response({"ok": True, "pool": pool})
@@ -559,7 +653,7 @@ class GrimoireMixin:
             if bad:
                 return web.json_response({"ok": False,
                                           "error": f"无效的数据源: {', '.join(bad[:5])}{'…' if len(bad) > 5 else ''}"})
-        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        pool = list(self._grimoire_get_pool())
         if action == 'add':
             for src in sources:
                 if src not in pool:
@@ -568,7 +662,7 @@ class GrimoireMixin:
             pool = [s for s in pool if s not in sources]
         else:
             return web.json_response({"ok": False, "error": "未知操作"})
-        self.workflow_config['__grimoire_rand_pool__'] = pool
+        self._grimoire_set_pool(pool)
         await self._save_workflow_config()
         return web.json_response({"ok": True, "pool": pool, "count": len(sources)})
 
@@ -589,8 +683,8 @@ class GrimoireMixin:
         return web.json_response({"ok": True})
 
     async def _webui_grimoire_get_presets(self, request):
-        """获取所有预设列表（含 LoRA 条数与来源工作流，供菜单标注）"""
-        presets = self.workflow_config.get('__grimoire_presets__', {})
+        """获取**当前工作流**的预设列表（含 LoRA 条数与来源工作流，供菜单标注）"""
+        presets = self._grimoire_get_presets()
         out = []
         for name, p in presets.items():
             if not isinstance(p, dict):
@@ -643,15 +737,15 @@ class GrimoireMixin:
                     })
                 if items:
                     loras_clean.append({"nodeId": str(grp.get('nodeId', '')), "loras": items})
-        presets = self.workflow_config.get('__grimoire_presets__', {})
+        presets = dict(self._grimoire_get_presets())
         presets[name] = {
-            "pins": self.workflow_config.get('__grimoire_pins__', {}),
-            "pool": self.workflow_config.get('__grimoire_rand_pool__', []),
+            "pins": self._grimoire_get_pins(),
+            "pool": self._grimoire_get_pool(),
             "loras": loras_clean,
-            # 只有真存了 LoRA 才记来源工作流，空列表时不记（避免误导）
-            "lora_source_wf": (self.current_workflow_name or '') if loras_clean else '',
+            # v4.13.9 起预设已按工作流分桶，理论上不会跨流；仍记录来源做老数据兼容
+            "lora_source_wf": self._grimoire_wf_key() if loras_clean else '',
         }
-        self.workflow_config['__grimoire_presets__'] = presets
+        self._grimoire_set_presets(presets)
         await self._save_workflow_config()
         return web.json_response({"ok": True, "presets": list(presets.keys())})
 
@@ -669,12 +763,12 @@ class GrimoireMixin:
         try: body = await request.json()
         except Exception: return web.json_response({"ok": False, "error": "请求体格式错误"})
         name = body.get('name', '').strip()
-        presets = self.workflow_config.get('__grimoire_presets__', {})
+        presets = self._grimoire_get_presets()
         if name not in presets:
             return web.json_response({"ok": False, "error": f"预设「{name}」不存在"})
         preset = presets[name] or {}
-        self.workflow_config['__grimoire_pins__'] = preset.get("pins", {})
-        self.workflow_config['__grimoire_rand_pool__'] = preset.get("pool", [])
+        self._grimoire_set_pins(preset.get("pins", {}))
+        self._grimoire_set_pool(preset.get("pool", []))
 
         # ---- LoRA 写回（带来源工作流校验）----
         preset_loras = preset.get("loras", []) or []
@@ -727,11 +821,11 @@ class GrimoireMixin:
         try: body = await request.json()
         except Exception: return web.json_response({"ok": False, "error": "请求体格式错误"})
         name = body.get('name', '').strip()
-        presets = self.workflow_config.get('__grimoire_presets__', {})
+        presets = dict(self._grimoire_get_presets())
         if name not in presets:
             return web.json_response({"ok": False, "error": f"预设「{name}」不存在"})
         del presets[name]
-        self.workflow_config['__grimoire_presets__'] = presets
+        self._grimoire_set_presets(presets)
         await self._save_workflow_config()
         return web.json_response({"ok": True, "presets": list(presets.keys())})
 
@@ -742,8 +836,9 @@ class GrimoireMixin:
                                    _is_low_quality)
 
         data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
-        pool = self.workflow_config.get('__grimoire_rand_pool__', [])
-        pins = self.workflow_config.get('__grimoire_pins__', {})
+        # v4.13.9: 读**当前工作流**的随机池与固定标签（生成链抽词必须跟随工作流）
+        pool = self._grimoire_get_pool()
+        pins = self._grimoire_get_pins()
 
         # ★ NSFW 开关（宽松档：只过滤明确色情标签；开启则不过滤）
         #   K2 模式沿用前端的 K2 NSFW 设置；anima 模式用独立的 anima_nsfw 配置

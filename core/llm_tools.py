@@ -454,7 +454,7 @@ class ComfyUIListPresetsTool(FunctionTool):
 
     async def run(self, event: AstrMessageEvent):
         plugin = self._plugin
-        presets = plugin.workflow_config.get('__grimoire_presets__', {})
+        presets = plugin._grimoire_get_presets()  # v4.13.9: 当前工作流的预设
         names = list(presets.keys())
         if not names:
             return "📭 没有预设"
@@ -474,11 +474,11 @@ class ComfyUIDeletePresetTool(FunctionTool):
     async def run(self, event: AstrMessageEvent, name: str):
         plugin = self._plugin
         name = name.strip()
-        presets = plugin.workflow_config.get('__grimoire_presets__', {})
+        presets = dict(plugin._grimoire_get_presets())  # v4.13.9: 当前工作流的预设
         if name not in presets:
             return f"❌ 预设「{name}」不存在。现有预设：{', '.join(presets.keys()) if presets else '无'}"
         del presets[name]
-        plugin.workflow_config['__grimoire_presets__'] = presets
+        plugin._grimoire_set_presets(presets)
         await plugin._save_workflow_config()
         return f"✅ 已删除预设「{name}」"
 
@@ -578,7 +578,7 @@ class ComfyUIRandomImageTool(FunctionTool):
         plugin = self._plugin
         import aiohttp
         count = max(1, min(count, 10))
-        pins = plugin.workflow_config.get('__grimoire_pins__', {})
+        pins = plugin._grimoire_get_pins()  # v4.13.9: 当前工作流的固定标签
         # 兼容新旧 pin 格式
         pin_names = []
         for info in pins.values():
@@ -733,8 +733,9 @@ class LLMToolsMixin:
     async def llm_list_grimoire(self, event: AstrMessageEvent):
         """列出魔导书的随机池子来源和已固定的标签。返回所有可用的随机池子名称和已固定的标签信息。"""
         wc = self.workflow_config
-        pool = wc.get('__grimoire_rand_pool__', [])
-        pins = wc.get('__grimoire_pins__', {})
+        # v4.13.9: 随机池/固定标签按当前工作流隔离
+        pool = self._grimoire_get_pool()
+        pins = self._grimoire_get_pins()
         enabled = self.grimoire_enabled
         if not pool and not pins:
             return f"魔导书当前{'已启用' if enabled else '已禁用'}，随机池和固定标签均为空"
@@ -781,20 +782,20 @@ class LLMToolsMixin:
             src = self._grimoire_find_source_path(source)
         if not src:
             return f"未知数据源: {source}，可选: {', '.join(name_map.keys())}"
-        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        pool = list(self._grimoire_get_pool())  # v4.13.9: 当前工作流的随机池
         action = action.lower().strip()
         if action == "add":
             if src in pool:
                 return f"「{source}」已在随机池中"
             pool.append(src)
-            self.workflow_config['__grimoire_rand_pool__'] = pool
+            self._grimoire_set_pool(pool)
             await self._save_workflow_config()
             return f"✅ 已将「{source}」添加到随机池"
         elif action == "remove":
             if src not in pool:
                 return f"「{source}」不在随机池中"
             pool.remove(src)
-            self.workflow_config['__grimoire_rand_pool__'] = pool
+            self._grimoire_set_pool(pool)
             await self._save_workflow_config()
             return f"✅ 已将「{source}」从随机池移除"
         else:
@@ -817,11 +818,11 @@ class LLMToolsMixin:
         src = name_map.get(source.lower().strip())
         if not src:
             return f"未知数据源: {source}"
-        pool = list(self.workflow_config.get('__grimoire_rand_pool__', []))
+        pool = list(self._grimoire_get_pool())  # v4.13.9: 当前工作流的随机池
         if src not in pool:
             return f"「{source}」不在随机池中"
         pool.remove(src)
-        self.workflow_config['__grimoire_rand_pool__'] = pool
+        self._grimoire_set_pool(pool)
         await self._save_workflow_config()
         return f"✅ 已将「{source}」从随机池移除"
 
@@ -853,7 +854,7 @@ class LLMToolsMixin:
             if not name or not tags:
                 return "固定标签需要提供 name 和 tags 参数"
             source_key = src.replace('/', '\\')
-            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            pins = dict(self._grimoire_get_pins())  # v4.13.9: 当前工作流的固定标签
             # 兼容：统一用列表格式
             if source_key not in pins:
                 pins[source_key] = []
@@ -861,18 +862,18 @@ class LLMToolsMixin:
                 pins[source_key] = [pins[source_key]]
             if not any(e.get('name') == name for e in pins[source_key]):
                 pins[source_key].append({"name": name, "tags": tags})
-            self.workflow_config['__grimoire_pins__'] = pins
+            self._grimoire_set_pins(pins)
             await self._save_workflow_config()
             return f"✅ 已固定 {source}/{name}: {tags}"
         elif action == "unpin":
             source_key = src.replace('/', '\\')
-            pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+            pins = dict(self._grimoire_get_pins())  # v4.13.9: 当前工作流的固定标签
             matched = [k for k in pins if k.replace('\\','/') == src]
             if not matched:
                 return f"「{source}」没有固定的标签"
             for k in matched:
                 pins.pop(k, None)
-            self.workflow_config['__grimoire_pins__'] = pins
+            self._grimoire_set_pins(pins)
             await self._save_workflow_config()
             return f"✅ 已取消固定 {source}"
         else:
@@ -896,13 +897,13 @@ class LLMToolsMixin:
         if not src:
             return f"未知数据源: {source}"
         source_key = src.replace('/', '\\')
-        pins = dict(self.workflow_config.get('__grimoire_pins__', {}))
+        pins = dict(self._grimoire_get_pins())  # v4.13.9: 当前工作流的固定标签
         matched = [k for k in pins if k.replace('\\','/') == src]
         if not matched:
             return f"「{source}」没有固定的标签"
         for k in matched:
             pins.pop(k, None)
-        self.workflow_config['__grimoire_pins__'] = pins
+        self._grimoire_set_pins(pins)
         await self._save_workflow_config()
         return f"✅ 已取消固定 {source}"
 
