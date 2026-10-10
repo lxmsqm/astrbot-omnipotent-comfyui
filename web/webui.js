@@ -8540,15 +8540,22 @@ async function loadGrimoirePresets(setValue) {
   const label = document.getElementById('grm_preset_label');
   if (!menu) return;
   const r = await apiFetch('/api/grimoire/presets', {}, true);
-  const presets = (r && r.ok && r.presets) ? r.presets : [];
+  // 后端返回 [{name, lora_count}, ...]（兼容旧的纯字符串数组）
+  const raw = (r && r.ok && r.presets) ? r.presets : [];
+  const presets = raw.map(x => (typeof x === 'string') ? { name: x, lora_count: 0 } : x);
   let h = '';
   if (!presets.length) {
     h += '<div class="grm-preset-empty">暂无预设</div>';
   } else {
-    for (const name of presets) {
+    for (const p of presets) {
+      const name = p.name;
+      // 含 LoRA 的预设加一个小标记，便于区分纯标签预设
+      const loraTag = p.lora_count
+        ? `<span class="grm-preset-lora" title="含 ${p.lora_count} 个 LoRA">${p.lora_count} LoRA</span>`
+        : '';
       // 每项：名称（点击应用）+ 删除按钮（不再需要一个突兀的裸 ✕）
       h += `<div class="grm-preset-item">` +
-        `<span class="grm-preset-name" onclick="applyGrimoirePreset('${esc(name)}')" title="应用此预设">${esc(name)}</span>` +
+        `<span class="grm-preset-name" onclick="applyGrimoirePreset('${esc(name)}')" title="应用此预设">${esc(name)}${loraTag}</span>` +
         `<button class="grm-preset-del" onclick="event.stopPropagation();deleteGrimoirePresetByName('${esc(name)}')" title="删除此预设" aria-label="删除预设">✕</button>` +
         `</div>`;
     }
@@ -8566,37 +8573,91 @@ function showPresetDropdown() {
   menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
-/** 保存当前状态为预设 */
+/** 保存当前状态为预设（含 LoRA 配置）
+ *  LoRA 存取语义：预设全局，LoRA 按 {工作流:{节点ID:[...]}} 存、节点 ID 跨工作流不通用，
+ *  所以这里从 loraNodesConfig 提取**每个 LoRA 节点的纯列表**（按节点分组）交给后端，
+ *  应用时由后端写回当前工作流的 LoRA 节点（见 _webui_grimoire_apply_preset）。 */
 async function saveGrimoirePreset() {
   const name = prompt('输入预设名称：');
   if (!name) return;
+  // 收集所有 LoRA 节点的配置（不只第一个，避免多 Loader 工作流丢配置）
+  const loras = Object.keys(loraNodesConfig || {})
+    .filter(nid => (loraNodesConfig[nid] || []).length)
+    .map(nid => ({
+      nodeId: String(nid),
+      loras: (loraNodesConfig[nid] || []).map(l => ({
+        on: !!l.on,
+        lora_name: l.lora_name || '',
+        strength_model: l.strength_model,
+        strength_clip: l.strength_clip,
+      })),
+    }));
   const r = await apiFetch('/api/grimoire/presets', {
-    method: 'POST', body: JSON.stringify({ name })
+    method: 'POST', body: JSON.stringify({ name, loras })
   }, true);
   if (r && r.ok) {
-    toast(`✅ 预设「${name}」已保存`);
+    const n = loras.reduce((a, g) => a + g.loras.length, 0);
+    toast(n ? `✅ 预设「${name}」已保存（含 ${n} 个 LoRA）` : `✅ 预设「${name}」已保存`);
     await loadGrimoirePresets(name);
   } else {
     toast('❌ 保存失败: ' + (r?.error || ''), 'error');
   }
 }
 
-/** 应用预设 */
+/** 应用预设（固定标签 + 随机池 + LoRA） */
 async function applyGrimoirePreset(name) {
   if (!name) return;
   const r = await apiFetch('/api/grimoire/presets/apply', {
     method: 'POST', body: JSON.stringify({ name })
   }, true);
-  if (r && r.ok) {
-    _grimoirePins = r.pins || {};
-    _grimoireRandPool = (r.pool || []).map(p => p.replace(/\\/g, '/'));
-    renderGrimoireSources();
-    updatePinnedBar();
-    await loadGrimoirePresets(name);
-    toast(`✅ 已加载预设「${name}」`);
-  } else {
+  if (!r || !r.ok) {
     toast('❌ 加载失败: ' + (r?.error || ''), 'error');
+    return;
   }
+  _grimoirePins = r.pins || {};
+  _grimoireRandPool = (r.pool || []).map(p => p.replace(/\\/g, '/'));
+  renderGrimoireSources();
+  updatePinnedBar();
+
+  // ---- LoRA 写回本地内存 + 面板刷新 ----
+  let loraMsg = '';
+  const presetLoras = r.loras || [];
+  if (presetLoras.length) {
+    const nodes = (allParamsData && allParamsData.nodes)
+      ? allParamsData.nodes.filter(n => /power\s*lora/i.test(n.class_type || '') || /power\s*lora/i.test(n.title || ''))
+      : [];
+    if (!nodes.length) {
+      loraMsg = '（当前工作流无 LoRA 节点，已跳过 LoRA）';
+    } else {
+      let applied = 0;
+      presetLoras.forEach((grp, i) => {
+        if (i >= nodes.length) return;
+        const nid = nodes[i].id;
+        // 校验 lora_name 是否仍存在（缺失则保留条目但置 off，避免静默写进生成链）
+        const missing = [];
+        const list = (grp.loras || []).map(l => {
+          const exists = !availableLoras || !availableLoras.length || availableLoras.includes(l.lora_name);
+          if (!exists) missing.push(l.lora_name);
+          return {
+            on: exists ? !!l.on : false,
+            lora_name: l.lora_name,
+            strength_model: l.strength_model != null ? l.strength_model : 1.0,
+            strength_clip: l.strength_clip != null ? l.strength_clip : null,
+          };
+        });
+        loraNodesConfig[nid] = list;
+        applied++;
+        if (missing.length) {
+          loraMsg += `（${missing.length} 个 LoRA 已不存在，已置为停用：${missing.join('、')}）`;
+        }
+      });
+      if (loraNodesConfig) { renderLoraPanel(); _saveLoraConfig(); }
+      if (applied && !loraMsg) loraMsg = `（已恢复 ${applied} 组 LoRA）`;
+    }
+  }
+
+  await loadGrimoirePresets(name);
+  toast(`✅ 已加载预设「${name}」${loraMsg}`);
 }
 
 /** 删除指定名称的预设（预设菜单里每项自带的删除按钮） */
