@@ -6591,6 +6591,7 @@ let _grimoireCurrentTotal = 0;
 let _grimoireSourceFilter = '';
 let _grimoireDataFilter = '';
 let _grimoireCategoryFilter = '';
+let _grimoireStarOnly = false;   // v4.13.14: 只看收藏（当前数据源，跨页，后端过滤）
 let _grimoireAllCategories = [];
 let _grimoireEditingIndex = -1;
 let _grimoireEditMode = false;
@@ -7802,6 +7803,13 @@ async function fetchGrimoireData() {
   });
   if (_grimoireDataFilter) params.append('q', _grimoireDataFilter);
   if (_grimoireCategoryFilter) params.append('category', _grimoireCategoryFilter);
+  // v4.13.14: 只看收藏 —— 传 stars_only，后端在该数据源内只保留已收藏条目（跨页）
+  if (_grimoireStarOnly) {
+    const s = _grimoireStars && _grimoireStars[_grimoireCurrentSource];
+    const names = s ? Array.from(s) : [];
+    if (names.length) params.append('stars_only', names.join(','));
+    else { _grimoireCurrentData = []; _grimoireCurrentTotal = 0; renderGrimoireData(0, 1); return; }
+  }
   // v4.13.2: preferred = 固定在前 + 收藏次之（后端在分页前排序，固定条目天然进首页第一位）
   const pinData = _grimoirePins && _grimoirePins[_grimoireCurrentSource];
   const pinNames = [];
@@ -8175,6 +8183,17 @@ function filterGrimoireData() {
   fetchGrimoireData();
 }
 
+/** v4.13.14: 切换「只看收藏」（当前数据源，跨页） */
+function toggleGrimoireStarFilter() {
+  _grimoireStarOnly = !_grimoireStarOnly;
+  const btn = document.getElementById('grm_star_filter_btn');
+  const txt = document.getElementById('grm_star_filter_text');
+  if (btn) btn.classList.toggle('active', _grimoireStarOnly);
+  if (txt) txt.textContent = _grimoireStarOnly ? '只看收藏' : '收藏';
+  _grimoireCurrentPage = 1;
+  fetchGrimoireData();
+}
+
 function grimoirePage(delta) {
   _grimoireCurrentPage = Math.max(1, _grimoireCurrentPage + delta);
   fetchGrimoireData();
@@ -8444,9 +8463,12 @@ async function toggleGrimoireStar(idx) {
     method: 'POST',
     body: JSON.stringify({ stars: serialized })
   }, true);
-  // 留在当前页重新渲染，收藏的条目会在当前页排最前
-  renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
-  toast(stars.has(item.name) ? '⭐ 已收藏' : '已取消收藏');
+  // v4.13.14: 收藏后必须**重新拉数据**（带 preferred 让后端在分页前重排），
+  // 并把当前页跳回第 1 页 —— 否则只做前端重渲染，新收藏只能挤到"当前页首排"，
+  // 到不了整个列表最前面（与其它收藏并排）。
+  _grimoireCurrentPage = 1;
+  await fetchGrimoireData();
+  toast(stars.has(item.name) ? '⭐ 已收藏（已置顶到首页）' : '已取消收藏');
 }
 
 /** 渲染正面提示词下方的固定标签 / 随机池展示区（与魔导书状态同步） */

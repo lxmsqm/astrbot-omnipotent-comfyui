@@ -300,6 +300,12 @@ class GrimoireMixin:
             cat_kw = category.strip().lower()
             items = [it for it in items if
                      cat_kw in [p.strip().lower() for p in (it.get("category") or "").split(";")]]
+        # v4.13.14 只看收藏：请求带 stars_only（逗号分隔的收藏名）时，只保留命中条目
+        # （跨页过滤，前端"收藏"筛选按钮用）
+        stars_only = request.query.get('stars_only', '').strip()
+        if stars_only:
+            so_names = {n.strip().lower() for n in stars_only.split(',') if n.strip()}
+            items = [it for it in items if (it.get("name") or "").lower() in so_names]
         # 收藏优先：将 preferred 中指定的条目排到最前面（保持原有相对顺序）
         preferred = request.query.get('preferred', '').strip()
         if preferred:

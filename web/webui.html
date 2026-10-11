@@ -769,6 +769,10 @@
           </div>
         </div>
         <div style="flex:1"></div>
+        <!-- ★ v4.13.14 收藏筛选：只看当前数据源已收藏的条目（跨页，后端过滤） -->
+        <button class="btn btn-xs btn-secondary" id="grm_star_filter_btn" onclick="toggleGrimoireStarFilter()" title="只看收藏：只显示当前数据源已收藏的条目">
+          <svg class="icon-sm" aria-hidden="true"><use href="#icon-star"/></svg> <span id="grm_star_filter_text">收藏</span>
+        </button>
         <!-- ★ Anima 随机 NSFW 开关（放在魔导书里，手机端同样可见）
              关闭（默认）= 过滤裸体/性行为/性器官/BDSM（内衣/泳装/透视保留）
              开启 = 完全放开，不做任何过滤 -->

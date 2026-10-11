@@ -3019,6 +3019,12 @@ select:not([class*="color"]):not([class*="date"]){
 .grm-item-btn.star{opacity:0.6;}
 .grm-item-btn.star:hover{background:color-mix(in oklch, var(--primary) 18%, transparent);color:var(--primary);}
 .grm-item-btn.star.active{opacity:1;color:var(--primary);filter:drop-shadow(0 0 8px oklch(65% 0.22 50 / 0.7)) drop-shadow(0 0 20px oklch(65% 0.22 50 / 0.3));}
+/* v4.13.14: 详情区筛选按钮的激活态（如「只看收藏」） */
+#grm_star_filter_btn.active{
+  background:color-mix(in oklch, var(--primary) 18%, transparent);
+  border-color:var(--primary);color:var(--primary);
+}
+#grm_star_filter_btn.active svg{color:var(--primary);}
 .grm-item-card.starred{outline:none;border-left:3px solid oklch(65% 0.22 50 / 0.7);box-shadow:none;background:color-mix(in oklch, oklch(65% 0.22 50 / 0.5) 5%, var(--input-bg))}
 .grm-item-card.pinned{outline:none;border-left:3px solid var(--accent);box-shadow:none;background:color-mix(in oklch, var(--accent) 5%, var(--input-bg))}
 
