@@ -5,6 +5,7 @@ SmartComfy 随机提示词系统 — Python 移植版
 
 import json
 import random
+import re
 import copy
 from pathlib import Path
 from typing import Optional
@@ -119,12 +120,41 @@ NSFW_KEYWORDS = (
 )
 
 
+# ★ v4.13.16: 需要**词边界**匹配的短/歧义关键词（用 \b 而不是裸子串包含）。
+#   背景：裸子串匹配会误杀正常标签 —— 实测 `cock` 命中画师 `@andrewcockroach` 与
+#   服装 `cocktail dress`；`sex` 命中画师 `@cutesexyrobutts`。
+#   这些词作为完整单词出现时才是色情语义，作为更长单词的一部分则不是。
+_NSFW_WORD_BOUNDED = {
+    "sex", "cock", "cum", "anal", "dick", "facial", "leash", "presenting",
+    "restrained", "suspension", "bondage", "present",
+}
+# 预编译词边界正则（\b 在 tag 内的任意位置匹配完整单词）
+_NSFW_WORD_RE = {kw: re.compile(r"(?<![a-z0-9])" + re.escape(kw) + r"(?![a-z0-9])") for kw in _NSFW_WORD_BOUNDED}
+
+
 def _is_nsfw_tag(tag: str) -> bool:
-    """判断标签是否属于 NSFW（子串匹配，覆盖组合标签）"""
+    """判断标签是否属于 NSFW（子串匹配，覆盖组合标签）。
+
+    v4.13.16 两项防误杀：
+    1) **画师标签（@ 开头，如 @andrewcockroach / @cutesexyrobutts）直接跳过** ——
+       画师名只是人名，不是内容标签，且常含 sex/cock 等子串。
+    2) 短/歧义词（sex/cock/cum/anal/facial/leash…）改用**词边界**匹配，
+       避免 cocktail dress / accumulate 之类被误判。
+    """
     t = (tag or "").strip().lower()
     if not t:
         return False
-    return any(kw in t for kw in NSFW_KEYWORDS)
+    # 画师标签（@ 前缀）不做 NSFW 判定
+    if t.startswith('@'):
+        return False
+    for kw in NSFW_KEYWORDS:
+        rx = _NSFW_WORD_RE.get(kw)
+        if rx is not None:
+            if rx.search(t):
+                return True
+        elif kw in t:
+            return True
+    return False
 
 
 # ★ 低质量标签黑名单：随机抽取时跳过（只保留最高质量档，避免拉低出图质量）

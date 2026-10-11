@@ -142,13 +142,16 @@ class WebUIMixin:
         on = bool(data.get("nsfw", False))
         async with self._config_lock:
             self.workflow_config["__k2_nsfw__"] = on
-        # v4.13.1: 同步 anima 模式的 NSFW——界面上可见的 NSFW 开关只有一个，
-        # 用户开了就该两个引擎都生效（此前 anima_nsfw 藏在管理后台，开了 K2 的等于没开）
-        try:
-            self._save_local_config({"anima_nsfw": on})
-            self.anima_nsfw = on
-        except Exception as e:
-            logger.debug(f"[ComfyUI] 同步 anima_nsfw 失败: {e}")
+        # v4.13.16: 不再把 K2 开关同步写入 anima_nsfw —— 两者**各自独立**
+        #   （旧版 v4.13.1 的"双向同步"导致 K2 的 True 覆盖掉用户的 Anima 设置，
+        #    使界面上的 Anima 开关形同虚设）。
+        #   若调用方显式要求同步（body.sync_anima=true，兼容老前端），才写 anima_nsfw。
+        if data.get("sync_anima"):
+            try:
+                self._save_local_config({"anima_nsfw": on})
+                self.anima_nsfw = on
+            except Exception as e:
+                logger.debug(f"[ComfyUI] 同步 anima_nsfw 失败: {e}")
         await self._save_workflow_config()
         return web.json_response({"ok": True, "nsfw": on})
 

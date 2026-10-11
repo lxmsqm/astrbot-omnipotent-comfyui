@@ -894,17 +894,15 @@ class GrimoireMixin:
         pins = self._grimoire_get_pins()
 
         # ★ NSFW 开关（宽松档：只过滤明确色情标签；开启则不过滤）
-        #   K2 模式沿用前端的 K2 NSFW 设置；anima 模式用独立的 anima_nsfw 配置
-        try:
-            _k2_nsfw = bool(self.workflow_config.get('__k2_nsfw__', False))
-        except Exception:
-            _k2_nsfw = False
+        #   v4.13.16: **各自独立** —— Anima 随机只看 anima_nsfw，K2 组句只看 __k2_nsfw__。
+        #   旧版是 `_k2_nsfw or _anima_nsfw` 的并集，导致 K2 残留 True 时
+        #   用户在界面关掉 Anima 开关也关不掉 NSFW（Anima 随机照样出色情内容）。
+        #   K2 的 NSFW 由 _k2_compose_prompt 自己读 __k2_nsfw__，与本处无关。
         try:
             _anima_nsfw = bool(self._load_local_config().get('anima_nsfw', False))
         except Exception:
             _anima_nsfw = False
-        # v4.13.1: 任一 NSFW 开关开启即放行（两个开关已由保存接口双向同步，此处兜底并集）
-        _nsfw_on = _k2_nsfw or _anima_nsfw
+        _nsfw_on = _anima_nsfw
 
         # 已固定的数据源不参与随机（避免同源出重复）
         pinned_sources = set(pins.keys())
