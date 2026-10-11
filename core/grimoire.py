@@ -115,6 +115,44 @@ class GrimoireMixin:
         m[self._grimoire_wf_key()] = presets
         self.workflow_config['__grimoire_presets_by_wf__'] = m
 
+    def _find_power_lora_nodes(self, wf_name: str = None) -> list:
+        """扫描工作流文件，返回所有 Power Lora Loader 节点 ID（字符串，按出现顺序）。
+
+        识别口径与前端 renderLoraPanel 一致：class_type 或 title 含 "power lora"（不区分
+        大小写）。标准 LoraLoader/LoraLoaderModelOnly **不算**（那些是固定写在工作流里的，
+        由 _apply_workflow_config 提交链处理）。
+        """
+        try:
+            wf_name = wf_name or self.current_workflow_name
+            wf_file = None
+            if hasattr(self, '_find_workflow_file_path'):
+                wf_file = self._find_workflow_file_path(wf_name)
+            if not wf_file and getattr(self, 'workflow_list_cache', None):
+                for w in self.workflow_list_cache:
+                    if w.get('name') == wf_name:
+                        wf_file = w.get('path')
+                        break
+            if not wf_file or not os.path.exists(wf_file):
+                return []
+            with open(wf_file, 'r', encoding='utf-8') as f:
+                wf = json.load(f)
+            out = []
+            for nid, node in (wf or {}).items():
+                if not isinstance(node, dict):
+                    continue
+                ct = str(node.get('class_type', ''))
+                title = str((node.get('_meta') or {}).get('title', ''))
+                if 'lora' not in ct.lower() and 'lora' not in title.lower():
+                    continue
+                if ct.strip() == 'LoraLoader' or ct == 'LoraLoaderModelOnly':
+                    continue
+                if 'power' in ct.lower() or 'power' in title.lower():
+                    out.append(str(nid))
+            return out
+        except Exception as e:
+            logger.warning(f"[魔导书] 扫描权重Lora加载器节点失败: {e}")
+            return []
+
     async def _webui_grimoire_sources(self, request):
         """列出所有数据源（按目录分组），缺失的 anima 数据从 Anima-Tools JS 补充"""
         data_dir = data_dir_resolver()  # v4.3.0: 统一经 data_paths 解析
@@ -786,7 +824,15 @@ class GrimoireMixin:
                 wf = cur_wf
                 wf_configs = self.workflow_config.get('__workflow_node_configs__', {}) or {}
                 wf_cfg = wf_configs.get(wf, {})
-                lora_nodes = wf_cfg.get('__lora_nodes__', {}) or {}
+                lora_nodes = dict(wf_cfg.get('__lora_nodes__', {}) or {})
+                # v4.13.13 修复：判断"有没有权重Lora加载器"要基于**工作流文件里是否存在
+                # Power Lora Loader 节点**，而不是 `__lora_nodes__` 配置是否非空 ——
+                # 配置为空只说明"这个工作流还没配过 LoRA"，恰恰是预设最该发挥作用的场景。
+                # 之前配置为空就直接跳过，导致「类似鸣潮画风」这类预设永远恢复不了 LoRA。
+                if not lora_nodes:
+                    discovered = self._find_power_lora_nodes(wf) or []
+                    for nid in discovered:
+                        lora_nodes[str(nid)] = []
                 if not lora_nodes:
                     loras_note = "当前工作流没有权重Lora加载器节点，已跳过 LoRA 部分"
                 else:
