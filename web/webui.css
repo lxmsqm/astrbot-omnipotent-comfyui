@@ -2581,11 +2581,36 @@ select:not([class*="color"]):not([class*="date"]){
   #grimoire_sheet .grimoire-body{flex-direction:column;flex:1;min-height:0;}
   #grimoire_sheet .grimoire-sources{
     width:100%;border-right:none;border-bottom:1px solid rgba(255,255,255,0.06);
-    max-height:40vh;flex-shrink:0;background:transparent;overflow-y:auto;
+    max-height:none;flex-shrink:0;background:transparent;overflow-y:auto;
   }
+  /* v4.13.12 修复：.grimoire-source-list 里现在是 .grm-toolbar + .source-group-list 两块，
+     不能再整体 flex row 横滑（会把工具栏和分类树并排、分类树挤成窄竖列）。
+     恢复纵向块布局，分类树自身全宽竖排，工具栏按钮正常换行。 */
   #grimoire_sheet .grimoire-source-list{
-    display:flex;flex-direction:row;overflow-x:auto;gap:2px;
-    padding:4px 6px;flex-wrap:nowrap;
+    display:block;overflow-y:visible;
+    padding:4px 6px;
+  }
+  #grimoire_sheet .grimoire-source-list .grm-toolbar{
+    width:100%;margin:0 0 6px;
+  }
+  #grimoire_sheet .grimoire-source-list .source-group-list{
+    width:100%;display:block;
+  }
+  #grimoire_sheet .grimoire-source-list .source-group{
+    width:100%;
+  }
+  /* v4.13.12: 分类树手机端紧凑排版 —— 组头全宽、子项胶囊横排换行 */
+  #grimoire_sheet .source-group-header{
+    display:flex;align-items:center;gap:6px;padding:8px 6px 4px;
+  }
+  #grimoire_sheet .source-group-children{
+    display:flex;flex-wrap:wrap;gap:4px;padding:0 2px 4px;
+  }
+  #grimoire_sheet .source-group-children .source-item{
+    white-space:nowrap;flex-shrink:0;
+    padding:5px 10px;font-size:11px;
+    border:1px solid var(--card-border);border-left:1px solid var(--card-border);
+    border-radius:8px;background:var(--input-bg);
   }
   #grimoire_sheet .source-item{
     white-space:nowrap;flex-shrink:0;padding:4px 10px;font-size:10px;
@@ -3278,16 +3303,11 @@ select:not([class*="color"]):not([class*="date"]){
   /* 魔导书移动端布局 — 左右分栏 */
   .grimoire-sheet{border-radius:var(--radius-lg) var(--radius-lg) 0 0;}
   .grimoire-sheet .grip-bar{display:block;}
-  .grimoire-body{flex-direction:row;}
+  /* v4.13.12: 旧版「左右分栏」规则已删（row + 120px 与 v4.13.x Linear 单列布局冲突，
+     曾导致手机端魔导书分类树挤成窄竖列、工具栏按钮悬浮在中间空白区）。
+     布局统一由上方 #grimoire_sheet 专属块（2576 起）负责：column 单列。 */
   .grimoire-detail{overflow:hidden;min-width:0;flex:1;display:flex;flex-direction:column;overflow-x:clip}
 
-  .grimoire-sources{
-    width:120px;border-right:1px solid var(--card-border);
-    border-bottom:none;max-height:none;flex-shrink:0;
-    background:var(--card);
-  }
-  .grimoire-sources-header{padding:4px 8px 2px;font-size:9px;display:none;}
-  .grimoire-source-list{display:flex;gap:0;overflow-y:auto;padding:4px 0;flex-direction:column;}
   .source-item{
     white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;
     padding:6px 10px;border-radius:0;font-size:11px;margin-bottom:0;
@@ -3316,10 +3336,9 @@ select:not([class*="color"]):not([class*="date"]){
   .grimoire-detail-header .btn{font-size:10px;padding:3px 8px;min-height:auto}
   .grimoire-detail-header .btn span{display:none;}
   .grimoire-detail-header .btn svg{margin:0;}
-  /* 手机端：大分类标签放前面，展开全部按钮放后面 */
-  #grimoire_source_list{display:flex;flex-direction:column}
-  #grimoire_source_list .grm-toolbar{order:2}
-  #grimoire_source_list .source-group-list{order:1}
+  /* v4.13.12: 旧 #grimoire_source_list 规则已删 —— 现在的 DOM 是
+     #grimoire_sheet .grimoire-source-list > (.grm-toolbar + .source-group-list)，
+     排序/布局由 2576 起的 #grimoire_sheet 专属块统一管理。 */
   
   /* 手机底部导航隐藏「生成」按钮 */
   .bn-generate{display:none!important;}
