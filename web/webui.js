@@ -3629,7 +3629,10 @@ let _mpData = []; // v4.12.0: 媒体面板独立数据（分页后不再与画�
 async function loadMediaPanel(force = false) {
   if (!force && _mpData && _mpData.length) { renderMediaPanel(); return; }
   try {
-    const d = await apiFetch('/api/gallery?limit=60&type=' + encodeURIComponent(_mpTab), {}, true);
+    // v4.13.15 修复：force 时必须带 force=1 传给后端 —— 后端画廊扫描有 30s TTL 缓存，
+    // 不带 force 时生成完成后重新拉取拿到的仍是**生成前**的旧快照，
+    // 表现为媒体资产面板的新图总要晚一轮才出现（loadGalleryImages 一直是正确传的）。
+    const d = await apiFetch('/api/gallery?limit=60&type=' + encodeURIComponent(_mpTab) + (force ? '&force=1' : ''), {}, true);
     _mpData = (d && d.images) ? d.images : [];
     renderMediaPanel();
   } catch (e) { /* 忽略：面板开着时静默失败 */ }
@@ -5037,11 +5040,14 @@ async function pollProgress() {
       section.classList.remove('generating');
       if (_wasRunning) {
         loadGalleryImages(true); // v4.12.0: force 立即重扫，新图马上出现在页首
-        // 媒体资产面板：生成完成自动弹出（仅 PC），强制拉取最新列表（异步时序：直接渲染会拿到旧列表）
+        // 媒体资产面板：生成完成自动弹出（仅 PC），强制拉取最新列表
+        // v4.13.15：改为**多次 force 重扫**（800ms / 2.5s）—— 单次 800ms 缓冲在
+        // 慢盘/大图时文件可能还没落盘，导致面板仍列旧图（表现为"晚一轮才刷新"）。
         const mp = window.innerWidth >= 900 ? document.getElementById('media_panel') : null;
         if (mp) {
           if (!mp.classList.contains('show')) mp.classList.add('show');
-          setTimeout(() => loadMediaPanel(true), 800); // 缓冲等图片文件落盘
+          setTimeout(() => loadMediaPanel(true), 800);
+          setTimeout(() => loadMediaPanel(true), 2500);
         }
       }
       schedulePoll(5000);
