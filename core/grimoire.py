@@ -1245,6 +1245,10 @@ class GrimoireMixin:
             logger.info(f"[随机图] 色情动作检测触发，已过滤服装源标签，已补充裸体标签")
 
         # 3.7 标签总数上限控制：最多 15 个，超出时丢弃非核心标签
+        #     固定标签(pins)与角色/画师标签永不丢弃：
+        #     - pins 是用户明确要求必出的（如整套固定姿势），本就不该被上限裁掉；
+        #     - 角色/画师是"这张图是谁"的身份锚点，被随机丢弃会让角色凭空消失；
+        #     它们不占上限名额，上限只约束随机抽来的普通标签。
         MAX_TAGS = 15
         if len(all_tags) > MAX_TAGS:
             # 核心标签列表（优先保留）
@@ -1256,7 +1260,16 @@ class GrimoireMixin:
             extra_indices = []
             for i, t in enumerate(all_tags):
                 t_lower = t.lower()
-                if any(kw in t_lower for kw in CORE_KEYWORDS):
+                obj = all_tag_objects[i] if i < len(all_tag_objects) else {}
+                src = str(obj.get("source") or "").replace("\\", "/").lower()
+                # 身份锚点：角色 / 画师 源（anima 只读源，名字即角色名）
+                identity = _is_anima_source(src) and (
+                    src == "anima/characters" or src.endswith("/characters")
+                    or src == "anima/artists" or src.endswith("/artists")
+                )
+                if (identity
+                        or obj.get("category") == "固定"
+                        or any(kw in t_lower for kw in CORE_KEYWORDS)):
                     core_indices.append(i)
                 else:
                     extra_indices.append(i)
