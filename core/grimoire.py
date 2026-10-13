@@ -1262,10 +1262,13 @@ class GrimoireMixin:
                 t_lower = t.lower()
                 obj = all_tag_objects[i] if i < len(all_tag_objects) else {}
                 src = str(obj.get("source") or "").replace("\\", "/").lower()
-                # 身份锚点：角色 / 画师 源（anima 只读源，名字即角色名）
-                identity = _is_anima_source(src) and (
-                    src == "anima/characters" or src.endswith("/characters")
-                    or src == "anima/artists" or src.endswith("/artists")
+                # 身份锚点：角色 / 画师 源（名字即角色/画师名）。
+                # 注意 source 存的是带后缀的源路径（如 "anima/characters.json"），
+                # 必须先剥掉 .json 再比较，否则永远匹配不上（角色被当成普通标签丢弃）。
+                src_base = src[:-5] if src.endswith(".json") else src
+                identity = _is_anima_source(src_base) and (
+                    src_base == "anima/characters" or src_base.endswith("/characters")
+                    or src_base == "anima/artists" or src_base.endswith("/artists")
                 )
                 if (identity
                         or obj.get("category") == "固定"
