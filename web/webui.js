@@ -8072,7 +8072,7 @@ function renderGrimoireData(total, page) {
         `<div class="grm-item-img-placeholder" style="display:none">🎨</div>`;
       hasImgClass = ' has-img';
     }
-    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}">` +
+    html += `<div class="grm-item-card${_grimoireSelectedIndices.has(item.index) ? ' grm-selected' : ''}${isStarred ? ' starred' : ''}${isPinned ? ' pinned' : ''}${hasImgClass}"${_grimoireEditMode ? ` onclick="grmCardClick(event, ${item.index})"` : ''}>` +
       checkbox +
       imgHtml +
       cachedBadge +
@@ -8436,8 +8436,7 @@ async function toggleGrimoirePin(idx) {
     for (const [k, v] of Object.entries(result.pins || {})) {
       _grimoirePins[k.replace(/\\/g, '/')] = v;
     }
-    // v4.13.2: 固定后跳回首页第一位（后端 preferred 已把固定条目排到全源最前）
-    _grimoireCurrentPage = 1;
+    // v4.13.18: 固定后重拉数据（后端 preferred 已把固定条目排到全源最前），保持当前页码不跳转
     await fetchGrimoireData();
     toast(isPinned ? '✅ 已取消固定' : '✅ 已固定: ' + (item.name_cn || item.name));
     updatePinnedBar();
@@ -8469,12 +8468,10 @@ async function toggleGrimoireStar(idx) {
     method: 'POST',
     body: JSON.stringify({ stars: serialized })
   }, true);
-  // v4.13.14: 收藏后必须**重新拉数据**（带 preferred 让后端在分页前重排），
-  // 并把当前页跳回第 1 页 —— 否则只做前端重渲染，新收藏只能挤到"当前页首排"，
-  // 到不了整个列表最前面（与其它收藏并排）。
-  _grimoireCurrentPage = 1;
+  // v4.13.18: 收藏后重新拉数据（带 preferred 让后端在分页前重排，新收藏在数据上置顶），
+  // 但保持当前页码 —— 翻页浏览中收藏不再把视图拽回第 1 页。
   await fetchGrimoireData();
-  toast(stars.has(item.name) ? '⭐ 已收藏（已置顶到首页）' : '已取消收藏');
+  toast(stars.has(item.name) ? '⭐ 已收藏' : '已取消收藏');
 }
 
 /** 渲染正面提示词下方的固定标签 / 随机池展示区（与魔导书状态同步） */
@@ -8912,6 +8909,13 @@ function toggleGrimoireItem(idx, checked) {
   if (checked) _grimoireSelectedIndices.add(idx);
   else _grimoireSelectedIndices.delete(idx);
   renderGrimoireData(_grimoireCurrentTotal || 0, _grimoireCurrentPage || 1);
+}
+
+/** 编辑模式：点击卡片整行切换选中（复选框/按钮/图片/链接自身除外） */
+function grmCardClick(ev, idx) {
+  if (!_grimoireEditMode) return;
+  if (ev.target.closest('input,button,img,a,label')) return;
+  toggleGrimoireItem(idx, !_grimoireSelectedIndices.has(idx));
 }
 
 /** 全选/取消全选 */
