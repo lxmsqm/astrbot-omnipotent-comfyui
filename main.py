@@ -2224,7 +2224,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 await asyncio.sleep(5)
             await asyncio.sleep(0.5)
 
-    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None, skip_pin_merge=False, notify_umo=None):
+    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None, skip_pin_merge=False, notify_umo=None, video_overrides=None):
         self._refresh_workflow_list()
         if not self.workflow_path: return ("error", "未设置工作流", None)
         # 快照当前工作流：防止并发时（他人切换工作流）本次提交串用别的配置
@@ -2407,6 +2407,9 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # 确保 WebUI 中刚设置的比例/质量生效
             if w is not None and h is not None:
                 self._set_resolution(wf, w, h)
+            # v4.13.19: LLM 视频工具「当次参数」（时长/比例/清晰度）——只改本次提交副本，不落盘
+            if video_overrides:
+                self._apply_video_overrides(wf, video_overrides)
             if image_path: await self._set_load_image(wf, image_path)
             self._rebuild_jzl_refs(wf)
             if prompt:

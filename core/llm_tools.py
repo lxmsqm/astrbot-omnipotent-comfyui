@@ -338,17 +338,49 @@ class ComfyUIVideoTool(FunctionTool):
                         "★ 只能用分类为「视频」的工作流；若当前工作流不是「视频」类，"
                         "必须先用 comfyui_list_workflows 找到「视频」类工作流，"
                         "再用 comfyui_switch_workflow 切换后再调用本工具。"
-                        "★ image_url 不传时自动使用用户最近在对话中发送/引用的图片。")
+                        "★ image_url 不传时自动使用用户最近在对话中发送/引用的图片。"
+                        "★ 可用当次参数 duration(秒)/ratio/quality 指定本次视频规格（如 15 秒 9:16 竖屏），"
+                        "仅本次生效、不修改工作流默认配置；不传则保持工作流现成规格。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object", "properties": {
             "prompt": {"type": "string", "description": "提示词，描述视频内容"},
             "image_url": {"type": "string", "description": "输入图片的URL或本地文件路径；不传则自动使用用户最近发送/引用的图片"},
-            "workflow": {"type": "string", "description": "工作流名称关键词，不传则用当前工作流"}
+            "workflow": {"type": "string", "description": "工作流名称关键词，不传则用当前工作流"},
+            "duration": {"type": "number", "description": "视频时长（秒，5-60，仅本次生效）。用户要求了具体秒数时才传；不传保持工作流默认时长"},
+            "ratio": {"type": "string", "description": "视频比例（仅本次生效）。不传保持工作流当前比例",
+                      "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]},
+            "quality": {"type": "string", "description": "出片清晰度档位（仅本次生效）。不传保持工作流当前档位",
+                        "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]}
         }, "required": []
     })
 
-    async def run(self, event: AstrMessageEvent, image_url: str = "", prompt: str = "", workflow: str = None):
+    async def run(self, event: AstrMessageEvent, image_url: str = "", prompt: str = "", workflow: str = None,
+                  duration: float = None, ratio: str = None, quality: str = None):
         plugin = self._plugin
+        # v4.13.19: 当次规格参数（仅本次生效，不落盘）；非法值按不传处理（与 comfyui_draw 同口径）
+        if ratio and ratio not in plugin.aspect_ratios:
+            ratio = None
+        if quality and quality not in plugin.quality_presets:
+            quality = None
+        try:
+            duration = float(duration) if duration is not None else None
+        except (TypeError, ValueError):
+            duration = None
+        video_overrides = {}
+        if duration is not None:
+            video_overrides['duration'] = duration
+        if ratio:
+            video_overrides['ratio'] = ratio
+        if quality:
+            video_overrides['quality'] = quality
+        _ov_parts = []
+        if duration is not None:
+            _ov_parts.append(f"{duration:g}秒")
+        if ratio:
+            _ov_parts.append(ratio)
+        if quality:
+            _ov_parts.append(quality)
+        _ov_note = ("（本次规格：" + " ".join(_ov_parts) + "）") if _ov_parts else ""
         if workflow:
             for w in plugin._refresh_workflow_list():
                 if workflow.lower() in w['name'].lower():
@@ -361,7 +393,7 @@ class ComfyUIVideoTool(FunctionTool):
             umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
             if umo:
                 from astrbot.api.event import MessageChain
-                await plugin.context.send_message(umo, MessageChain().message("🎬 生成视频中..."))
+                await plugin.context.send_message(umo, MessageChain().message(f"🎬 生成视频中{_ov_note}..."))
         except Exception as e: logger.debug(f"[ComfyUI] 操作提示发送失败: {e}")
         got_img = await plugin._download_image(image_url, save_path) if image_url else False
         if not got_img:
@@ -375,7 +407,9 @@ class ComfyUIVideoTool(FunctionTool):
         if not got_img:
             return "❌ 未能获取图片：请在对话中发送图片后再试，或提供图片 URL"
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
-        status, text, out_path = await plugin._process_and_submit(prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo)
+        status, text, out_path = await plugin._process_and_submit(
+            prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo,
+            video_overrides=video_overrides or None)
         if status == "ok":
             try:
                 from astrbot.api.message_components import Video
@@ -388,10 +422,10 @@ class ComfyUIVideoTool(FunctionTool):
                 if umo:
                     chain = MessageChain(chain=[Video(file=vid_path)])
                     await plugin.context.send_message(umo, chain)
-                return "✅ 视频已生成并发送"
+                return f"✅ 视频已生成并发送{_ov_note}"
             except Exception as e:
                 logger.error(f"[ComfyUI] 发送视频失败: {e}")
-            return "✅ 视频已生成并发送给用户"
+            return f"✅ 视频已生成并发送给用户{_ov_note}"
         return text
 
 

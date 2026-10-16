@@ -769,6 +769,83 @@ class GenerateMixin:
         inputs['height'] = height
         return True
 
+    def _apply_video_overrides(self, wf, ov):
+        """LLM 视频工具的「当次参数」覆盖 —— 只改本次提交副本，不落盘、不影响工作流文件。
+
+        ov 可含: duration(float 秒) / ratio(插件比例串) / quality(quality_presets 键)。
+        - duration → 官方时长节点（PrimitiveFloat/Float，图内表达式自动换算帧并补齐）
+        - ratio    → 官方分辨率选择器(含 XB)改 aspect_ratio；AspectRatioNode 系重算宽高
+        - quality  → 官方选择器按档位缩放各阶段 megapixels（多阶段保持档差比例，
+                     与 _set_resolution 的 v4.9.0 语义一致）；不改 aspect_ratio
+        单独传 ratio 不动画质档、单独传 quality 不动比例。目标节点缺失只记日志跳过。
+        """
+        d = ov.get('duration')
+        if d is not None:
+            try:
+                d = max(5.0, min(60.0, float(d)))
+                dur_ids = self._find_official_duration_nodes(wf)
+                if dur_ids:
+                    for nid in dur_ids:
+                        wf[nid].setdefault('inputs', {})['value'] = d
+                    logger.info(f"[ComfyUI] 视频当次时长: {d:g}s → 节点{dur_ids}（帧数由图内表达式自动换算）")
+                else:
+                    logger.warning("[ComfyUI] 视频当次时长未生效：当前工作流无官方时长节点(PrimitiveFloat/Float)")
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 应用当次时长失败（已跳过）: {e}")
+
+        r = ov.get('ratio')
+        q = ov.get('quality')
+        if not r and not q:
+            return
+        official_ids = self._find_official_resolution_nodes(wf)
+        aspect_ids = self._find_aspect_ratio_nodes(wf)
+        target_mp = None
+        if q and q in self.quality_presets:
+            target_mp = self.quality_presets[q]['pixels'] / (1024 * 1024)
+        file_mps = []
+        for oid in official_ids:
+            v = wf[oid].get('inputs', {}).get('megapixels')
+            if isinstance(v, (int, float)) and v > 0:
+                file_mps.append(float(v))
+        max_mp = max(file_mps) if file_mps else 0.0
+        if official_ids:
+            for oid in official_ids:
+                ins = wf[oid].setdefault('inputs', {})
+                if r:
+                    ins['aspect_ratio'] = self._ratio_to_official(r)
+                if target_mp:
+                    v = ins.get('megapixels')
+                    if isinstance(v, (int, float)) and v > 0 and max_mp > 0:
+                        ins['megapixels'] = round(float(v) * target_mp / max_mp, 3)
+                    else:
+                        ins['megapixels'] = round(target_mp, 3)
+                if 'multiple' not in ins:
+                    ins['multiple'] = 8
+            logger.info(f"[ComfyUI] 视频当次参数: 官方选择器节点{official_ids} ratio={r or '(保持)'} quality={q or '(保持)'}"
+                        + (f" → 目标总像素{target_mp * 1024 * 1024:.0f} 档差基准{max_mp:g}MP" if target_mp else ""))
+        if aspect_ids and r:
+            try:
+                ra, rb = map(int, r.split(':'))
+                fw, fh = self._read_workflow_file_resolution(wf)
+                total = (fw * fh) if (fw and fh) else 0
+                if target_mp:
+                    total = target_mp * 1024 * 1024
+                if total:
+                    x = (total / (ra * rb)) ** 0.5
+                    for aid in aspect_ids:
+                        ins = wf[aid].setdefault('inputs', {})
+                        div = 8
+                        dv = ins.get('divisible_by', 8)
+                        div = int(dv) if str(dv).isdigit() else 8
+                        ins['aspect_ratio'] = r
+                        ins['width'] = round(ra * x / div) * div
+                        ins['height'] = round(rb * x / div) * div
+                    logger.info(f"[ComfyUI] 视频当次比例: AspectRatioNode{aspect_ids} → {r}")
+            except Exception as e:
+                logger.warning(f"[ComfyUI] 应用当次比例(AspectRatioNode)失败（已跳过）: {e}")
+        if not official_ids and not aspect_ids:
+            logger.warning("[ComfyUI] 视频当次比例/画质未生效：当前工作流未找到官方分辨率节点")
+
     async def _set_load_image(self, workflow, image_path):
         """设置工作流中的 LoadImage 节点。
         image_path 可以是单个路径字符串，也可以是路径列表（设置多个 LoadImage 节点）。
