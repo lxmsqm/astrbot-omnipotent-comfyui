@@ -32,7 +32,7 @@ from .core.grimoire import (
 from .core.llm_tools import (
     ComfyUITaskError, LarkLooseCommandFilter, LLMToolsMixin,
     ComfyUIDrawTool, ComfyUIListWorkflowsTool, ComfyUISwitchWorkflowTool,
-    ComfyUIGetCurrentWorkflowTool, ComfyUIListGroupsTool, ComfyUIImg2ImgTool, ComfyUIVideoTool,
+    ComfyUIGetCurrentWorkflowTool, ComfyUIListGroupsTool, ComfyUIGetResolutionTool, ComfyUIImg2ImgTool, ComfyUIVideoTool,
     ComfyUIRandomTool, ComfyUIListStarsTool, ComfyUIListPresetsTool,
     ComfyUIDeletePresetTool, ComfyUIQueueTool, ComfyUIStopTool,
     ComfyUIExecuteTool, ComfyUIRandomImageTool,
@@ -313,6 +313,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
         try:
             tools = [ComfyUIDrawTool(), ComfyUIListWorkflowsTool(), ComfyUISwitchWorkflowTool(), ComfyUIGetCurrentWorkflowTool(),
                      ComfyUIListGroupsTool(),
+                     ComfyUIGetResolutionTool(),
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIRandomTool(),
                      ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool(),
                      ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool(),

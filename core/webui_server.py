@@ -1078,6 +1078,25 @@ class WebUIMixin:
             return prompt, ''
         return out, '⚠ 已按规则「' + str(rule.get('name', '')) + '」自动修正：' + '；'.join(notes)
 
+    @staticmethod
+    def _match_group_id(groups, name):
+        """组名/ID 匹配 → 组 id：精确（id/全名）→「一采↔1采」数字归一等价 → 唯一子串；
+        歧义（多个命中）或未命中返回 None（宁可不匹配也不猜）。组控制与分辨率管理共用。"""
+        def _norm(s):
+            return (str(s).replace('一', '1').replace('二', '2').replace('三', '3')
+                    .replace('四', '4').replace('五', '5').lower())
+
+        n = _norm(name)
+        hits = []
+        for g in groups:
+            gid = str(g.get('id', ''))
+            title = str(g.get('title', ''))
+            if name == gid or name == title or n == _norm(gid) or n == _norm(title):
+                return gid
+            if n and (n in _norm(title) or _norm(title) in n):
+                hits.append(gid)
+        return hits[0] if len(hits) == 1 else None
+
     def _apply_group_modes(self, workflow, wf_name=None, overrides=None):
         """v4.4.10: 组控制落装——禁用组从图中级联移除（ComfyUI API 执行忽略 mode=4）。
         语义：节点处于禁用组且不在任何启用组 → 移除；跨组共享节点不受影响。
@@ -1094,32 +1113,16 @@ class WebUIMixin:
             disabled |= set(str(k) for k in (self.workflow_config.get('__disabled_groups__', {}) or {}).keys())
         # v4.13.20: LLM 当次组开关（仅本次提交副本生效，不落盘）
         if overrides and groups:
-            def _norm(s):
-                return (str(s).replace('一', '1').replace('二', '2').replace('三', '3')
-                        .replace('四', '4').replace('五', '5').lower())
-
-            def _match(name):
-                n = _norm(name)
-                hits = []
-                for g in groups:
-                    gid = str(g.get('id', ''))
-                    title = str(g.get('title', ''))
-                    if name == gid or name == title or n == _norm(gid) or n == _norm(title):
-                        return gid
-                    if n and (n in _norm(title) or _norm(title) in n):
-                        hits.append(gid)
-                return hits[0] if len(hits) == 1 else None
-
             _on, _off, _miss = [], [], []
             for name in (overrides.get('disable') or []):
-                gid = _match(str(name).strip())
+                gid = self._match_group_id(groups, str(name).strip())
                 if gid:
                     disabled.add(gid)
                     _off.append(gid)
                 else:
                     _miss.append(f"关:{name}")
             for name in (overrides.get('enable') or []):
-                gid = _match(str(name).strip())
+                gid = self._match_group_id(groups, str(name).strip())
                 if gid:
                     disabled.discard(gid)
                     _on.append(gid)

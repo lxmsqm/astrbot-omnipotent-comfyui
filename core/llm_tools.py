@@ -86,6 +86,29 @@ def _build_group_overrides(enable_groups=None, disable_groups=None):
     return ov or None
 
 
+def _parse_mp_stages(s):
+    """解析「一采=0.5, 二采=2」形式的阶段 MP 设置 → [['一采', 0.5], ['二采', 2.0]]；无效项丢弃。"""
+    out = []
+    if not s:
+        return out
+    for item in _GROUP_SPLIT_RE.split(str(s)):
+        item = item.strip()
+        if not item:
+            continue
+        for sep in ('=', '＝'):
+            if sep in item:
+                name, _, val = item.partition(sep)
+                name = name.strip()
+                try:
+                    mp = round(float(str(val).strip()), 3)
+                except ValueError:
+                    break
+                if name and 0.05 <= mp <= 32:
+                    out.append([name, mp])
+                break
+    return out
+
+
 # ====================================================================
 # LLM 工具集（共10个）
 # ====================================================================
@@ -299,6 +322,71 @@ class ComfyUIListGroupsTool(FunctionTool):
 
 
 @dataclass
+class ComfyUIGetResolutionTool(FunctionTool):
+    name: str = "comfyui_get_resolution"
+    description: str = ("查看当前工作流的分辨率设置——各阶段（如 一采/二采）官方分辨率节点的"
+                        "比例、像素数(MP)与约合宽高，含所属组与启用状态。"
+                        "用户问分辨率/生成前需要确认清晰度时使用；"
+                        "修改用生成工具的 mp_stages 参数（仅本次生效，不改默认）。")
+    parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
+
+    async def run(self, event: AstrMessageEvent):
+        plugin = self._plugin
+        try:
+            wf = json.loads(Path(plugin.workflow_path).read_text(encoding='utf-8'))
+        except Exception as e:
+            return f"❌ 读取当前工作流文件失败: {e}"
+        official_ids = plugin._find_official_resolution_nodes(wf)
+        aspect_ids = plugin._find_aspect_ratio_nodes(wf)
+        wf_title = plugin._get_display_name(plugin.current_workflow_name)
+        if not official_ids and not aspect_ids:
+            return f"当前工作流「{wf_title}」未找到官方分辨率节点（ResolutionSelector / AspectRatioNode）"
+        store = plugin.workflow_config.get('__group_bindings_store__', {}) or {}
+        bucket = store.get(plugin.current_workflow_name) or {}
+        disabled = set(str(k) for k in (bucket.get('disabled') or {}).keys())
+        node_groups = {}
+        for g in (bucket.get('data') or []):
+            gid = str(g.get('id', ''))
+            gtitle = (str(g.get('title', '')) or gid) + ("（已禁用）" if gid in disabled else "")
+            for n in (g.get('nodes') or []):
+                node_groups.setdefault(str(n), []).append(gtitle)
+
+        def _sort_key(x):
+            return int(x) if str(x).isdigit() else 0
+
+        lines = [f"当前工作流「{wf_title}」的分辨率设置："]
+        for nid in sorted(official_ids, key=_sort_key):
+            ins = wf[nid].get('inputs', {}) or {}
+            ratio = ins.get('aspect_ratio', '-')
+            mp = ins.get('megapixels')
+            title = str((wf[nid].get('_meta') or {}).get('title', '') or '')
+            glabel = "、".join(node_groups.get(str(nid), []))
+            label = title or glabel or "无标题"
+            approx = ''
+            try:
+                m = re.match(r'\s*(\d+)\s*:\s*(\d+)', str(ratio))
+                if m and isinstance(mp, (int, float)) and float(mp) > 0:
+                    ra, rb = int(m.group(1)), int(m.group(2))
+                    total = float(mp) * 1024 * 1024
+                    x = (total / (ra * rb)) ** 0.5
+                    mult = ins.get('multiple', 32)
+                    mult = int(mult) if str(mult).isdigit() else 32
+                    approx = f" ≈ {round(ra * x / mult) * mult}×{round(rb * x / mult) * mult}"
+            except Exception:
+                pass
+            lines.append(f"  - 节点{nid}（{label}）: {ratio} / {mp} MP{approx}")
+        for aid in sorted(aspect_ids, key=_sort_key):
+            ins = wf[aid].get('inputs', {}) or {}
+            title = str((wf[aid].get('_meta') or {}).get('title', '') or '')
+            glabel = "、".join(node_groups.get(str(aid), []))
+            label = title or glabel or "无标题"
+            lines.append(f"  - 节点{aid}（{label}）: {ins.get('aspect_ratio', '-')} / {ins.get('width')}×{ins.get('height')}")
+        lines.append("")
+        lines.append("按次调整：comfyui_video 传 mp_stages=「一采=0.5, 二采=2」可直设各阶段 MP（阶段名或节点ID，仅本次生效、不改默认）；quality 用预设档位（480p~4K）。")
+        return "\n".join(lines)
+
+
+@dataclass
 class ComfyUIImg2ImgTool(FunctionTool):
     name: str = "comfyui_img2img"
     description: str = ("使用本地ComfyUI图生图/编辑图片——输入1~10张参考图（逗号分隔），根据提示词修改生成新图片。"
@@ -409,13 +497,14 @@ class ComfyUIVideoTool(FunctionTool):
             "quality": {"type": "string", "description": "出片清晰度档位（仅本次生效）。不传保持工作流当前档位",
                         "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]},
             "enable_groups": {"type": "string", "description": "本次生成要启用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"},
-            "disable_groups": {"type": "string", "description": "本次生成要禁用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"}
+            "disable_groups": {"type": "string", "description": "本次生成要禁用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"},
+            "mp_stages": {"type": "string", "description": "按阶段直接设分辨率像素（仅本次生效）：阶段名（分辨率节点标题，如 一采/二采）或节点ID=MP，逗号分隔，如 一采=0.5, 二采=2（可精确到小数）；先用 comfyui_get_resolution 查当前值与阶段名。与 quality 同时用时它优先作用于指定阶段"}
         }, "required": []
     })
 
     async def run(self, event: AstrMessageEvent, image_url: str = "", prompt: str = "", workflow: str = None,
                   duration: float = None, ratio: str = None, quality: str = None,
-                  enable_groups: str = None, disable_groups: str = None):
+                  enable_groups: str = None, disable_groups: str = None, mp_stages: str = None):
         plugin = self._plugin
         # v4.13.19: 当次规格参数（仅本次生效，不落盘）；非法值按不传处理（与 comfyui_draw 同口径）
         if ratio and ratio not in plugin.aspect_ratios:
@@ -446,6 +535,10 @@ class ComfyUIVideoTool(FunctionTool):
                 _ov_parts.append("关:" + "/".join(_group_ov['disable']))
             if _group_ov.get('enable'):
                 _ov_parts.append("开:" + "/".join(_group_ov['enable']))
+        _mp_stages = _parse_mp_stages(mp_stages)
+        if _mp_stages:
+            video_overrides['mp_stages'] = _mp_stages
+            _ov_parts.append("MP:" + " ".join(f"{n}={v:g}" for n, v in _mp_stages))
         _ov_note = ("（本次规格：" + " ".join(_ov_parts) + "）") if _ov_parts else ""
         if workflow:
             for w in plugin._refresh_workflow_list():

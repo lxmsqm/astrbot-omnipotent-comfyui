@@ -9,6 +9,12 @@ from pathlib import Path
 from astrbot.api import logger
 
 
+def _nrm(s):
+    """中文数字归一（一→1…五→5）+ 小写：阶段/组名模糊匹配用。"""
+    return (str(s).replace('一', '1').replace('二', '2').replace('三', '3')
+            .replace('四', '4').replace('五', '5').lower())
+
+
 class GenerateMixin:
     """生成核心:工作流节点查找、配置应用、提示词注入、分辨率、等待与提交。"""
 
@@ -795,7 +801,7 @@ class GenerateMixin:
 
         r = ov.get('ratio')
         q = ov.get('quality')
-        if not r and not q:
+        if not r and not q and not ov.get('mp_stages'):
             return
         official_ids = self._find_official_resolution_nodes(wf)
         aspect_ids = self._find_aspect_ratio_nodes(wf)
@@ -843,8 +849,56 @@ class GenerateMixin:
                     logger.info(f"[ComfyUI] 视频当次比例: AspectRatioNode{aspect_ids} → {r}")
             except Exception as e:
                 logger.warning(f"[ComfyUI] 应用当次比例(AspectRatioNode)失败（已跳过）: {e}")
+        # v4.13.22: 按阶段直设 MP（如 一采=0.5, 二采=2）——定位优先级：
+        # ① 节点标题（分辨率节点常用「一采/二采」命名，含中文数字归一）→ ② 节点ID → ③ 组名（组内节点∩官方节点）；
+        # 均不中再做标题唯一子串兜底。与 quality（按档差比例缩放）互不冲突：先缩放、后覆盖指定阶段。
+        ms = ov.get('mp_stages')
+        if ms:
+            store = self.workflow_config.get('__group_bindings_store__', {}) or {}
+            bucket = store.get(self.current_workflow_name) or {}
+            groups = bucket.get('data') or []
+
+            def _title_of(oid):
+                return str((wf[oid].get('_meta') or {}).get('title', '') or '')
+
+            for item in ms:
+                try:
+                    name, mp = str(item[0]), float(item[1])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                targets = []
+                for oid in official_ids:
+                    if name == str(oid) or (name and _nrm(name) == _nrm(_title_of(oid)) and _title_of(oid)):
+                        targets = [oid]
+                        break
+                if not targets:
+                    gid = self._match_group_id(groups, name) if groups else None
+                    if gid:
+                        gnode_ids = set()
+                        for g in groups:
+                            if str(g.get('id', '')) == gid:
+                                gnode_ids = {str(n) for n in (g.get('nodes') or [])}
+                                break
+                        targets = [oid for oid in official_ids if str(oid) in gnode_ids]
+                if not targets:
+                    hits = [oid for oid in official_ids
+                            if _nrm(name) and (_nrm(name) in _nrm(_title_of(oid))
+                                               or _nrm(_title_of(oid)) in _nrm(name))
+                            and _title_of(oid)]
+                    if len(hits) == 1:
+                        targets = hits
+                if not targets:
+                    logger.warning(f"[ComfyUI] 当次MP：未找到阶段/节点「{name}」对应的分辨率节点，跳过")
+                    continue
+                for tid in targets:
+                    ins = wf[tid].setdefault('inputs', {})
+                    if 'megapixels' in ins:
+                        ins['megapixels'] = round(mp, 3)
+                        logger.info(f"[ComfyUI] 当次MP: 节点{tid}（{name}）→ {mp:g} MP")
+                    else:
+                        logger.warning(f"[ComfyUI] 当次MP：节点{tid} 无 megapixels 输入（{wf[tid].get('class_type')}），跳过")
         if not official_ids and not aspect_ids:
-            logger.warning("[ComfyUI] 视频当次比例/画质未生效：当前工作流未找到官方分辨率节点")
+            logger.warning("[ComfyUI] 视频当次比例/画质/MP 未生效：当前工作流未找到官方分辨率节点")
 
     async def _set_load_image(self, workflow, image_path):
         """设置工作流中的 LoadImage 节点。
