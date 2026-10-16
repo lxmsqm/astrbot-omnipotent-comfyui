@@ -70,6 +70,22 @@ def _lark_cmd(name: str):
     return type(f"LarkLoose_{name}", (LarkLooseCommandFilter,), {"command_name": name})
 
 
+# ── v4.13.20: 组控制当次开关的参数解析（三个生成工具共用）──
+_GROUP_SPLIT_RE = re.compile(r"[,，、;；]")
+
+
+def _build_group_overrides(enable_groups=None, disable_groups=None):
+    """把逗号/顿号分隔的组名字符串解析为当次组开关 dict；两者都空返回 None。"""
+    ov = {}
+    e = [x.strip() for x in _GROUP_SPLIT_RE.split(str(enable_groups or "")) if x.strip()]
+    d = [x.strip() for x in _GROUP_SPLIT_RE.split(str(disable_groups or "")) if x.strip()]
+    if e:
+        ov["enable"] = e
+    if d:
+        ov["disable"] = d
+    return ov or None
+
+
 # ====================================================================
 # LLM 工具集（共10个）
 # ====================================================================
@@ -89,12 +105,15 @@ class ComfyUIDrawTool(FunctionTool):
             "prompt": {"type": "string", "description": "提示词（英文或中文），描述要生成的画面"},
             "workflow": {"type": "string", "description": "工作流名称关键词，例如'动漫'、'FLUX'、'真人'。不传则用当前工作流"},
             "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]},
-            "quality": {"type": "string", "description": "质量等级", "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]}
+            "quality": {"type": "string", "description": "质量等级", "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]},
+            "enable_groups": {"type": "string", "description": "本次生成要启用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"},
+            "disable_groups": {"type": "string", "description": "本次生成要禁用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"}
         },
         "required": ["prompt"]
     })
 
-    async def run(self, event: AstrMessageEvent, prompt: str, workflow: str = None, ratio: str = None, quality: str = None):
+    async def run(self, event: AstrMessageEvent, prompt: str, workflow: str = None, ratio: str = None, quality: str = None,
+                  enable_groups: str = None, disable_groups: str = None):
         plugin = self._plugin
         if ratio and ratio not in plugin.aspect_ratios: ratio = None
         if workflow:
@@ -112,7 +131,9 @@ class ComfyUIDrawTool(FunctionTool):
         except Exception as e:
             logger.warning(f"[ComfyUI] 发送生成中提示失败: {e}")
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 't2i')
-        status, text, path = await plugin._process_and_submit(prompt, ratio, user_id=event.get_sender_id(), quality_override=quality)
+        status, text, path = await plugin._process_and_submit(prompt, ratio, user_id=event.get_sender_id(),
+                                                              quality_override=quality,
+                                                              group_overrides=_build_group_overrides(enable_groups, disable_groups))
         if status == "ok":
             _ok_note = (_rule_note + "\n") if _rule_note else ""
             sent = await plugin._send_image_result(event, "✨ 生成完成", path, prompt=prompt)
@@ -248,6 +269,36 @@ class ComfyUIGetCurrentWorkflowTool(FunctionTool):
 # ====================================================================
 
 @dataclass
+class ComfyUIListGroupsTool(FunctionTool):
+    name: str = "comfyui_list_groups"
+    description: str = ("查看当前工作流的「组控制」分组与启用状态（如 二采/1采、加速/标准 这类可选阶段）。"
+                        "需要按次开关组之前先用本工具确认组名，再用 comfyui_draw / comfyui_img2img / comfyui_video "
+                        "的 enable_groups / disable_groups 参数（仅本次生效、不改默认）。")
+    parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
+
+    async def run(self, event: AstrMessageEvent):
+        plugin = self._plugin
+        wf_now = plugin.current_workflow_name
+        store = plugin.workflow_config.get('__group_bindings_store__', {}) or {}
+        bucket = store.get(wf_now) or {}
+        groups = bucket.get('data') or []
+        if not groups:
+            return (f"当前工作流「{plugin._get_display_name(wf_now)}」没有组数据（尚未提取/应用组）。"
+                    "需要控制组的话，请先在 WebUI 的组控制区对该工作流提取并应用组。")
+        disabled = set(str(k) for k in (bucket.get('disabled') or {}).keys())
+        disabled |= set(str(k) for k in (plugin.workflow_config.get('__disabled_groups__', {}) or {}).keys())
+        lines = [f"当前工作流「{plugin._get_display_name(wf_now)}」的分组（共 {len(groups)} 个）："]
+        for g in groups:
+            gid = str(g.get('id', ''))
+            title = str(g.get('title', '')) or gid
+            state = "❌ 已禁用" if gid in disabled else "✅ 已启用"
+            lines.append(f"  - {title}：{state}（{len(g.get('nodes') or [])} 个节点）")
+        lines.append("")
+        lines.append("如需按次调整：调用生成工具时传 enable_groups / disable_groups（逗号分隔组名，仅本次生效），例如 disable_groups=「二采」。")
+        return "\n".join(lines)
+
+
+@dataclass
 class ComfyUIImg2ImgTool(FunctionTool):
     name: str = "comfyui_img2img"
     description: str = ("使用本地ComfyUI图生图/编辑图片——输入1~10张参考图（逗号分隔），根据提示词修改生成新图片。"
@@ -260,11 +311,14 @@ class ComfyUIImg2ImgTool(FunctionTool):
             "image_urls": {"type": "string", "description": "1~10张输入图片的URL或本地文件路径，用英文逗号分隔"},
             "denoise": {"type": "number", "description": "降噪值 0.1~0.8，越低变化越小（仅单图时有效）"},
             "workflow": {"type": "string", "description": "工作流名称关键词，不传则用当前工作流"},
-            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]}
+            "ratio": {"type": "string", "description": "图片比例", "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]},
+            "enable_groups": {"type": "string", "description": "本次生成要启用的组名（逗号分隔，仅本次生效）；先查 comfyui_list_groups 确认组名"},
+            "disable_groups": {"type": "string", "description": "本次生成要禁用的组名（逗号分隔，仅本次生效）；先查 comfyui_list_groups 确认组名"}
         }, "required": ["prompt", "image_urls"]
     })
 
-    async def run(self, event: AstrMessageEvent, prompt: str, image_urls: str, denoise: float = None, workflow: str = None, ratio: str = None):
+    async def run(self, event: AstrMessageEvent, prompt: str, image_urls: str, denoise: float = None, workflow: str = None, ratio: str = None,
+                  enable_groups: str = None, disable_groups: str = None):
         plugin = self._plugin
         if ratio and ratio not in plugin.aspect_ratios: ratio = None
         if workflow:
@@ -312,7 +366,8 @@ class ComfyUIImg2ImgTool(FunctionTool):
         # 单图传路径字符串（兼容降噪/比例），多图传路径列表
         submit_imgs = saved_paths[0] if len(saved_paths) == 1 else saved_paths
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
-        status, text, out_path = await plugin._process_and_submit(prompt, ratio, submit_imgs, cmd_config=cmd_config or None, user_id=event.get_sender_id())
+        status, text, out_path = await plugin._process_and_submit(prompt, ratio, submit_imgs, cmd_config=cmd_config or None, user_id=event.get_sender_id(),
+                                                                  group_overrides=_build_group_overrides(enable_groups, disable_groups))
         # 清理临时下载的图片
         for p in saved_paths:
             try: Path(p).unlink(missing_ok=True)
@@ -350,12 +405,15 @@ class ComfyUIVideoTool(FunctionTool):
             "ratio": {"type": "string", "description": "视频比例（仅本次生效）。不传保持工作流当前比例",
                       "enum": ["1:1", "3:4", "4:3", "9:16", "16:9", "21:9", "2:3", "3:2"]},
             "quality": {"type": "string", "description": "出片清晰度档位（仅本次生效）。不传保持工作流当前档位",
-                        "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]}
+                        "enum": ["480p", "720p", "960p", "1080p", "2K", "4K"]},
+            "enable_groups": {"type": "string", "description": "本次生成要启用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"},
+            "disable_groups": {"type": "string", "description": "本次生成要禁用的组名（逗号分隔，如 二采），仅本次生效；先查 comfyui_list_groups 确认组名"}
         }, "required": []
     })
 
     async def run(self, event: AstrMessageEvent, image_url: str = "", prompt: str = "", workflow: str = None,
-                  duration: float = None, ratio: str = None, quality: str = None):
+                  duration: float = None, ratio: str = None, quality: str = None,
+                  enable_groups: str = None, disable_groups: str = None):
         plugin = self._plugin
         # v4.13.19: 当次规格参数（仅本次生效，不落盘）；非法值按不传处理（与 comfyui_draw 同口径）
         if ratio and ratio not in plugin.aspect_ratios:
@@ -380,6 +438,12 @@ class ComfyUIVideoTool(FunctionTool):
             _ov_parts.append(ratio)
         if quality:
             _ov_parts.append(quality)
+        _group_ov = _build_group_overrides(enable_groups, disable_groups)
+        if _group_ov:
+            if _group_ov.get('disable'):
+                _ov_parts.append("关:" + "/".join(_group_ov['disable']))
+            if _group_ov.get('enable'):
+                _ov_parts.append("开:" + "/".join(_group_ov['enable']))
         _ov_note = ("（本次规格：" + " ".join(_ov_parts) + "）") if _ov_parts else ""
         if workflow:
             for w in plugin._refresh_workflow_list():
@@ -409,7 +473,7 @@ class ComfyUIVideoTool(FunctionTool):
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
         status, text, out_path = await plugin._process_and_submit(
             prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo,
-            video_overrides=video_overrides or None)
+            video_overrides=video_overrides or None, group_overrides=_group_ov)
         if status == "ok":
             try:
                 from astrbot.api.message_components import Video

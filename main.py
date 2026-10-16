@@ -32,7 +32,7 @@ from .core.grimoire import (
 from .core.llm_tools import (
     ComfyUITaskError, LarkLooseCommandFilter, LLMToolsMixin,
     ComfyUIDrawTool, ComfyUIListWorkflowsTool, ComfyUISwitchWorkflowTool,
-    ComfyUIGetCurrentWorkflowTool, ComfyUIImg2ImgTool, ComfyUIVideoTool,
+    ComfyUIGetCurrentWorkflowTool, ComfyUIListGroupsTool, ComfyUIImg2ImgTool, ComfyUIVideoTool,
     ComfyUIRandomTool, ComfyUIListStarsTool, ComfyUIListPresetsTool,
     ComfyUIDeletePresetTool, ComfyUIQueueTool, ComfyUIStopTool,
     ComfyUIExecuteTool, ComfyUIRandomImageTool,
@@ -312,6 +312,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
     def _register_tools(self):
         try:
             tools = [ComfyUIDrawTool(), ComfyUIListWorkflowsTool(), ComfyUISwitchWorkflowTool(), ComfyUIGetCurrentWorkflowTool(),
+                     ComfyUIListGroupsTool(),
                      ComfyUIImg2ImgTool(), ComfyUIVideoTool(), ComfyUIRandomTool(),
                      ComfyUIQueueTool(), ComfyUIStopTool(), ComfyUIExecuteTool(), ComfyUIRandomImageTool(),
                      ComfyUIListStarsTool(), ComfyUIListPresetsTool(), ComfyUIDeletePresetTool(),
@@ -2224,7 +2225,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 await asyncio.sleep(5)
             await asyncio.sleep(0.5)
 
-    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None, skip_pin_merge=False, notify_umo=None, video_overrides=None):
+    async def _process_and_submit(self, prompt, ratio, image_path=None, cmd_config=None, user_id=None, quality_override=None, skip_pin_merge=False, notify_umo=None, video_overrides=None, group_overrides=None):
         self._refresh_workflow_list()
         if not self.workflow_path: return ("error", "未设置工作流", None)
         # 快照当前工作流：防止并发时（他人切换工作流）本次提交串用别的配置
@@ -2332,7 +2333,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 except Exception as e:
                     logger.debug(f"[ComfyUI] 预取 LoadImage 节点失败: {e}")
             self._apply_workflow_config(wf, wf_name=wf_name, protect_nodes=_protect or None)
-            self._apply_group_modes(wf, wf_name=wf_name)
+            self._apply_group_modes(wf, wf_name=wf_name, overrides=group_overrides)
             # 注：占位文件方案已废弃（改用「未上传加载节点移除+断连」），
             # 不再需要 _ensure_placeholder_files 预上传，避免每次生成浪费 ffmpeg + 上传
             try:

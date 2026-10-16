@@ -1078,10 +1078,12 @@ class WebUIMixin:
             return prompt, ''
         return out, '⚠ 已按规则「' + str(rule.get('name', '')) + '」自动修正：' + '；'.join(notes)
 
-    def _apply_group_modes(self, workflow, wf_name=None):
+    def _apply_group_modes(self, workflow, wf_name=None, overrides=None):
         """v4.4.10: 组控制落装——禁用组从图中级联移除（ComfyUI API 执行忽略 mode=4）。
         语义：节点处于禁用组且不在任何启用组 → 移除；跨组共享节点不受影响。
         数据源：分桶存储（当前工作流的 data+disabled），兼容旧 ROOT __disabled_groups__。
+        v4.13.20: overrides={'enable': [组名/id...], 'disable': [...]} —— LLM 工具「当次组开关」，
+        在持久禁用状态之上叠加覆盖（仅本次提交、不落盘）。组名支持「一采↔1采」数字归一与唯一子串匹配。
         注意：全部输出组被禁用 → ComfyUI 返回 no outputs，属预期反馈。"""
         wf = wf_name or self.current_workflow_name
         store = self.workflow_config.get('__group_bindings_store__', {}) or {}
@@ -1090,6 +1092,43 @@ class WebUIMixin:
         disabled = set(str(k) for k in (bucket.get('disabled') or {}).keys())
         if wf == self.current_workflow_name:
             disabled |= set(str(k) for k in (self.workflow_config.get('__disabled_groups__', {}) or {}).keys())
+        # v4.13.20: LLM 当次组开关（仅本次提交副本生效，不落盘）
+        if overrides and groups:
+            def _norm(s):
+                return (str(s).replace('一', '1').replace('二', '2').replace('三', '3')
+                        .replace('四', '4').replace('五', '5').lower())
+
+            def _match(name):
+                n = _norm(name)
+                hits = []
+                for g in groups:
+                    gid = str(g.get('id', ''))
+                    title = str(g.get('title', ''))
+                    if name == gid or name == title or n == _norm(gid) or n == _norm(title):
+                        return gid
+                    if n and (n in _norm(title) or _norm(title) in n):
+                        hits.append(gid)
+                return hits[0] if len(hits) == 1 else None
+
+            _on, _off, _miss = [], [], []
+            for name in (overrides.get('disable') or []):
+                gid = _match(str(name).strip())
+                if gid:
+                    disabled.add(gid)
+                    _off.append(gid)
+                else:
+                    _miss.append(f"关:{name}")
+            for name in (overrides.get('enable') or []):
+                gid = _match(str(name).strip())
+                if gid:
+                    disabled.discard(gid)
+                    _on.append(gid)
+                else:
+                    _miss.append(f"开:{name}")
+            logger.info(f"[ComfyUI] 当次组开关: 开{sorted(_on)} 关{sorted(_off)}"
+                        + (f" 未匹配{sorted(_miss)}" if _miss else ""))
+        elif overrides and not groups:
+            logger.warning("[ComfyUI] 当次组开关未生效：当前工作流无组数据（未提取/未应用组）")
         if not disabled or not groups:
             self._group_modes_diag = {'wf': wf, '组数': len(groups), '禁用': sorted(disabled), '结果': '跳过'}
             return
