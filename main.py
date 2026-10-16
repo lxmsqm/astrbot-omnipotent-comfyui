@@ -2692,6 +2692,47 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 self._prompt_start_time.pop(_pid, None)
             return ("error", str(e), None)
 
+    def _spawn_bg_video_submit(self, **kwargs):
+        """启动「提交即返回」的后台视频生成链；句柄登记进 _background_tasks，
+        插件卸载时随 terminate 统一取消（被取消时由 notify_umo 的 watcher 兜底）。"""
+        task = asyncio.get_running_loop().create_task(self._bg_video_submit(**kwargs))
+        self._background_tasks.append(task)
+        return task
+
+    async def _bg_video_submit(self, umo, prompt, image_path, cmd_config, user_id,
+                               video_overrides, group_overrides, is_feishu, ov_note=""):
+        """v4.13.21: LLM 视频工具的「非阻塞提交」后台链——工具提交后立即返回，
+        这里等生成完成，把视频（或失败提示）推回发起会话。
+        原因：视频等待超时 4h，工具内 await 会占住 AstrBot 的 per-session 锁
+        （session_lock_manager），期间该会话所有消息全部阻塞（表现为 LLM 罢工）。"""
+        try:
+            status, text, out_path = await self._process_and_submit(
+                prompt, None, image_path, cmd_config=cmd_config, user_id=user_id,
+                notify_umo=umo, video_overrides=video_overrides, group_overrides=group_overrides)
+            if status == "ok" and out_path:
+                vid_path = out_path[0] if isinstance(out_path, list) and out_path else out_path
+                if is_feishu and vid_path:
+                    vid_path = await asyncio.to_thread(self._shrink_video_for_feishu, vid_path)
+                if umo and vid_path:
+                    from astrbot.api.message_components import Video
+                    from astrbot.api.event import MessageChain
+                    await self.context.send_message(umo, MessageChain(chain=[Video(file=vid_path)]))
+                logger.info(f"[ComfyUI] 后台视频链完成并已推送: {umo}")
+            elif umo:
+                from astrbot.api.event import MessageChain
+                await self.context.send_message(umo, MessageChain().message(f"⚠️ 视频生成失败{ov_note}：{text}"))
+        except asyncio.CancelledError:
+            # 插件卸载/重载被取消：_process_and_submit 内部已按 notify_umo 启动 watcher 兜底
+            raise
+        except Exception as e:
+            logger.error(f"[ComfyUI] 后台视频链异常: {traceback.format_exc()}")
+            try:
+                if umo:
+                    from astrbot.api.event import MessageChain
+                    await self.context.send_message(umo, MessageChain().message(f"⚠️ 视频生成异常{ov_note}：{e}"))
+            except Exception:
+                pass
+
     async def _watch_and_push_video(self, pid, umo):
         """后台 watcher：工具协程被取消后，视频仍在 ComfyUI 后台生成时，
         独立等待生成完成并推送到发起人，避免长视频白生成。"""

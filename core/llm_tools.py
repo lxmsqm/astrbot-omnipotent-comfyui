@@ -395,7 +395,9 @@ class ComfyUIVideoTool(FunctionTool):
                         "再用 comfyui_switch_workflow 切换后再调用本工具。"
                         "★ image_url 不传时自动使用用户最近在对话中发送/引用的图片。"
                         "★ 可用当次参数 duration(秒)/ratio/quality 指定本次视频规格（如 15 秒 9:16 竖屏），"
-                        "仅本次生效、不修改工作流默认配置；不传则保持工作流现成规格。")
+                        "仅本次生效、不修改工作流默认配置；不传则保持工作流现成规格。"
+                        "★ 提交后立即返回（不阻塞对话），生成完成会自动把视频发到会话；"
+                        "向用户报告时说清「已提交、完成后自动送达」，之后可继续对话。")
     parameters: dict = field(default_factory=lambda: {
         "type": "object", "properties": {
             "prompt": {"type": "string", "description": "提示词，描述视频内容"},
@@ -471,26 +473,23 @@ class ComfyUIVideoTool(FunctionTool):
         if not got_img:
             return "❌ 未能获取图片：请在对话中发送图片后再试，或提供图片 URL"
         prompt, _rule_note = plugin._enforce_prompt_rule(prompt, 'imgrev')
-        status, text, out_path = await plugin._process_and_submit(
-            prompt, None, str(save_path), user_id=event.get_sender_id(), notify_umo=umo,
-            video_overrides=video_overrides or None, group_overrides=_group_ov)
-        if status == "ok":
-            try:
-                from astrbot.api.message_components import Video
-                # out_path 可能是列表(兼容多图)，取第一个文件发送
-                vid_path = out_path[0] if isinstance(out_path, list) and out_path else out_path
-                umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
-                # v4.8.0: 飞书视频限 ~10MB，超限压缩后再发
-                if plugin._detect_event_platform(event) == 'feishu':
-                    vid_path = await asyncio.to_thread(plugin._shrink_video_for_feishu, vid_path)
-                if umo:
-                    chain = MessageChain(chain=[Video(file=vid_path)])
-                    await plugin.context.send_message(umo, chain)
-                return f"✅ 视频已生成并发送{_ov_note}"
-            except Exception as e:
-                logger.error(f"[ComfyUI] 发送视频失败: {e}")
-            return f"✅ 视频已生成并发送给用户{_ov_note}"
-        return text
+        # v4.13.21: 非阻塞提交——视频生成动辄几分钟到几十分钟，在工具里 await 完会占住
+        # AstrBot 的 per-session 锁（session_lock_manager）：期间该会话所有消息全被阻塞，
+        # 表现为 LLM 罢工。现工具「提交即返回」，由后台链完成后把视频（或失败提示）推回会话。
+        umo = event.unified_msg_origin if hasattr(event, 'unified_msg_origin') else None
+        try:
+            _is_feishu = plugin._detect_event_platform(event) == 'feishu'
+        except Exception:
+            _is_feishu = False
+        plugin._spawn_bg_video_submit(
+            umo=umo, prompt=prompt, image_path=str(save_path), cmd_config=None,
+            user_id=event.get_sender_id(),
+            video_overrides=video_overrides or None,
+            group_overrides=_group_ov,
+            is_feishu=_is_feishu,
+            ov_note=_ov_note)
+        return (f"🎬 视频任务已提交{_ov_note}，生成完成后会自动发送到本会话"
+                "（视频较长时可能需要数分钟到数十分钟）；等待期间可以继续对话，也能让我做别的事。")
 
 
 @dataclass
