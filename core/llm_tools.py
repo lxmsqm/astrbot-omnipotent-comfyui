@@ -325,9 +325,9 @@ class ComfyUIListGroupsTool(FunctionTool):
 class ComfyUIGetResolutionTool(FunctionTool):
     name: str = "comfyui_get_resolution"
     description: str = ("查看当前工作流的分辨率设置——各阶段（如 一采/二采）官方分辨率节点的"
-                        "比例、像素数(MP)与约合宽高，含所属组与启用状态。"
-                        "用户问分辨率/生成前需要确认清晰度时使用；"
-                        "修改用生成工具的 mp_stages 参数（仅本次生效，不改默认）。")
+                        "比例、像素数(MP)与约合宽高（文件默认值），含 quality 档位→各阶段 MP 换算表、"
+                        "以及最近一次提交实际生效值。用户问分辨率、需要确认清晰度或核对某次生成的实际"
+                        "参数时使用；修改用生成工具的 mp_stages/quality 参数（仅本次生效）。")
     parameters: dict = field(default_factory=lambda: {"type": "object", "properties": {}, "required": []})
 
     async def run(self, event: AstrMessageEvent):
@@ -336,10 +336,9 @@ class ComfyUIGetResolutionTool(FunctionTool):
             wf = json.loads(Path(plugin.workflow_path).read_text(encoding='utf-8'))
         except Exception as e:
             return f"❌ 读取当前工作流文件失败: {e}"
-        official_ids = plugin._find_official_resolution_nodes(wf)
-        aspect_ids = plugin._find_aspect_ratio_nodes(wf)
+        data = plugin._resolution_data(wf)
         wf_title = plugin._get_display_name(plugin.current_workflow_name)
-        if not official_ids and not aspect_ids:
+        if not data:
             return f"当前工作流「{wf_title}」未找到官方分辨率节点（ResolutionSelector / AspectRatioNode）"
         store = plugin.workflow_config.get('__group_bindings_store__', {}) or {}
         bucket = store.get(plugin.current_workflow_name) or {}
@@ -351,38 +350,40 @@ class ComfyUIGetResolutionTool(FunctionTool):
             for n in (g.get('nodes') or []):
                 node_groups.setdefault(str(n), []).append(gtitle)
 
-        def _sort_key(x):
-            return int(x) if str(x).isdigit() else 0
+        lines = [f"当前工作流「{wf_title}」的分辨率设置（文件里的默认值）："]
+        for it in data:
+            glabel = "、".join(node_groups.get(it['nid'], []))
+            label = it['title'] + (f"·{glabel}" if glabel else "")
+            if it.get('mp'):
+                lines.append(f"  - 节点{it['nid']}（{label}）: {it['ratio']} / {it['mp']} MP ≈ {it['approx']}")
+            else:
+                lines.append(f"  - 节点{it['nid']}（{label}）: {it['ratio']} / {it['approx']}")
 
-        lines = [f"当前工作流「{wf_title}」的分辨率设置："]
-        for nid in sorted(official_ids, key=_sort_key):
-            ins = wf[nid].get('inputs', {}) or {}
-            ratio = ins.get('aspect_ratio', '-')
-            mp = ins.get('megapixels')
-            title = str((wf[nid].get('_meta') or {}).get('title', '') or '')
-            glabel = "、".join(node_groups.get(str(nid), []))
-            label = title or glabel or "无标题"
-            approx = ''
+        qmap = plugin._quality_resolution_map(wf)
+        if qmap:
+            lines.append("")
+            lines.append("quality 档位换算表（按当前文件比例；最大阶段=档位总像素、其余等比缩放；quality 与 mp_stages 同传时 mp_stages 优先）：")
+            for row in qmap:
+                lines.append(f"  - {row['quality']} → " + " / ".join(f"{s['title']} {s['mp']}MP" for s in row['stages']))
+
+        last = getattr(plugin, '_last_effective_res', None)
+        if last and last.get('items'):
             try:
-                m = re.match(r'\s*(\d+)\s*:\s*(\d+)', str(ratio))
-                if m and isinstance(mp, (int, float)) and float(mp) > 0:
-                    ra, rb = int(m.group(1)), int(m.group(2))
-                    total = float(mp) * 1024 * 1024
-                    x = (total / (ra * rb)) ** 0.5
-                    mult = ins.get('multiple', 32)
-                    mult = int(mult) if str(mult).isdigit() else 32
-                    approx = f" ≈ {round(ra * x / mult) * mult}×{round(rb * x / mult) * mult}"
+                _t = datetime.fromtimestamp(last.get('when', 0)).strftime('%H:%M:%S')
             except Exception:
-                pass
-            lines.append(f"  - 节点{nid}（{label}）: {ratio} / {mp} MP{approx}")
-        for aid in sorted(aspect_ids, key=_sort_key):
-            ins = wf[aid].get('inputs', {}) or {}
-            title = str((wf[aid].get('_meta') or {}).get('title', '') or '')
-            glabel = "、".join(node_groups.get(str(aid), []))
-            label = title or glabel or "无标题"
-            lines.append(f"  - 节点{aid}（{label}）: {ins.get('aspect_ratio', '-')} / {ins.get('width')}×{ins.get('height')}")
+                _t = '?'
+            lines.append("")
+            lines.append(f"最近一次提交实际生效（{_t}，{last.get('workflow', '')}）：")
+            for it in last['items']:
+                glabel = "、".join(node_groups.get(it.get('nid', ''), []))
+                label = it.get('title', '') + (f"·{glabel}" if glabel else "")
+                if it.get('mp'):
+                    lines.append(f"  - {label}: {it.get('ratio')} / {it.get('mp')} MP ≈ {it.get('approx')}")
+                else:
+                    lines.append(f"  - {label}: {it.get('ratio')} / {it.get('approx')}")
+
         lines.append("")
-        lines.append("按次调整：comfyui_video 传 mp_stages=「一采=0.5, 二采=2」可直设各阶段 MP（阶段名或节点ID，仅本次生效、不改默认）；quality 用预设档位（480p~4K）。")
+        lines.append("按次调整（仅本次生效、不改默认）：comfyui_video 传 mp_stages=「一采=0.5, 二采=2」直设各阶段 MP；ratio/quality 用预设档位。")
         return "\n".join(lines)
 
 
@@ -581,7 +582,7 @@ class ComfyUIVideoTool(FunctionTool):
             group_overrides=_group_ov,
             is_feishu=_is_feishu,
             ov_note=_ov_note)
-        return (f"🎬 视频任务已提交{_ov_note}，生成完成后会自动发送到本会话"
+        return (f"🎬 视频任务已提交{_ov_note}，生成完成后会自动发送到本会话，并附「本次实际生效分辨率」回执"
                 "（视频较长时可能需要数分钟到数十分钟）；等待期间可以继续对话，也能让我做别的事。")
 
 

@@ -196,6 +196,7 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             "4K": {"name": "原画", "pixels": 8_294_400},
         }
         self.default_quality = local_cfg.get("default_quality") or "720p"
+        self._last_effective_res = None  # v4.13.23: 最近一次提交实际生效的分辨率快照（回执/查询用）
         # 图片消息是否附带提示词
         self.show_prompt_on_image = bool(local_cfg.get("show_prompt_on_image", False))
         # 生成结果发送平台: auto=自动识别来源平台(默认) / qq=强制QQ(OneBot) / feishu=强制飞书 / both=两边都发
@@ -2412,6 +2413,19 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
             # v4.13.19: LLM 视频工具「当次参数」（时长/比例/清晰度）——只改本次提交副本，不落盘
             if video_overrides:
                 self._apply_video_overrides(wf, video_overrides)
+            # v4.13.23: 记录本次提交实际生效的分辨率（完成回执 + comfyui_get_resolution 可查，解决"两个真相源"）
+            try:
+                _res_now = self._resolution_data(wf)
+                if _res_now:
+                    self._last_effective_res = {
+                        'when': time.time(),
+                        'workflow': wf_name or self.current_workflow_name,
+                        'items': _res_now,
+                    }
+                    if isinstance(video_overrides, dict):
+                        video_overrides['_applied_res'] = _res_now
+            except Exception as _re_err:
+                logger.debug(f"[ComfyUI] 记录实际分辨率失败: {_re_err}")
             if image_path: await self._set_load_image(wf, image_path)
             self._rebuild_jzl_refs(wf)
             if prompt:
@@ -2711,6 +2725,18 @@ class ComfyUILocalPlugin(WorkflowMixin, GenerateMixin, WebUIMixin, GrimoireMixin
                 prompt, None, image_path, cmd_config=cmd_config, user_id=user_id,
                 notify_umo=umo, video_overrides=video_overrides, group_overrides=group_overrides)
             if status == "ok" and out_path:
+                # v4.13.23: 先发「本次实际生效分辨率」文字回执（飞书文字+视频混合链会吞文字 → 分开发）
+                try:
+                    _res_items = video_overrides.get('_applied_res') if isinstance(video_overrides, dict) else None
+                    if umo and _res_items:
+                        _parts = [f"{it.get('title')} {it.get('mp')}MP≈{it.get('approx')}"
+                                  for it in _res_items if isinstance(it, dict) and it.get('mp')]
+                        if _parts:
+                            from astrbot.api.event import MessageChain
+                            await self.context.send_message(umo, MessageChain().message("📐 本次实际生效：" + " / ".join(_parts)))
+                            await asyncio.sleep(0.6)
+                except Exception as _e:
+                    logger.debug(f"[ComfyUI] 分辨率回执发送失败: {_e}")
                 vid_path = out_path[0] if isinstance(out_path, list) and out_path else out_path
                 if is_feishu and vid_path:
                     vid_path = await asyncio.to_thread(self._shrink_video_for_feishu, vid_path)

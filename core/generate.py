@@ -4,6 +4,7 @@ v4.13.5 拆分自 main.py，行为不变：Mixin 间仍经 self 运行时互通�
 """
 import hashlib
 import os
+import re
 from pathlib import Path
 
 from astrbot.api import logger
@@ -774,6 +775,61 @@ class GenerateMixin:
         inputs['width'] = width
         inputs['height'] = height
         return True
+
+    def _resolution_data(self, wf):
+        """快照工作流（提交副本或文件）各官方分辨率节点的实际值。
+        返回 [{'nid','title','kind','ratio','mp','approx'}]；无官方节点返回 []。"""
+        data = []
+        for nid in self._find_official_resolution_nodes(wf):
+            node = wf.get(nid)
+            if not isinstance(node, dict):
+                continue
+            ins = node.get('inputs', {}) or {}
+            title = str((node.get('_meta') or {}).get('title', '') or '')
+            ratio = ins.get('aspect_ratio', '-')
+            mp = ins.get('megapixels')
+            approx = ''
+            try:
+                m = re.match(r'\s*(\d+)\s*:\s*(\d+)', str(ratio))
+                if m and isinstance(mp, (int, float)) and float(mp) > 0:
+                    ra, rb = int(m.group(1)), int(m.group(2))
+                    total = float(mp) * 1024 * 1024
+                    x = (total / (ra * rb)) ** 0.5
+                    mult = ins.get('multiple', 32)
+                    mult = int(mult) if str(mult).isdigit() else 32
+                    approx = f"{round(ra * x / mult) * mult}×{round(rb * x / mult) * mult}"
+            except Exception:
+                pass
+            data.append({'nid': str(nid), 'title': title or f"节点{nid}", 'kind': node.get('class_type', ''),
+                         'ratio': ratio, 'mp': mp, 'approx': approx})
+        for aid in self._find_aspect_ratio_nodes(wf):
+            node = wf.get(aid)
+            if not isinstance(node, dict):
+                continue
+            ins = node.get('inputs', {}) or {}
+            title = str((node.get('_meta') or {}).get('title', '') or '')
+            w_, h_ = ins.get('width'), ins.get('height')
+            data.append({'nid': str(aid), 'title': title or f"节点{aid}", 'kind': 'AspectRatioNode',
+                         'ratio': ins.get('aspect_ratio', '-'), 'mp': None,
+                         'approx': f"{w_}×{h_}" if w_ and h_ else ''})
+        return data
+
+    def _quality_resolution_map(self, wf):
+        """按当前工作流各阶段 MP 比例，换算每个 quality 档位的各阶段 MP。
+        规则与提交链一致：最大阶段=档位总像素(1024²)，其余阶段等比缩放。
+        返回 [{'quality': q, 'stages': [{'title','mp'}]}]；无法换算返回 []。"""
+        data = [d for d in self._resolution_data(wf)
+                if isinstance(d.get('mp'), (int, float)) and float(d['mp']) > 0]
+        if not data:
+            return []
+        max_mp = max(float(d['mp']) for d in data)
+        out = []
+        for q, preset in self.quality_presets.items():
+            target = preset['pixels'] / (1024 * 1024)
+            out.append({'quality': q, 'stages': [
+                {'title': d['title'], 'mp': round(float(d['mp']) * target / max_mp, 2)} for d in data
+            ]})
+        return out
 
     def _apply_video_overrides(self, wf, ov):
         """LLM 视频工具的「当次参数」覆盖 —— 只改本次提交副本，不落盘、不影响工作流文件。
