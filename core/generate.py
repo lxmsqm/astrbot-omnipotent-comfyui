@@ -776,9 +776,31 @@ class GenerateMixin:
         inputs['height'] = height
         return True
 
+    @staticmethod
+    def _approx_wh(ratio, mp, mult=32):
+        """megapixels(1024² 口径) + 比例 → 约合输出宽高（两维各自按 multiple 就近对齐）。
+        与 ComfyUI ResolutionSelector(multiple=32) 的官方 Size Settings Reference 表逐行一致：
+        0.2→608×352 / 0.5→960×544 / 0.98→1344×768 / 2.0(16:9)→1920×1088（9:16 竖屏则 1088×1920）。"""
+        try:
+            m = re.match(r'\s*(\d+)\s*:\s*(\d+)', str(ratio))
+            if not m or not isinstance(mp, (int, float)) or float(mp) <= 0:
+                return ''
+            ra, rb = int(m.group(1)), int(m.group(2))
+            total = float(mp) * 1024 * 1024
+            x = (total / (ra * rb)) ** 0.5
+            try:
+                mult = int(mult)
+            except (TypeError, ValueError):
+                mult = 32
+            if mult <= 0:
+                mult = 32
+            return f"{round(ra * x / mult) * mult}×{round(rb * x / mult) * mult}"
+        except Exception:
+            return ''
+
     def _resolution_data(self, wf):
         """快照工作流（提交副本或文件）各官方分辨率节点的实际值。
-        返回 [{'nid','title','kind','ratio','mp','approx'}]；无官方节点返回 []。"""
+        返回 [{'nid','title','kind','ratio','mp','mult','approx'}]；无官方节点返回 []。"""
         data = []
         for nid in self._find_official_resolution_nodes(wf):
             node = wf.get(nid)
@@ -788,20 +810,9 @@ class GenerateMixin:
             title = str((node.get('_meta') or {}).get('title', '') or '')
             ratio = ins.get('aspect_ratio', '-')
             mp = ins.get('megapixels')
-            approx = ''
-            try:
-                m = re.match(r'\s*(\d+)\s*:\s*(\d+)', str(ratio))
-                if m and isinstance(mp, (int, float)) and float(mp) > 0:
-                    ra, rb = int(m.group(1)), int(m.group(2))
-                    total = float(mp) * 1024 * 1024
-                    x = (total / (ra * rb)) ** 0.5
-                    mult = ins.get('multiple', 32)
-                    mult = int(mult) if str(mult).isdigit() else 32
-                    approx = f"{round(ra * x / mult) * mult}×{round(rb * x / mult) * mult}"
-            except Exception:
-                pass
+            mult = ins.get('multiple', 32)
             data.append({'nid': str(nid), 'title': title or f"节点{nid}", 'kind': node.get('class_type', ''),
-                         'ratio': ratio, 'mp': mp, 'approx': approx})
+                         'ratio': ratio, 'mp': mp, 'mult': mult, 'approx': self._approx_wh(ratio, mp, mult)})
         for aid in self._find_aspect_ratio_nodes(wf):
             node = wf.get(aid)
             if not isinstance(node, dict):
@@ -810,14 +821,14 @@ class GenerateMixin:
             title = str((node.get('_meta') or {}).get('title', '') or '')
             w_, h_ = ins.get('width'), ins.get('height')
             data.append({'nid': str(aid), 'title': title or f"节点{aid}", 'kind': 'AspectRatioNode',
-                         'ratio': ins.get('aspect_ratio', '-'), 'mp': None,
+                         'ratio': ins.get('aspect_ratio', '-'), 'mp': None, 'mult': None,
                          'approx': f"{w_}×{h_}" if w_ and h_ else ''})
         return data
 
     def _quality_resolution_map(self, wf):
-        """按当前工作流各阶段 MP 比例，换算每个 quality 档位的各阶段 MP。
-        规则与提交链一致：最大阶段=档位总像素(1024²)，其余阶段等比缩放。
-        返回 [{'quality': q, 'stages': [{'title','mp'}]}]；无法换算返回 []。"""
+        """按当前工作流各阶段 MP 比例，换算每个 quality 档位的各阶段 MP 与约合宽高。
+        规则与提交链一致：最大阶段=档位总像素(1024²)、其余阶段等比缩放（写盘 3 位小数口径）。
+        返回 [{'quality': q, 'stages': [{'title','mp','approx'}]}]；无法换算返回 []。"""
         data = [d for d in self._resolution_data(wf)
                 if isinstance(d.get('mp'), (int, float)) and float(d['mp']) > 0]
         if not data:
@@ -826,9 +837,12 @@ class GenerateMixin:
         out = []
         for q, preset in self.quality_presets.items():
             target = preset['pixels'] / (1024 * 1024)
-            out.append({'quality': q, 'stages': [
-                {'title': d['title'], 'mp': round(float(d['mp']) * target / max_mp, 2)} for d in data
-            ]})
+            stages = []
+            for d in data:
+                scaled = round(float(d['mp']) * target / max_mp, 3)
+                stages.append({'title': d['title'], 'mp': scaled,
+                               'approx': self._approx_wh(d['ratio'], scaled, d.get('mult', 32))})
+            out.append({'quality': q, 'stages': stages})
         return out
 
     def _apply_video_overrides(self, wf, ov):

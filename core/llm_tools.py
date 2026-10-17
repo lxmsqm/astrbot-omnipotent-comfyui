@@ -364,7 +364,7 @@ class ComfyUIGetResolutionTool(FunctionTool):
             lines.append("")
             lines.append("quality 档位换算表（按当前文件比例；最大阶段=档位总像素、其余等比缩放；quality 与 mp_stages 同传时 mp_stages 优先）：")
             for row in qmap:
-                lines.append(f"  - {row['quality']} → " + " / ".join(f"{s['title']} {s['mp']}MP" for s in row['stages']))
+                lines.append(f"  - {row['quality']} → " + " / ".join(f"{s['title']} {s['mp']:g}MP≈{s['approx']}" for s in row['stages']))
 
         last = getattr(plugin, '_last_effective_res', None)
         if last and last.get('items'):
