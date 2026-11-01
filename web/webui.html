@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="/webui.css?v=20261009b">
+<link rel="stylesheet" href="/webui.css?v=4.13.28">
 </head>
 <body>
 <div id="bg_particles" aria-hidden="true">
@@ -848,8 +848,11 @@
       <div id="k2_locks_panel" style="padding:0 12px 12px"></div>
     </div>
   </div>
-  <!-- PC 右下角缩放手柄（拖动自由调整大小） -->
-  <div class="grimoire-resize-handle" id="grimoire_resize_handle" title="拖动调整大小"></div>
+  <!-- PC 四角缩放手柄（v4.13.28：从单一右下角扩展为四角，均可拖动调整大小） -->
+  <div class="grimoire-resize-handle grm-rh-nw" id="grimoire_rh_nw" data-corner="nw" title="拖动调整大小"></div>
+  <div class="grimoire-resize-handle grm-rh-ne" id="grimoire_rh_ne" data-corner="ne" title="拖动调整大小"></div>
+  <div class="grimoire-resize-handle grm-rh-sw" id="grimoire_rh_sw" data-corner="sw" title="拖动调整大小"></div>
+  <div class="grimoire-resize-handle grm-rh-se" id="grimoire_rh_se" data-corner="se" title="拖动调整大小"></div>
 </div>
 
 <!-- ===== 魔导书图片放大灯箱 ===== -->
@@ -1108,14 +1111,16 @@
     </div>
     <div class="lightbox-toolbar">
       <span id="lightbox_info" class="lightbox-info"></span>
+      <span id="lightbox_zoom_badge" class="lightbox-zoom-badge"></span>
       <button class="lightbox-btn" id="lightbox_zoom_in" title="放大" aria-label="放大图片"><svg class="icon" aria-hidden="true"><use href="#icon-zoom-in"/></svg></button>
       <button class="lightbox-btn" id="lightbox_zoom_out" title="缩小" aria-label="缩小图片"><svg class="icon" aria-hidden="true"><use href="#icon-zoom-out"/></svg></button>
       <button class="lightbox-btn" id="lightbox_zoom_reset" title="重置" aria-label="重置缩放"><svg class="icon" aria-hidden="true"><use href="#icon-reset"/></svg></button>
       <button class="lightbox-btn" id="lightbox_download" title="下载" aria-label="下载图片"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg></button>
     </div>
   </div>
+</div>
 
-<script src="/webui.js?v=20261009b"></script>
+<script src="/webui.js?v=4.13.28"></script>
 
 </div>
 

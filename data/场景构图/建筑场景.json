@@ -48,5 +48,210 @@
     "name": "商店",
     "tags": "shop",
     "category": "建筑场景"
+  },
+  {
+    "name": "学校天台",
+    "tags": "school rooftop, chain-link fence, water tower, blue sky, city skyline in the distance",
+    "style": "general"
+  },
+  {
+    "name": "学校走廊",
+    "tags": "school hallway, corridor, lockers, bulletin board, sunlight through windows",
+    "style": "general"
+  },
+  {
+    "name": "体育馆",
+    "tags": "gymnasium, basketball court, wooden floor, high ceiling, wall bars",
+    "style": "general"
+  },
+  {
+    "name": "室内游泳池",
+    "tags": "indoor swimming pool, swimming lanes, water reflections, tiles, glass ceiling",
+    "style": "general"
+  },
+  {
+    "name": "学校礼堂",
+    "tags": "auditorium, stage, rows of seats, thick curtain, spotlights",
+    "style": "general"
+  },
+  {
+    "name": "更衣室",
+    "tags": "locker room, changing room, metal lockers, wooden bench, dim light",
+    "style": "general"
+  },
+  {
+    "name": "音乐教室",
+    "tags": "music room, grand piano, music stands, wooden chairs, curtains",
+    "style": "general"
+  },
+  {
+    "name": "社团教室",
+    "tags": "club room, desks, whiteboard, notice board, afternoon light",
+    "style": "general"
+  },
+  {
+    "name": "保健室",
+    "tags": "infirmary, nurse's office, white bed, privacy curtain, medicine cabinet",
+    "style": "general"
+  },
+  {
+    "name": "学生会室",
+    "tags": "student council room, large desk, filing cabinet, sofa, warm light",
+    "style": "general"
+  },
+  {
+    "name": "玄关入口",
+    "tags": "entrance hall, genkan, shoe rack, front door, slippers",
+    "style": "general"
+  },
+  {
+    "name": "公寓楼",
+    "tags": "apartment building, balconies, outdoor corridor, night windows, city lights",
+    "style": "general"
+  },
+  {
+    "name": "客厅",
+    "tags": "living room, sofa, coffee table, tv, rug, warm indoor light",
+    "style": "general"
+  },
+  {
+    "name": "浴室",
+    "tags": "bathroom, bathtub, ceramic tiles, shower curtain, steam",
+    "style": "general"
+  },
+  {
+    "name": "淋浴间",
+    "tags": "shower room, glass door, running water, steam, wet tiles",
+    "style": "general"
+  },
+  {
+    "name": "洗手间隔间",
+    "tags": "restroom, toilet stall, partition, tiled wall, fluorescent light",
+    "style": "general"
+  },
+  {
+    "name": "电梯间",
+    "tags": "elevator, closed space, metallic walls, mirror, floor indicator light",
+    "style": "general"
+  },
+  {
+    "name": "楼梯间",
+    "tags": "stairwell, handrail, concrete steps, tall window light, shadow",
+    "style": "general"
+  },
+  {
+    "name": "地下停车场",
+    "tags": "underground parking garage, concrete pillars, parked cars, dim ceiling lamps",
+    "style": "general"
+  },
+  {
+    "name": "便利店",
+    "tags": "convenience store, shelves, refrigerators, bright fluorescent light, cashier counter",
+    "style": "general"
+  },
+  {
+    "name": "居酒屋",
+    "tags": "izakaya, red lantern, wooden counter, bottles, warm yellow light",
+    "style": "general"
+  },
+  {
+    "name": "餐厅",
+    "tags": "restaurant, dining table, warm light, window seat, tableware",
+    "style": "general"
+  },
+  {
+    "name": "酒吧",
+    "tags": "bar, counter, neon light, bottles on shelf, bar stools",
+    "style": "general"
+  },
+  {
+    "name": "酒店客房",
+    "tags": "hotel room, large bed, curtains, city night view, warm lamps",
+    "style": "general"
+  },
+  {
+    "name": "日式旅馆和室",
+    "tags": "ryokan, tatami mats, shoji screen, low table, futon",
+    "style": "general"
+  },
+  {
+    "name": "露天温泉",
+    "tags": "hot spring, onsen, steam, stone rocks, bamboo fence, night",
+    "style": "general"
+  },
+  {
+    "name": "神社",
+    "tags": "shrine, torii gate, stone path, stone lanterns, forest, steps",
+    "style": "general"
+  },
+  {
+    "name": "寺庙",
+    "tags": "temple, stone steps, wooden hall, incense smoke, red pillars",
+    "style": "general"
+  },
+  {
+    "name": "欧式城堡",
+    "tags": "castle, stone walls, tall tower, banners, courtyard, gothic",
+    "style": "general"
+  },
+  {
+    "name": "教堂",
+    "tags": "church, stained glass, wooden pews, light beams, high ceiling",
+    "style": "general"
+  },
+  {
+    "name": "图书馆书架间",
+    "tags": "library stacks, tall bookshelves, narrow aisle, reading lamp, dust",
+    "style": "general"
+  },
+  {
+    "name": "电车车厢",
+    "tags": "train interior, seats, hanging straps, windows, evening light",
+    "style": "general"
+  },
+  {
+    "name": "车站站台",
+    "tags": "train station platform, railway tracks, timetable sign, vending machine",
+    "style": "general"
+  },
+  {
+    "name": "飞机客舱",
+    "tags": "airplane cabin, narrow seats, window, overhead light, aisle",
+    "style": "general"
+  },
+  {
+    "name": "摩天大楼办公室",
+    "tags": "office, skyscraper, floor-to-ceiling glass wall, desk, city view",
+    "style": "general"
+  },
+  {
+    "name": "卡拉OK包厢",
+    "tags": "karaoke room, neon light, sofa, microphone, screen, colorful lighting",
+    "style": "general"
+  },
+  {
+    "name": "医院病房",
+    "tags": "hospital room, bed, iv stand, pale light, curtain partition",
+    "style": "general"
+  },
+  {
+    "name": "仓库",
+    "tags": "warehouse, cardboard boxes, metal shelves, skylight, dusty floor",
+    "style": "general"
+  },
+  {
+    "name": "废弃工厂",
+    "tags": "abandoned factory, rusted machinery, broken windows, graffiti, debris",
+    "style": "general"
+  },
+  {
+    "name": "赛博街区",
+    "tags": "cyberpunk city street, neon signs, holograms, rain, wet asphalt",
+    "style": "general"
+  },
+  {
+    "name": "夜市街道",
+    "tags": "night market street, food stalls, string lights, crowd, steam",
+    "style": "general"
   }
 ]

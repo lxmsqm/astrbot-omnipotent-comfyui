@@ -2694,17 +2694,23 @@ select:not([class*="color"]):not([class*="date"]){
     animation:grimoireFloatIn 0.3s cubic-bezier(0.16,1,0.3,1);
     box-shadow:var(--shadow-xl),0 0 0 1px oklch(65% 0.25 50 / 0.06);
   }
-  /* PC 右下角缩放手柄：拖动可自由调整魔导书大小 */
+  /* v4.13.28: PC 四角缩放手柄 —— 面板锚定 top/right，故拖动不同角需联动调整
+     width/height 与 top/right。四角共样式 + 各角定位与光标。 */
   .grimoire-resize-handle{
-    position:absolute;right:3px;bottom:3px;
-    width:18px;height:18px;
-    cursor:nwse-resize;z-index:5;
-    touch-action:none;opacity:.65;
-    border-right:2px solid var(--text-sub);
-    border-bottom:2px solid var(--text-sub);
-    border-radius:0 0 4px 0;
+    position:absolute;width:18px;height:18px;z-index:5;
+    touch-action:none;opacity:.55;
+    border-color:var(--text-sub);
+    transition:opacity var(--transition-fast);
   }
   .grimoire-resize-handle:hover{opacity:1;border-color:var(--primary);}
+  .grm-rh-se{right:3px;bottom:3px;cursor:nwse-resize;
+    border-right:2px solid;border-bottom:2px solid;border-radius:0 0 4px 0;}
+  .grm-rh-sw{left:3px;bottom:3px;cursor:nesw-resize;
+    border-left:2px solid;border-bottom:2px solid;border-radius:0 0 0 4px;}
+  .grm-rh-ne{right:3px;top:3px;cursor:nesw-resize;
+    border-right:2px solid;border-top:2px solid;border-radius:0 4px 0 0;}
+  .grm-rh-nw{left:3px;top:3px;cursor:nwse-resize;
+    border-left:2px solid;border-top:2px solid;border-radius:4px 0 0 0;}
   @keyframes grimoireFloatIn{
     from{opacity:0;transform:translateY(16px) scale(0.97)}
     to{opacity:1;transform:none}
@@ -3500,10 +3506,13 @@ select:not([class*="color"]):not([class*="date"]){
   transition:color var(--transition-fast);
 }
 .lightbox-close:hover{color:#fff;}
+/* v4.13.27: 放大改用尺寸百分比，wrap 需可滚动才能看全图（transform:scale 方案会裁切） */
 .lightbox-image-wrap{
-  position:relative;overflow:hidden;border-radius:var(--radius);
+  position:relative;overflow:auto;border-radius:var(--radius);
   cursor:grab;box-shadow:var(--shadow-xl);
   max-width:100%;max-height:80vh;
+  /* 隐藏滚动条视觉但保留滚动能力（放大后才需要） */
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.25) transparent;
 }
 .lightbox-image-wrap:active{cursor:grabbing;}
 .lightbox-image-wrap img{
@@ -3520,6 +3529,14 @@ select:not([class*="color"]):not([class*="date"]){
 .lightbox-info{
   color:rgba(255,255,255,0.7);font-size:12px;margin-right:auto;
   max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* v4.13.27: 缩放比例徽标（独立于信息栏，缩放时才淡入） */
+.lightbox-zoom-badge{
+  flex-shrink:0;min-width:44px;text-align:center;
+  font-size:11px;font-variant-numeric:tabular-nums;
+  color:#fff;background:rgba(255,255,255,0.14);
+  border-radius:8px;padding:3px 7px;
+  opacity:0;transition:opacity var(--transition-fast);
 }
 .lightbox-btn{
   background:rgba(255,255,255,0.1);border:none;color:#fff;

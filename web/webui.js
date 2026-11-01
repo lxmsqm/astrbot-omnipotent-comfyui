@@ -339,12 +339,23 @@ function openLightbox(src, title) {
   if (!lb || !img) return;
   img.src = src;
   _lightboxZoom = 1;
-  img.style.transform = 'scale(1)';
+  img.style.transform = 'none';
+  img.style.width = '100%';
+  img.style.height = 'auto';
+  img.style.maxWidth = '100%';
+  img.style.maxHeight = '80vh';
   img.style.left = '0px';
   img.style.top = '0px';
   _lightboxState.imgX = 0;
   _lightboxState.imgY = 0;
-  $id('lightbox_info').textContent = title || '';
+  // 信息栏固定显示文件名；缩放比例由独立徽标显示（不再互相覆盖）
+  const info = $id('lightbox_info');
+  if (info) {
+    info.textContent = title || '';
+    info.dataset.origText = title || '';
+  }
+  const badge = $id('lightbox_zoom_badge');
+  if (badge) { badge.textContent = ''; badge.style.opacity = '0'; }
   lb.classList.add('active');
   document.body.style.overflow = 'hidden';
 }
@@ -356,24 +367,122 @@ function closeLightbox() {
   document.body.style.overflow = '';
 }
 
-// 缩放控件（DOM 就绪后绑定）
+// 滚轮缩放（灯箱打开时）
+(function() {
+  function _wheelZoom(e) {
+    const lb = $id('lightbox');
+    if (!lb || !lb.classList.contains('active')) return;
+    const img = $id('lightbox_img');
+    if (!img) return;
+    // 只在光标位于图片区域内时缩放，避免与页面滚动冲突
+    const r = img.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
+    e.preventDefault();
+    const next = Math.min(8, Math.max(0.5, _lightboxZoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+    if (Math.abs(next - _lightboxZoom) < 0.01) return;
+    _lightboxZoom = next;
+    const pct = Math.round(next * 100);
+    img.style.width = pct + '%';
+    img.style.height = 'auto';
+    img.style.maxWidth = 'none';
+    img.style.maxHeight = 'none';
+    const badge = $id('lightbox_zoom_badge');
+    if (badge) { badge.textContent = pct + '%'; badge.style.opacity = next === 1 ? '0' : '1'; }
+  }
+  document.addEventListener('wheel', _wheelZoom, { passive: false });
+})();
+
+/** v4.13.27: 灯箱缩放（step 为增量，如 +0.25/-0.25）。
+ *  与 v4.13.26 的 transform:scale 方案的区别：放大时用 **width/height 百分比**撑开图片，
+ *  图片始终完整可见（不裁切、不需要拖动平移），缩放比例由独立徽标显示，
+ *  信息栏则固定显示文件名。 */
+function zoomLightbox(step) {
+  const img = $id('lightbox_img');
+  if (!img) return;
+  const next = Math.min(8, Math.max(0.5, _lightboxZoom + step));
+  _lightboxZoom = next;
+  // 用尺寸百分比缩放：图片完整可见，wrap 的 overflow 由 hidden 改 auto 以便超大时滚动
+  const pct = Math.round(next * 100);
+  img.style.width = pct + '%';
+  img.style.height = 'auto';
+  img.style.maxWidth = 'none';
+  img.style.maxHeight = 'none';
+  img.style.transform = 'none';
+  img.style.left = '0px';
+  img.style.top = '0px';
+  _lightboxState.imgX = 0;
+  _lightboxState.imgY = 0;
+  // 缩放徽标（独立元素，不覆盖文件名）
+  const badge = $id('lightbox_zoom_badge');
+  if (badge) {
+    badge.textContent = pct + '%';
+    badge.style.opacity = next === 1 ? '0' : '1';
+  }
+}
+
+/** v4.13.27: 灯箱图片下载（走 a[download]）。
+ *  信息栏固定显示文件名（缩放比例改由独立徽标显示），所以这里直接取信息栏文本即可。 */
+function downloadLightbox() {
+  const img = $id('lightbox_img');
+  if (!img) return;
+  const src = img.src || img.getAttribute('src');
+  if (!src) { toast('❌ 没有可下载的图片', 'error'); return; }
+  let name = ($id('lightbox_info') && $id('lightbox_info').textContent) || '';
+  if (!name) {
+    try {
+      const u = new URL(src, location.origin);
+      u.searchParams.delete('_t');
+      name = decodeURIComponent(u.pathname.split('/').pop() || '');
+    } catch (e) { /* 忽略 */ }
+  }
+  name = (name || 'image.png').replace(/[^\w\u4e00-\u9fff.-]/g, '_');
+  try {
+    let href = src;
+    try {
+      const u = new URL(src, location.origin);
+      u.searchParams.delete('_t');
+      href = u.toString();
+    } catch (e) { /* 同源相对路径直接用原值 */ }
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('✅ 开始下载: ' + name);
+  } catch (e) {
+    window.open(src, '_blank');
+  }
+}
+
+// 缩放/下载控件（DOM 就绪后绑定）
+// v4.13.27: 去掉「刷新」按钮 —— 预览场景不需要；缩放改用尺寸百分比（见 zoomLightbox）
 (function() {
   function initLightboxControls() {
     const zi = $id('lightbox_zoom_in');
     const zo = $id('lightbox_zoom_out');
     const zr = $id('lightbox_zoom_reset');
-    if (!zi || !zo || !zr) { setTimeout(initLightboxControls, 100); return; }
-    zi.addEventListener('click', () => zoomLightbox(0.25));
-    zo.addEventListener('click', () => zoomLightbox(-0.25));
-    zr.addEventListener('click', () => {
+    const dl = $id('lightbox_download');
+    if (!zi || !zo || !zr || !dl) { setTimeout(initLightboxControls, 100); return; }
+    zi.addEventListener('click', (e) => { e.stopPropagation(); zoomLightbox(0.25); });
+    zo.addEventListener('click', (e) => { e.stopPropagation(); zoomLightbox(-0.25); });
+    zr.addEventListener('click', (e) => {
+      e.stopPropagation();
       _lightboxZoom = 1;
       _lightboxState.imgX = 0;
       _lightboxState.imgY = 0;
       const img = $id('lightbox_img');
-      img.style.transform = 'scale(1)';
+      img.style.transform = 'none';
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '80vh';
       img.style.left = '0px';
       img.style.top = '0px';
+      const badge = $id('lightbox_zoom_badge');
+      if (badge) { badge.textContent = ''; badge.style.opacity = '0'; }
     });
+    dl.addEventListener('click', (e) => { e.stopPropagation(); downloadLightbox(); });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initLightboxControls);
@@ -1297,49 +1406,109 @@ function openSettingsPage() {
   });
 })();
 
-// 魔导书 PC 自由调整大小（右下角手柄拖动，尺寸持久化到 localStorage）
+// 魔导书 PC 自由调整大小（四角手柄拖动，尺寸持久化到 localStorage）
+// v4.13.28: 从单一右下角扩展为四角。面板锚定 top:72px / right:20px，因此：
+//   SE → 宽高增长（向左下展开）
+//   SW → 宽增长 + right 回退（向左上展开，需同步 left 位置）
+//   NE → 高增长 + top 回退
+//   NW → 宽高增长 + top/right 均回退
 (function initGrimoireResize() {
   const sheet = document.getElementById('grimoire_sheet');
-  const handle = document.getElementById('grimoire_resize_handle');
-  if (!sheet || !handle) return;
-  let resizing = false, rsx = 0, rsy = 0, rw = 0, rh = 0;
-  handle.addEventListener('pointerdown', (e) => {
-    if (window.innerWidth < 900) return;
-    resizing = true;
-    const r = sheet.getBoundingClientRect();
-    rsx = e.clientX; rsy = e.clientY; rw = r.width; rh = r.height;
-    handle.setPointerCapture(e.pointerId);
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  handle.addEventListener('pointermove', (e) => {
-    if (!resizing) return;
-    const w = Math.max(440, Math.min(rw + (e.clientX - rsx), window.innerWidth - 40));
-    const h = Math.max(400, Math.min(rh + (e.clientY - rsy), window.innerHeight - 100));
-    sheet.style.width = w + 'px';
-    sheet.style.height = h + 'px';
-  });
-  const endResize = (e) => {
-    if (!resizing) return;
-    resizing = false;
-    try { handle.releasePointerCapture(e.pointerId); } catch (_) { /* noop */ }
-    try {
+  const handles = document.querySelectorAll('.grimoire-resize-handle');
+  if (!sheet || !handles.length) return;
+  const MIN_W = 440, MIN_H = 400;
+  const EDGE = 20;          // 停靠边距，与 CSS 的 right:20px 一致
+  let resizing = false, corner = '', rsx = 0, rsy = 0, rw = 0, rh = 0, rtop = 0, rleft = 0;
+
+  // 拖动左上/左下角时，面板会从「right 锚定」切换为「left 锚定」，
+  // 统一用 left/top 表达位置，逻辑最简单也最不容易错。
+  handles.forEach((handle) => {
+    handle.addEventListener('pointerdown', (e) => {
+      if (window.innerWidth < 900) return;   // 仅 PC
+      resizing = true;
+      corner = handle.dataset.corner || 'se';
       const r = sheet.getBoundingClientRect();
-      localStorage.setItem('grimoire_size', JSON.stringify({ w: Math.round(r.width), h: Math.round(r.height) }));
-    } catch (_) { /* noop */ }
-  };
-  handle.addEventListener('pointerup', endResize);
-  handle.addEventListener('pointercancel', endResize);
-  // 恢复上次尺寸（仅 PC）
+      rsx = e.clientX; rsy = e.clientY;
+      rw = r.width; rh = r.height;
+      rtop = r.top; rleft = r.left;
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    const onMove = (e) => {
+      if (!resizing) return;
+      const dx = e.clientX - rsx;
+      const dy = e.clientY - rsy;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      let w = rw, h = rh;
+
+      // ---- 宽度 ----
+      // 几何表述（避免自指陷阱）：
+      //   右边界固定值 rb = rleft + rw；左边界固定值 lb = rleft。
+      //   右侧手柄（SE/NE）：lb 不动，右扩 → w = rb - lb + dx，上限 rb ≤ vw-EDGE
+      //   左侧手柄（SW/NW）：rb 不动，左扩 → w = rb - lb - dx，上限 lb ≥ EDGE
+      const rb = rleft + rw;
+      if (corner === 'se' || corner === 'ne') {
+        const maxRight = vw - EDGE;
+        w = Math.max(MIN_W, Math.min(rb + dx, maxRight) - rleft);
+        // 保持右边界钉在本次起点（面板可能已被切到 left 锚定）
+        sheet.style.right = Math.max(EDGE, vw - rb) + 'px';
+      } else {
+        const minLeft = EDGE;
+        const newLeft = Math.max(minLeft, rleft + dx);
+        w = Math.max(MIN_W, rb - newLeft);
+        sheet.style.left = newLeft + 'px';
+        sheet.style.right = 'auto';
+      }
+      // ---- 高度 ----
+      // 同宽的几何表述：底边界固定值 bb = rtop + rh；顶边界固定值 tb = rtop。
+      //   底部手柄（SE/SW）：tb 不动，下扩 → h = bb - tb + dy，上限 bb ≤ vh-EDGE
+      //   顶部手柄（NE/NW）：bb 不动，上扩 → h = bb - tb - dy，上限 tb ≥ 0
+      const bb = rtop + rh;
+      if (corner === 'se' || corner === 'sw') {
+        const maxBottom = vh - EDGE;
+        h = Math.max(MIN_H, Math.min(bb + dy, maxBottom) - rtop);
+      } else {
+        const newTop = Math.max(0, rtop + dy);
+        h = Math.max(MIN_H, bb - newTop);
+        sheet.style.top = newTop + 'px';
+      }
+
+      sheet.style.width = w + 'px';
+      sheet.style.height = h + 'px';
+    };
+    const endResize = (e) => {
+      if (!resizing) return;
+      resizing = false;
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) { /* noop */ }
+      try {
+        const r = sheet.getBoundingClientRect();
+        localStorage.setItem('grimoire_size', JSON.stringify({
+          w: Math.round(r.width), h: Math.round(r.height),
+          // 用 left/top 表达位置（拖动左上/左下时会从 right 锚定切过来，一并保存才能还原）
+          left: Math.round(r.left), top: Math.round(r.top)
+        }));
+      } catch (_) { /* noop */ }
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', endResize);
+    handle.addEventListener('pointercancel', endResize);
+  });
+
+  // 恢复上次尺寸与位置（仅 PC）
   try {
     const saved = JSON.parse(localStorage.getItem('grimoire_size') || 'null');
     if (saved && saved.w && saved.h && window.innerWidth >= 900) {
       sheet.style.width = saved.w + 'px';
       sheet.style.height = saved.h + 'px';
+      if (saved.left != null && saved.top != null) {
+        sheet.style.left = saved.left + 'px';
+        sheet.style.top = saved.top + 'px';
+        sheet.style.right = 'auto';   // 交给 left 锚定，避免两边同时生效互相拉扯
+      }
     }
   } catch (_) { /* noop */ }
 })();
-
 function toggleSettings() {
   const modal = document.getElementById('settings_modal');
   if (!modal) return;
@@ -6696,6 +6865,11 @@ async function loadGrimoireData() {
     const status = await apiFetch('/api/grimoire/status', {}, true);
     if (status) updateGrimoireToggle(status.enabled);
   } catch (e) {}
+
+  // v4.13.25: 每次打开魔导书都对一次 K2 NSFW 开关（多设备/多标签页时以服务端为准）
+  if (typeof window._syncK2NsfwFromServer === 'function') {
+    try { window._syncK2NsfwFromServer(); } catch (e) {}
+  }
   
   // Load models
   try {
@@ -6844,6 +7018,27 @@ function syncGrimoireK2UI() {
 if (typeof window._k2NsfwOn === 'undefined') {
   try { window._k2NsfwOn = localStorage.getItem('k2_nsfw_on') === '1'; } catch (e) { window._k2NsfwOn = false; }
 }
+/** v4.13.25: 启动时从**服务端**回填 K2 NSFW 状态（与 anima_nsfw 一致：以服务端为准）。
+ *  此前只有 POST 没有 GET，_k2NsfwOn 只靠 localStorage —— 换浏览器/清缓存后
+ *  界面显示 SFW 而后端仍是 True，开关与实际不一致。 */
+(function syncK2NsfwFromServer() {
+  const apply = (on) => {
+    window._k2NsfwOn = !!on;
+    try { localStorage.setItem('k2_nsfw_on', window._k2NsfwOn ? '1' : '0'); } catch (e) {}
+    const bt = document.getElementById('grm_k2_nsfw_text');
+    if (bt) bt.textContent = window._k2NsfwOn ? 'NSFW开' : 'NSFW关';
+    const bc = document.getElementById('grm_k2_nsfw_btn');
+    if (bc) bc.className = 'btn btn-xs ' + (window._k2NsfwOn ? 'btn-primary' : 'btn-secondary');
+  };
+  const kick = () => apiFetch('/api/k2-nsfw', {}, true)
+    .then(r => { if (r && r.ok && typeof r.nsfw !== 'undefined') apply(r.nsfw); })
+    .catch(() => {});
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', kick, { once: true });
+  } else { kick(); }
+  // 面板每次打开时也对一次（多设备/多标签页场景）
+  window._syncK2NsfwFromServer = kick;
+})();
 function toggleK2Nsfw() {
   window._k2NsfwOn = !window._k2NsfwOn;
   try { localStorage.setItem('k2_nsfw_on', window._k2NsfwOn ? '1' : '0'); } catch (e) {}

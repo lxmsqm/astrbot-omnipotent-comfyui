@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -15,18 +15,11 @@ build/
 *.swo
 *~
 
-
 # Local runtime config (contains user machine paths)
 plugin_config.json
 
-# Local dev scratch folder (patch/queue scripts, word-list temp output)
-theme_work/
-
 # User data directory (gitignored — each user's personal config)
 data/user/
-# v4.3.0 数据分离迁移后留下的旧数据备份（真实数据在 AstrBot/data/comfyui_allinone_data/）
-data/user_migrated_backup/
-data/anima_tools_migrated_backup/
 
 # Local machine paths / OS
 previews/
@@ -46,9 +39,7 @@ Thumbs.db
 # Cache (symlinked to E: drive)
 data/cache/
 
-# Local user data (runtime)
-
-
-
-# Architecture handover doc (kept local, not in repo)
-ASTCOMF架构总文档.md
+# 手动备份（2026-11-01 起不入库）
+*.bak
+*.bak_*
+*.bak-*

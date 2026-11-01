@@ -43,14 +43,54 @@ class WebUIMixin:
         resp.headers['Clear-Site-Data'] = '"cache"'
         return resp
 
+    def _gz_text(self, path, cache_attr, content_type):
+        """v4.13.25: 读文本文件并以 gzip 压缩结果缓存返回 (body, mtime)。
+
+        aiohttp 3.14 已移除内置压缩 API（Application.enable_compression / Response(compress=)
+        都不存在），而 webui.js(417KB)+webui.css(230KB) 是纯文本、手机上首屏要传 ~646KB。
+        这里做**按 mtime 失效的内存 gzip 缓存**：文件不变则直接复用压缩字节，
+        前端仍靠 ?v= 与 no-cache 保证拿到新文件。
+        """
+        import gzip as _gzip
+        st = path.stat()
+        cached = getattr(self, cache_attr, None)
+        if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
+            return cached[2], True
+        raw = path.read_bytes()
+        comp = _gzip.compress(raw, compresslevel=6)
+        setattr(self, cache_attr, (st.st_mtime, st.st_size, comp))
+        return comp, False
+
     async def _serve_webui_css(self, r):
-        resp = web.FileResponse(PLUGIN_ROOT / 'web' / 'webui.css')
-        resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
-        return resp
+        return await self._serve_static_text(r, PLUGIN_ROOT / 'web' / 'webui.css',
+                                             '_gz_cache_css', 'text/css')
 
     async def _serve_webui_js(self, r):
-        resp = web.FileResponse(PLUGIN_ROOT / 'web' / 'webui.js')
-        resp.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return await self._serve_static_text(r, PLUGIN_ROOT / 'web' / 'webui.js',
+                                             '_gz_cache_js', 'application/javascript')
+
+    async def _serve_static_text(self, r, path, cache_attr, content_type):
+        """文本静态资源：客户端支持 gzip 就回压缩版，否则回原文。"""
+        accepts = (r.headers.get('Accept-Encoding') or '').lower()
+        cache_ctrl = 'no-cache, must-revalidate'
+        if 'gzip' in accepts:
+            try:
+                body, from_cache = self._gz_text(path, cache_attr, content_type)
+                resp = web.Response(body=body, content_type=content_type)
+                resp.headers['Content-Encoding'] = 'gzip'
+                resp.headers['Vary'] = 'Accept-Encoding'
+                resp.headers['Cache-Control'] = cache_ctrl
+                # 压缩版体积小，标注原始大小便于排查
+                try:
+                    resp.headers['X-Original-Size'] = str(path.stat().st_size)
+                except Exception:
+                    pass
+                return resp
+            except Exception as e:
+                logger.debug(f"[WebUI] gzip 失败，回落原文: {e}")
+        resp = web.FileResponse(path, headers={'Content-Type': content_type})
+        resp.headers['Cache-Control'] = cache_ctrl
+        resp.headers['Vary'] = 'Accept-Encoding'
         return resp
 
     async def _serve_favicon(self, r):
@@ -118,6 +158,16 @@ class WebUIMixin:
         """返回当前 K2 字段锁定设定（前端面板初始化用）。"""
         locks = self.workflow_config.get("__k2_locks__", {}) or {}
         return web.json_response({"locks": locks})
+
+    async def _webui_get_k2_nsfw(self, request):
+        """v4.13.25: 返回 K2 NSFW 开关的**服务端权威值**（前端启动时回填用）。
+
+        此前只有 POST 没有 GET，前端 _k2NsfwOn 只能从 localStorage 读 ——
+        换浏览器/清缓存后界面显示与后端真实状态不一致（界面 SFW、后端仍 True），
+        与 anima_nsfw 的做法对齐：**以服务端为准**回写本地。
+        """
+        on = bool(self.workflow_config.get("__k2_nsfw__", False))
+        return web.json_response({"ok": True, "nsfw": on})
 
     async def _webui_save_k2_locks(self, request):
         """保存 K2 字段锁定设定。body: {locks: {fieldId: {mode:'random'|'fixed'|'off', value:''}}}"""
@@ -219,6 +269,7 @@ class WebUIMixin:
         app.router.add_get('/api/k2-locks', self._webui_get_k2_locks)
         app.router.add_post('/api/k2-locks', self._webui_save_k2_locks)
         # K2 NSFW 开关（前端切换时同步保存，QQ /随机图 后端组句遵循）
+        app.router.add_get('/api/k2-nsfw', self._webui_get_k2_nsfw)   # v4.13.25: 前端回填权威值
         app.router.add_post('/api/k2-nsfw', self._webui_save_k2_nsfw)
         app.router.add_get('/favicon.ico', self._serve_favicon)  # 返回真正的图标文件
         app.router.add_get('/favicon-{size}.png', self._serve_favicon_png)  # v4.3.8 多尺寸 PNG
